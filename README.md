@@ -13,6 +13,6 @@ Features:
   
   * Written by GTK+ which is cross-platform, supporting Windows/Linux/BSD.
     
-  * Open source code (New BSD license).
+  * Open source code (Simplified BSD License).
 
 For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@gmail.com
