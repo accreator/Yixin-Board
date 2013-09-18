@@ -38,4 +38,8 @@ For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@g
   
   * 尽管本程序最初是为弈心设计的，它也支持与弈心协议兼容的引擎，如你可以在无禁规则下使用Tito等引擎。
 
+为什么开源？
+
+  * 相比于界面的设计，作者更感兴趣的工作是引擎设计。这个界面是在部分朋友的建议和期望下制作的，在基本完成主要功能后，我决定从中抽身，希望将剩下的功能完善的部分留给感兴趣的热心网友完成，共同为五子棋的发展做一些贡献。
+
 更多信息，请访问 www.aiexp.info 或通过email联系我： sunkaicn@gmail.com
