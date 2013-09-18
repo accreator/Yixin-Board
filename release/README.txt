@@ -67,4 +67,4 @@ piece.bmp
 piece_N.bmp
 	对于NxN棋盘的贴图设定
 
-更多信息，请参见www.aiexp.info或通过e-mail联系我：sunkaicn@gmail.com
+更多信息，请参见 www.aiexp.info 或通过e-mail联系我：sunkaicn@gmail.com
