@@ -1,9 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS /* for vs */
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include "yixin.h"
+#include "resource.h"
 
 typedef long long I64;
 #define MAX_SIZE 20
@@ -25,6 +28,7 @@ int timeused = 0;
 int timestart = 0;
 int timeoutmatch = 1000000;
 int computerside = 0; /* 0无 1黑 2白 3双方 */
+int cautionfactor = 0;
 int board[MAX_SIZE][MAX_SIZE];
 int boardnumber[MAX_SIZE][MAX_SIZE];
 int movepath[MAX_SIZE*MAX_SIZE];
@@ -63,7 +67,9 @@ void print_log(char *text)
 {
 	GtkTextIter start, end;
 	GtkAdjustment *adj;
-	static int flag = 0;
+	static int flag = 0, fspace = 0;
+	int len;
+	int i;
 
 	if(buffertextlog == NULL)
 	{
@@ -81,7 +87,28 @@ void print_log(char *text)
 	{
 		if(flag == 0) flag = 1; else return;
 	}
+	
+	for(i=0; text[i]; i++)
+	{
+		if(!isspace(text[i])) break;
+	}
+	if(text[i] == 0)
+	{
+		fspace ++;
+	}
+	else
+	{
+		fspace = 0;
+	}
+	if(fspace >= 2) return;
 
+	len = gtk_text_buffer_get_line_count(GTK_TEXT_BUFFER(buffertextlog));
+	if(len > 200)
+	{
+		gtk_text_buffer_get_iter_at_line(GTK_TEXT_BUFFER(buffertextlog), &start, 0);
+		gtk_text_buffer_get_iter_at_line(GTK_TEXT_BUFFER(buffertextlog), &end, len-200);
+		gtk_text_buffer_delete(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
+	}
 	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
 	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buffertextlog), &end, text, strlen(text));
 
@@ -143,6 +170,13 @@ int printf_log(char *fmt, ...)
 				strcpy(p, "深度");
 				p += 4;
 				i += 5;
+				continue;
+			}
+			if(strncmp(buffer+i, "NODE", 4) == 0)
+			{
+				strcpy(p, "结点数");
+				p += 6;
+				i += 4;
 				continue;
 			}
 			if(strncmp(buffer+i, "VAL", 3) == 0)
@@ -220,7 +254,7 @@ void show_welcome()
 
 void show_thanklist()
 {
-	printf_log(language==0?"I would like to thank my contributors, whose support makes yixin what it is.\n":
+	printf_log(language==0?"I would like to thank my contributors, whose support makes Yixin what it is.\n":
 			(language==1?"感谢那些对弈心的设计与编写提供支持帮助的朋友！他们是：\n":""));
 	printf_log("  彼方\n");
 	printf_log("  XR\n");
@@ -232,6 +266,7 @@ void show_thanklist()
 	printf_log("  Saturn|Titan\n");
 	printf_log("  元\n");
 	printf_log("  TZ\n");
+	printf_log("  濤声依旧\n");
 	printf_log("\n");
 }
 
@@ -612,15 +647,120 @@ int move_openbook(int *besty, int *bestx)
 
 //这个函数生成开局库前n优的着法
 //结果将存于besty, bestx两个数组中
-int move_openbook_n(int n, int *besty, int *bestx)
+int move_openbook_n(int n, int *besty, int *bestx, int force)
 {
-	int i;
+	int i, j, k, l, o;
+	double d[4][4];
+	int px[4], py[4];
+	int sy[3] = {0};
+	/*
+	不必要，因为在move_openbook中已有对board[][]的判断
+	if(force != 2)
+	{
+		for(i=0; i<piecenum; i++)
+		{
+			moveopenbookexclude[movepath[piecenum-1]/boardsize][movepath[piecenum-1]%boardsize] = 1;
+		}
+	}
+	*/
+	for(i=0; i<4; i++)
+	{
+		py[i] = movepath[i] / boardsize;
+		px[i] = movepath[i] % boardsize;
+	}
+	for(i=0; i<4; i++)
+	{
+		for(j=0; j<4; j++)
+		{
+			d[i][j] = (double)(px[i] - px[j])*(double)(px[i] - px[j]) + (double)(py[i] - py[j])*(double)(py[i] - py[j]);
+			d[i][j] = sqrt(d[i][j]);
+		}
+	}
+	if(fabs(d[0][1] - d[0][3]) <= 1e-6 && fabs(d[2][1] - d[2][3]) <= 1e-6) sy[0] = 1;
+	if((fabs(d[0][1]+d[2][1]-d[0][2]) <= 1e-6 || fabs(d[0][1]+d[0][2]-d[1][2]) <= 1e-6 || fabs(d[0][2]+d[2][1]-d[0][1]) <= 1e-6) &&
+		(fabs(d[0][3]+d[2][3]-d[0][2]) <= 1e-6 || fabs(d[0][3]+d[0][2]-d[3][2]) <= 1e-6 || fabs(d[0][2]+d[2][3]-d[0][3]) <= 1e-6)) sy[0] = 1;
+	if(fabs(d[0][1] - d[2][3]) <= 1e-6 && fabs(d[1][2] - d[0][3]) <= 1e-6) sy[1] = 1;
+	if(fabs(d[0][1] - d[2][1]) <= 1e-6 && fabs(d[0][3] - d[2][3]) <= 1e-6) sy[2] = 1;
+	if((fabs(d[0][1]+d[0][3]-d[1][3]) <= 1e-6 || fabs(d[0][1]+d[1][2]-d[0][3]) <= 1e-6 || fabs(d[0][3]+d[1][3]-d[0][1]) <= 1e-6) &&
+		(fabs(d[2][1]+d[2][3]-d[1][3]) <= 1e-6 || fabs(d[1][2]+d[1][3]-d[2][3]) <= 1e-6 || fabs(d[2][3]+d[1][3]-d[2][1]) <= 1e-6)) sy[2] = 1;
+
 	for(i=0; i<n; i++)
 	{
 		if(move_openbook(besty+i, bestx+i) == 0) break;
 		moveopenbookexclude[besty[i]][bestx[i]] = 1;
+		if(sy[0] || sy[1] || sy[2])
+		{
+			double d1, d2, d3, d4;
+			d1 = (besty[i] - py[0])*(besty[i] - py[0]) + (bestx[i] - px[0])*(bestx[i] - px[0]);
+			d2 = (besty[i] - py[2])*(besty[i] - py[2]) + (bestx[i] - px[2])*(bestx[i] - px[2]);
+			d3 = (besty[i] - py[1])*(besty[i] - py[1]) + (bestx[i] - px[1])*(bestx[i] - px[1]);
+			d4 = (besty[i] - py[3])*(besty[i] - py[3]) + (bestx[i] - px[3])*(bestx[i] - px[3]);
+			
+			for(j=0; j<boardsize; j++)
+			{
+				for(k=0; k<boardsize; k++)
+				{
+					double _d1, _d2, _d3, _d4;
+					if(moveopenbookexclude[j][k]) continue;
+					_d1 = (j - py[0])*(j - py[0]) + (k - px[0])*(k - px[0]);
+					_d2 = (j - py[2])*(j - py[2]) + (k - px[2])*(k - px[2]);
+					_d3 = (j - py[1])*(j - py[1]) + (k - px[0])*(k - px[1]);
+					_d4 = (j - py[3])*(j - py[3]) + (k - px[2])*(k - px[3]);
+					
+					if(sy[0] && fabs(d1 - _d1) <= 1e-6 && fabs(d2 - _d2) <= 1e-6)
+					{
+						moveopenbookexclude[j][k] = 1;
+					}
+					if(sy[1] && fabs(d1 - _d2) <= 1e-6 && fabs(d2 - _d1) <= 1e-6)
+					{
+						moveopenbookexclude[j][k] = 1;
+					}
+					if(sy[2] && fabs(d3 - _d3) <= 1e-6 && fabs(d4 - _d4) <= 1e-6)
+					{
+						moveopenbookexclude[j][k] = 1;
+					}
+				}
+			}
+		}
 	}
-	memset(moveopenbookexclude, 0, sizeof(moveopenbookexclude));
+
+	if(force == 1 && i<n)
+	{
+		int x, y, nx, ny;
+		y = movepath[piecenum-1] / boardsize;
+		x = movepath[piecenum-1] % boardsize;
+		for(j=1; j<boardsize; j++)
+		{
+			for(k=-j; k<=j; k++)
+			{
+				int t = j - abs(k);
+				for(l=-t; l<=t; l++)
+				{
+					nx = x + k;
+					ny = y + l;
+					if(nx < 0 || ny < 0 || nx >= boardsize || ny >= boardsize) continue;
+					movepath[piecenum-1] = ny * boardsize + nx;
+					i += move_openbook_n(n-i, besty+i, bestx+i, 2);
+					if(i >= n) break;
+				}
+				if(i >= n) break;
+			}
+			if(i >= n) break;
+		}
+		movepath[piecenum-1] = y * boardsize + x;
+		if(i < n)
+		{
+			printf_log("ERROR opening book error");
+			for(; i<n; i++)
+			{
+				besty[i] = bestx[i] = 0;
+			}
+		}
+	}
+	if(force != 2)
+	{
+		memset(moveopenbookexclude, 0, sizeof(moveopenbookexclude));
+	}
 	return i;
 }
 
@@ -787,11 +927,23 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 					{
 						int besty[2], bestx[2];
 						isneedrestart = 1;
-						//应采用开局库
-						refreshboardflag = 1;
-						move_openbook_n(2, besty, bestx);
-						make_move(besty[0], bestx[0]);
-						make_move(besty[1], bestx[1]);
+						if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
+							movepath[1]%boardsize <= boardsize/2+1 && movepath[1]%boardsize >= boardsize/2-1 &&
+							movepath[1]/boardsize <= boardsize/2+1 && movepath[1]/boardsize >= boardsize/2-1 &&
+							movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
+							movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
+						{
+							//应采用开局库
+							refreshboardflag = 1;
+							move_openbook_n(2, besty, bestx, 1);
+							make_move(besty[0], bestx[0]);
+							make_move(besty[1], bestx[1]);
+						}
+						else
+						{
+							show_dialog_illegal_opening(widget);
+							new_game(NULL, NULL);
+						}
 					}
 					else if(useopenbook && move_openbook(&y, &x) && is_legal_move(y, x))
 					{
@@ -869,7 +1021,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								show_dialog_swap_info(widget);
 							}
 						}
-						if(specialrule == 1 && piecenum == 3 && computerside != 0 && computerside != 1)
+						if(specialrule == 1 && piecenum == 3 && /*computerside != 0 &&*/ computerside != 1)
 						{
 							//判断是否是26种rif开局之一
 							if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
@@ -900,46 +1052,71 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						{
 							int besty[2], bestx[2];
 							isneedrestart = 1;
-							//采用开局库
-							refreshboardflag = 1;
-							move_openbook_n(2, besty, bestx);
-							make_move(besty[0], bestx[0]);
-							make_move(besty[1], bestx[1]);
+							
+							if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
+								movepath[1]%boardsize <= boardsize/2+1 && movepath[1]%boardsize >= boardsize/2-1 &&
+								movepath[1]/boardsize <= boardsize/2+1 && movepath[1]/boardsize >= boardsize/2-1 &&
+								movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
+								movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
+							{
+								refreshboardflag = 1;
+								//采用开局库
+								move_openbook_n(2, besty, bestx, 1);
+								make_move(besty[0], bestx[0]);
+								make_move(besty[1], bestx[1]);
+							}
+							else
+							{
+								show_dialog_illegal_opening(widget);
+								new_game(NULL, NULL);
+							}
 							flag = 1;
 						}
-						if(specialrule == 1 && piecenum == 5 && computerside != 1)
+						if(specialrule == 1 && piecenum == 5 && computerside != 0 && computerside != 1)
 						{
 							refreshboardflag = 1;
 							flag = 1;
 						}
-						if(specialrule == 1 && piecenum == 6 && computerside != 1)
+						if(specialrule == 1 && piecenum == 6 && computerside != 0 && computerside != 1)
 						{
 							int x1, y1;
 							int x2, y2;
 							int v1, v2;
 							refreshboardflag = 0;
 							isneedrestart = 1;
-							//采用开局库(应同时+计算)
-							y1 = movepath[piecenum-1] / boardsize;
-							x1 = movepath[piecenum-1] % boardsize;
-							y2 = movepath[piecenum-2] / boardsize;
-							x2 = movepath[piecenum-2] % boardsize;
-							change_piece(NULL, (gpointer)1);
-							v2 = eval_openbook();
-							change_piece(NULL, (gpointer)1);
-							make_move(y1, x1);
-							v1 = eval_openbook();
-							if(v1==0 || v2=='!' || v2=='1' || v2=='a' ||
-							   (v2>='A' && v2<='F' && v1>='A' && v1<='F' && v2<=v1) ||
-							   (v2>='1' && v2<='9' && v1>='1' && v1<='9' && v2<=v1) ||
-							   (v2>='1' && v2<='9' && (v1<'1' || v1>'9')))
+							if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
+								movepath[1]%boardsize <= boardsize/2+1 && movepath[1]%boardsize >= boardsize/2-1 &&
+								movepath[1]/boardsize <= boardsize/2+1 && movepath[1]/boardsize >= boardsize/2-1 &&
+								movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
+								movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
 							{
-								//do nothing
+								//采用开局库(应同时+计算)
+								y1 = movepath[piecenum-1] / boardsize;
+								x1 = movepath[piecenum-1] % boardsize;
+								y2 = movepath[piecenum-2] / boardsize;
+								x2 = movepath[piecenum-2] % boardsize;
+								change_piece(NULL, (gpointer)1);
+								v2 = eval_openbook();
+								change_piece(NULL, (gpointer)1);
+								make_move(y1, x1);
+								v1 = eval_openbook();
+								if(v1==0 || v2=='!' || v2=='1' || v2=='a' ||
+								   (v2>='A' && v2<='F' && v1>='A' && v1<='F' && v2<=v1) ||
+								   (v2>='1' && v2<='9' && v1>='1' && v1<='9' && v2<=v1) ||
+								   (v2>='1' && v2<='9' && (v1<'1' || v1>'9')))
+								{
+									//do nothing
+								}
+								else
+								{
+									change_piece(NULL, (gpointer)1);
+									make_move(y2, x2);
+								}
 							}
 							else
 							{
-								change_piece(NULL, (gpointer)1);
-								make_move(y2, x2);
+								show_dialog_illegal_opening(widget);
+								new_game(NULL, NULL);
 							}
 						}
 						show_forbid();
@@ -1048,6 +1225,18 @@ void set_level(int x)
 				sprintf(command, "INFO max_node %d\n", 10000);
 				send_command(command);
 				break;
+			case 5:
+				sprintf(command, "INFO max_node %d\n", 240000);
+				send_command(command);
+				break;
+			case 6:
+				sprintf(command, "INFO max_node %d\n", 1920000);
+				send_command(command);
+				break;
+			case 7:
+				sprintf(command, "INFO max_node %d\n", 500000000);
+				send_command(command);
+				break;
 		}
 		timeoutmatch = 1000000000;
 		timeoutturn = 1000000000;
@@ -1060,21 +1249,69 @@ void set_level(int x)
 	}
 }
 
+void set_cautionfactor(int x)
+{
+	gchar command[80];
+	if(x < 0) x = 0;
+	if(x > 2) x = 2;
+	cautionfactor = x;
+	sprintf(command, "INFO caution_factor %d\n", cautionfactor);
+	send_command(command);
+}
+
+void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
+{
+	static GtkWidget *editable[2];
+	static int flag = 0;
+	int i;
+	if(widget == NULL)
+	{
+		if(data == 0)
+		{
+			flag = 0;
+		}
+		else
+		{
+			editable[flag] = (GtkWidget *)data;
+			flag ++;
+		}
+		return;
+	}
+	for(i=0; i<flag; i++)
+	{
+		//gtk_editable_set_editable(GTK_EDITABLE(editable[i]), FALSE);
+		gtk_widget_set_sensitive(editable[i], (int)data==0 ? FALSE : TRUE);
+	}
+}
+
 void show_dialog_settings(GtkWidget *widget, gpointer data)
 {
 	gchar command[80];
 	gchar text[80];
 	const gchar *ptext;
 	GtkWidget *dialog;
+	GtkWidget *notebook;
+	GtkWidget *notebookvbox[2];
 	GtkWidget *hbox[2];
-	GtkWidget *radiolevel[5];
+	GtkWidget *radiolevel[8];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2];
 	GtkWidget *entrytimeturn, *entrytimematch;
+	GtkWidget *scalecaution;
 	gint result;
+
+	show_dialog_settings_custom_entry(NULL, 0);
 
 	dialog = gtk_dialog_new_with_buttons("Settings", data, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "OK", 1, "Cancel", 2, NULL);
 	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+
+	notebook = gtk_notebook_new();
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), notebook, FALSE, FALSE, 3);
+	notebookvbox[0] = gtk_vbox_new(FALSE, 0);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[0], gtk_label_new(language==0?"Level":(language==1?_T("棋力"):"")));
+	notebookvbox[1] = gtk_vbox_new(FALSE, 0);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[1], gtk_label_new(language==0?"Style":(language==1?_T("棋风"):"")));
+
 	labeltimeturn[0] = gtk_label_new(language==0?"Turn:":(language==1?_T("步时:"):""));
 	entrytimeturn = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrytimeturn), 6);
@@ -1088,12 +1325,30 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_entry_set_text(GTK_ENTRY(entrytimematch), text);
 	labeltimematch[1] = gtk_label_new(language==0?"s  ":(language==1?_T("秒  "):""));
 
+	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimeturn);
+	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimematch);
+
 	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language==0?"4 dan":(language==1?_T("职业四段"):""));
 	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language==0?"3 dan":(language==1?_T("职业三段"):""));
 	radiolevel[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[1])), language==0?"2 dan":(language==1?_T("职业二段"):""));
 	radiolevel[3] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[2])), language==0?"1 dan":(language==1?_T("职业一段"):""));
 	radiolevel[4] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[3])), language==0?"Custom Level":(language==1?_T("自定义"):""));
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[levelchoice]),TRUE);
+	radiolevel[5] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[4])), language==0?"6 dan (Slow)":(language==1?_T("职业六段(慢)"):""));
+	radiolevel[6] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[5])), language==0?"9 dan (Very Slow)":(language==1?_T("职业九段(很慢)"):""));
+	radiolevel[7] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[6])), language==0?"Meijin (Extremely Slow)":(language==1?_T("名人(极慢)"):""));
+
+	g_signal_connect(G_OBJECT(radiolevel[0]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
+	g_signal_connect(G_OBJECT(radiolevel[1]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
+	g_signal_connect(G_OBJECT(radiolevel[2]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
+	g_signal_connect(G_OBJECT(radiolevel[3]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
+	g_signal_connect(G_OBJECT(radiolevel[4]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)1);
+	g_signal_connect(G_OBJECT(radiolevel[5]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
+	g_signal_connect(G_OBJECT(radiolevel[6]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
+	g_signal_connect(G_OBJECT(radiolevel[7]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
+
+	if(levelchoice != 4) show_dialog_settings_custom_entry(widget, (gpointer)0);
+	
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[levelchoice]), TRUE);
 
 	hbox[0] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[0]), labeltimeturn[0], FALSE, FALSE, 3);
@@ -1103,13 +1358,28 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(hbox[0]), entrytimematch, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[0]), labeltimematch[1], FALSE, FALSE, 3);
 
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), radiolevel[4], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), hbox[0], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), radiolevel[0], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), radiolevel[1], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), radiolevel[2], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), radiolevel[3], FALSE, FALSE, 3);
-	
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[4], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), hbox[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[7], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[6], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[5], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[1], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[2], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[3], FALSE, FALSE, 3);
+
+	scalecaution = gtk_hscale_new_with_range(0, 2, 1);
+	//gtk_scale_set_value_pos(GTK_SCALE(scalecaution), GTK_POS_LEFT);
+	gtk_range_set_value(GTK_RANGE(scalecaution), cautionfactor);
+	gtk_widget_set_size_request(scalecaution, 100, -1);
+
+	hbox[1] = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Rash":(language==1?_T("冒进"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[1]), scalecaution, FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":(language==1?_T("谨慎"):"")), FALSE, FALSE, 3);
+
+	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[1], FALSE, FALSE, 3);
+
 	gtk_widget_show_all(dialog);
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch(result)
@@ -1156,7 +1426,21 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				{
 					set_level(3);
 				}
+				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[5])))
+				{
+					set_level(5);
+				}
+				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[6])))
+				{
+					set_level(6);
+				}
+				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[7])))
+				{
+					set_level(7);
+				}
 			}
+
+			set_cautionfactor((int)(gtk_range_get_value(GTK_RANGE(scalecaution))+1e-8));
 			break;
 		case 2:
 			break;
@@ -1294,7 +1578,7 @@ void show_dialog_about(GtkWidget *widget, gpointer data)
 	name = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(name), "<big><b>Yixin Board</b></big>");
 	version = gtk_label_new("Version "VERSION);
-	author = gtk_label_new("(C)2009-2013 Sun Kai");
+	author = gtk_label_new("(C)2009-2014 Sun Kai");
 	www = gtk_label_new("www.aiexp.info");
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), icon, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), name, FALSE, FALSE, 3);
@@ -1442,14 +1726,86 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			printf_log(" help\n");
 			printf_log(" clear\n");
-			printf_log(" putpos\n");
+			printf_log(" rotate [90,180,270]\n");
+			printf_log(" flip [/,\\,-,|]\n");
 			printf_log(" getpos\n");
+			printf_log(" putpos\n");
+			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1?"例":"Example");
 		}
 		else if(strncmp(command, "clear", 5) == 0)
 		{
 			GtkTextIter _start, _end;
 			gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &_start, &_end);
 			gtk_text_buffer_delete(buffertextlog, &_start, &_end);
+		}
+		else if(strncmp(command, "rotate", 6) == 0)
+		{
+			int p = piecenum;
+			int j, k = 1;
+			if(strlen(command) >= 8)
+			{
+				if(command[7] == '9') k = 1;
+				else if(command[7] == '1') k = 2;
+				else if(command[7] == '2') k = 3;
+			}
+			refreshboardflag = 0;
+			for(j=0; j<k; j++)
+			{
+				for(i=0; i<p; i++)
+				{
+					int _x, _y, x, y;
+					_y = movepath[i] / boardsize;
+					_x = movepath[i] % boardsize;
+					y = _x;
+					x = boardsize - 1 - _y;
+					movepath[i] = y*boardsize + x;
+				}
+			}
+			new_game(NULL, NULL);
+			for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
+			show_forbid();
+		}
+		else if(strncmp(command, "flip", 4) == 0)
+		{
+			int p = piecenum;
+			int k = 0;
+			if(strlen(command) >= 6)
+			{
+				if(command[5] == '-') k = 0;
+				else if(command[5] == '|') k = 1;
+				else if(command[5] == '/') k = 2;
+				else if(command[5] == '\\') k = 3;
+			}
+			refreshboardflag = 0;
+			for(i=0; i<p; i++)
+			{
+				int _x, _y, x, y;
+				_y = movepath[i] / boardsize;
+				_x = movepath[i] % boardsize;
+				switch(k)
+				{
+				case 0:
+					y = boardsize - 1 - _y;
+					x = _x;
+					break;
+				case 1:
+					y = _y;
+					x = boardsize - 1 - _x;
+					break;
+				case 2:
+					y = boardsize - 1 - _y;
+					x = boardsize - 1 - _x;
+					break;
+				case 3:
+					y = _x;
+					x = _y;
+					break;
+				}
+				movepath[i] = y*boardsize + x;
+			}
+			new_game(NULL, NULL);
+			for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
+			show_forbid();
 		}
 		else if(strncmp(command, "putpos", 6) == 0)
 		{
@@ -1512,9 +1868,10 @@ void yixin_quit()
 		fprintf(out, "%d\t;openbook (0:not use, 1:use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0:no, 1:yes)\n", computerside&1);
 		fprintf(out, "%d\t;computer play white (0:no, 1:yes)\n", computerside>>1);
-		fprintf(out, "%d\t;level(0: 4dan, 1:3dan, 2:2dan, 3:1dan, 4:customelevel)\n", levelchoice);
+		fprintf(out, "%d\t;level(0: 4dan, 1:3dan, 2:2dan, 3:1dan, 5:6dan, 6:9dan, 7: meijin, 4:customelevel)\n", levelchoice);
 		fprintf(out, "%d\t;time limit(turn)\n", timeoutturn/1000);
 		fprintf(out, "%d\t;time limit(match)\n", timeoutmatch/1000);
+		fprintf(out, "%d\t;style(rash 0 ~ 2 cautious)\n", cautionfactor);
 		fclose(out);
 	}
 	gtk_main_quit();
@@ -1563,6 +1920,7 @@ void create_windowmain()
 	GtkWidget *menuitemgame, *menuitemplayers, *menuitemview, *menuitemhelp;
 	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemopenbook, *menuitemquit, *menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5, *menuitemnewrule[10];
 	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemsettings;
+	//GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemchinese;
 	GtkWidget *menuitemnumeration, *menuitemlog;
 	GtkWidget *menuitemabout;
 
@@ -1910,14 +2268,19 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemcomputerplayswhite), "activate", G_CALLBACK(change_side), (gpointer)2);
 
 	toolbar = gtk_toolbar_new();
-	gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_ICONS);
-	//gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH);
+	//gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_ICONS);
+	gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH);
 	gtk_toolbar_set_orientation((GtkToolbar*)toolbar, GTK_ORIENTATION_VERTICAL);
 	toolgofirst = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_FIRST);
+	gtk_tool_button_set_label(toolgofirst, language==0 ? "Undo All": _T("首步"));
 	toolgoback = gtk_tool_button_new_from_stock(GTK_STOCK_GO_BACK);
+	gtk_tool_button_set_label(toolgoback, language==0 ? "Undo": _T("前一步"));
 	toolgoforward = gtk_tool_button_new_from_stock(GTK_STOCK_GO_FORWARD);
+	gtk_tool_button_set_label(toolgoforward, language==0 ? "Redo": _T("后一步"));
 	toolgolast = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_LAST);
+	gtk_tool_button_set_label(toolgolast, language==0 ? "Redo All": _T("末步"));
 	toolstop = gtk_tool_button_new_from_stock(GTK_STOCK_STOP);
+	gtk_tool_button_set_label(toolstop, language==0 ? "Stop": _T("立即出招"));
 	
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgofirst, -1);
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgoback, -1);
@@ -2168,11 +2531,13 @@ void load_setting()
 		t = read_int_from_file(in);
 		if(t == 1) computerside |= 2;
 		levelchoice = read_int_from_file(in);
-		if(levelchoice < 0 || levelchoice > 4) levelchoice = 4;
+		if(levelchoice < 0 || levelchoice > 7) levelchoice = 4;
 		timeoutturn = read_int_from_file(in) * 1000;
 		if(timeoutturn <= 0 || timeoutturn > 1000000000) timeoutturn = 5000;
 		timeoutmatch = read_int_from_file(in) * 1000;
 		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 1000000;
+		cautionfactor = read_int_from_file(in);
+		if(cautionfactor < 0 || cautionfactor > 2) cautionfactor = 0;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", boardsize);
@@ -2228,6 +2593,7 @@ void init_engine()
 	sprintf(command, "START %d\n", boardsize);
 	send_command(command);
 	set_level(levelchoice);
+	set_cautionfactor(cautionfactor);
 }
 int main(int argc, char** argv)  
 {
