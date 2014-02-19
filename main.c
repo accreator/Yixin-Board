@@ -55,6 +55,7 @@ GdkPixbuf *pixbufboardnumber[9][7][MAX_SIZE*MAX_SIZE+1][2];
 int imgtypeboard[MAX_SIZE][MAX_SIZE];
 char piecepicname[80] = "piece.bmp";
 /* log */
+GtkWidget *textlog;
 GtkTextBuffer *buffertextlog, *buffertextcommand;
 GtkWidget *scrolledtextlog, *scrolledtextcommand;
 
@@ -111,6 +112,11 @@ void print_log(char *text)
 	}
 	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
 	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buffertextlog), &end, text, strlen(text));
+
+	/*
+	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
+	gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(textlog), &end, 0, FALSE, 0, 0);
+	*/
 
 	adj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledtextlog));
 	gtk_adjustment_set_value(adj, gtk_adjustment_get_upper(adj) - gtk_adjustment_get_lower(adj));
@@ -1704,6 +1710,30 @@ void stop_thinking(GtkWidget *widget, gpointer data)
 	send_command(command);
 }
 
+void start_thinking(GtkWidget *widget, gpointer data)
+{
+	GdkEventButton event;
+	GdkWindowEdge edge;
+	if(isthinking) return;
+	if(piecenum%2 == 1 && (computerside & 1))
+		change_side_menu(-1, NULL);
+	if(piecenum%2 == 0 && (computerside & 2))
+		change_side_menu(-2, NULL);
+	if(piecenum%2 == 0 && computerside == 0)
+		change_side_menu(1, NULL);
+	if(piecenum%2 == 1 && computerside == 0)
+		change_side_menu(2, NULL);
+	event.type = GDK_BUTTON_PRESS;
+	event.button = 1;
+	event.x = imageboard[0][0]->allocation.x;
+	event.y = imageboard[0][0]->allocation.y;
+	on_button_press_windowmain(widget, &event, edge);
+	if(computerside == 1)
+		change_side_menu(-1, NULL);
+	if(computerside == 2)
+		change_side_menu(-2, NULL);
+}
+
 gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 {
 	GtkTextIter start, end;
@@ -1925,9 +1955,8 @@ void create_windowmain()
 	GtkWidget *menuitemabout;
 
 	GtkWidget *toolbar;
-	GtkToolItem *toolgofirst, *toolgoback, *toolgoforward, *toolgolast, *toolstop;
+	GtkToolItem *toolgofirst, *toolgoback, *toolgoforward, *toolgolast, *toolstop, *toolplay;
 
-	GtkWidget *textlog;
 	GtkWidget *textcommand;
 
 	GtkWidget *labellog, *labelcommand;
@@ -2281,18 +2310,22 @@ void create_windowmain()
 	gtk_tool_button_set_label(toolgolast, language==0 ? "Redo All": _T("末步"));
 	toolstop = gtk_tool_button_new_from_stock(GTK_STOCK_STOP);
 	gtk_tool_button_set_label(toolstop, language==0 ? "Stop": _T("立即出招"));
-	
+	toolplay = gtk_tool_button_new_from_stock(GTK_STOCK_EXECUTE);
+	gtk_tool_button_set_label(toolplay, language==0 ? "Play": _T("计算"));
+
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgofirst, -1);
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgoback, -1);
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgoforward, -1);
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgolast, -1);
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolstop, -1);
+	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolplay, -1);
 
 	g_signal_connect(G_OBJECT(toolgofirst), "clicked", G_CALLBACK(change_piece), (gpointer)0);
 	g_signal_connect(G_OBJECT(toolgoback), "clicked", G_CALLBACK(change_piece), (gpointer)1);
 	g_signal_connect(G_OBJECT(toolgoforward), "clicked", G_CALLBACK(change_piece), (gpointer)2);
 	g_signal_connect(G_OBJECT(toolgolast), "clicked", G_CALLBACK(change_piece), (gpointer)3);
 	g_signal_connect(G_OBJECT(toolstop), "clicked", G_CALLBACK(stop_thinking), NULL);
+	g_signal_connect(G_OBJECT(toolplay), "clicked", G_CALLBACK(start_thinking), NULL);
 
 	textlog = gtk_text_view_new();
 	buffertextlog = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textlog));
@@ -2304,7 +2337,7 @@ void create_windowmain()
 	buffertextcommand = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textcommand));
 	scrolledtextcommand = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolledtextcommand), textcommand);
-	gtk_widget_set_size_request(scrolledtextlog, 400, 200);
+	//gtk_widget_set_size_request(scrolledtextcommand, 400, 100);
 	g_signal_connect(textcommand, "key-release-event", G_CALLBACK(key_command), NULL);
 
 	vbox[0] = gtk_vbox_new(FALSE, 0);
