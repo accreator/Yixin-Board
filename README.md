@@ -3,7 +3,7 @@ Yixin-Board
 
 Special-designed GUI for Yixin
 
-To run Yixin Board, you need GTK+ environment.
+Now GTK+ environment has been integrated with Yixin-Board. However, to run old versions of Yixin-Board, you may need to install GTK+ environment manually.
   
   * For windows, I recommend gtk-2.16.0(http://downloads.sourceforge.net/gtk-win/gtk2-runtime-2.16.0-2009-03-22-ash.exe?download), because many other GTK+ runtime environments lost the file named "gspawn-win32-helper-console.exe" or report warning about fonts.
   
@@ -24,7 +24,7 @@ For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@g
 
 为弈心引擎设计的图形用户界面
 
-弈心界面程序采用GTK+编写，因而需要用户安装GTK+环境。
+GTK+运行库已与最新的弈心界面程序整合。然而，如果用户要运行老版本的弈心界面程序，用户需手动安装GTK+运行库。
 
   * 对于windows用户，推荐安装gtk-2.16.0(http://downloads.sourceforge.net/gtk-win/gtk2-runtime-2.16.0-2009-03-22-ash.exe?download)。
   
