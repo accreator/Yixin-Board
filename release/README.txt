@@ -34,7 +34,7 @@ For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@g
 中文版本
 
 运行环境要求：
-GTK2运行库/512MB内存/32位真彩色
+512MB内存/32位真彩色
 
 常见问题：
 问：如何改变棋盘大小？
