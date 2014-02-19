@@ -1,12 +1,9 @@
 ﻿English Version
 
 System Requirements:
-GTK2 runtime environment/512MB RAM/32-bit video display adapter(True color)
+512MB RAM/32-bit video display adapter(True color)
 
 FAQ:
-Q: How to use Yixin?
-A: Step1. Setup gtk2 runtime environment if you have not installed it(gtk2-runtime-2.16.0.exe).
-   Step2. Run Yixin.exe
 Q: How to change the size of board?
 A: Change the first line of "settings.txt" with the new size of board you want.
 Q: How to change the language of GUI?
@@ -40,8 +37,6 @@ For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@g
 GTK2运行库/512MB内存/32位真彩色
 
 常见问题：
-问：如何使用Yixin?
-答：首先确定是否安装了GTK运行库(gtk2-runtime-2.16.0.exe)，在此基础上，运行Yixin.exe。
 问：如何改变棋盘大小？
 答：修改settings.txt中的第一行。
 问：如何修改界面语言？
@@ -67,4 +62,4 @@ piece.bmp
 piece_N.bmp
 	对于NxN棋盘的贴图设定
 
-更多信息，请参见 www.aiexp.info 或通过e-mail联系我：sunkaicn@gmail.com
+更多信息，请参见www.aiexp.info或通过e-mail联系我：sunkaicn@gmail.com
