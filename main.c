@@ -1208,7 +1208,7 @@ void set_level(int x)
 		send_command(command);
 		sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 		send_command(command);
-		sprintf(command, "INFO max_node %d\n", 1000000000);
+		sprintf(command, "INFO max_node %d\n", 1000000000); //now it should not be -1
 		send_command(command);
 	}
 	else
@@ -1241,6 +1241,10 @@ void set_level(int x)
 				break;
 			case 7:
 				sprintf(command, "INFO max_node %d\n", 500000000);
+				send_command(command);
+				break;
+			case 8:
+				sprintf(command, "INFO max_node %d\n", -1);
 				send_command(command);
 				break;
 		}
@@ -1299,7 +1303,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *notebook;
 	GtkWidget *notebookvbox[2];
 	GtkWidget *hbox[2];
-	GtkWidget *radiolevel[8];
+	GtkWidget *radiolevel[9];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2];
 	GtkWidget *entrytimeturn, *entrytimematch;
 	GtkWidget *scalecaution;
@@ -1342,6 +1346,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	radiolevel[5] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[4])), language==0?"6 dan (Slow)":(language==1?_T("职业六段(慢)"):""));
 	radiolevel[6] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[5])), language==0?"9 dan (Very Slow)":(language==1?_T("职业九段(很慢)"):""));
 	radiolevel[7] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[6])), language==0?"Meijin (Extremely Slow)":(language==1?_T("名人(极慢)"):""));
+	radiolevel[8] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[7])), language==0?"Unlimited Time":(language==1?_T("不限时"):""));
 
 	g_signal_connect(G_OBJECT(radiolevel[0]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
 	g_signal_connect(G_OBJECT(radiolevel[1]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
@@ -1351,6 +1356,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	g_signal_connect(G_OBJECT(radiolevel[5]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
 	g_signal_connect(G_OBJECT(radiolevel[6]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
 	g_signal_connect(G_OBJECT(radiolevel[7]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
+	g_signal_connect(G_OBJECT(radiolevel[8]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
 
 	if(levelchoice != 4) show_dialog_settings_custom_entry(widget, (gpointer)0);
 	
@@ -1373,6 +1379,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[1], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[2], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[3], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[8], FALSE, FALSE, 3);
 
 	scalecaution = gtk_hscale_new_with_range(0, 2, 1);
 	//gtk_scale_set_value_pos(GTK_SCALE(scalecaution), GTK_POS_LEFT);
@@ -1443,6 +1450,10 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[7])))
 				{
 					set_level(7);
+				}
+				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[8])))
+				{
+					set_level(8);
 				}
 			}
 
@@ -1898,7 +1909,7 @@ void yixin_quit()
 		fprintf(out, "%d\t;openbook (0:not use, 1:use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0:no, 1:yes)\n", computerside&1);
 		fprintf(out, "%d\t;computer play white (0:no, 1:yes)\n", computerside>>1);
-		fprintf(out, "%d\t;level(0: 4dan, 1:3dan, 2:2dan, 3:1dan, 5:6dan, 6:9dan, 7: meijin, 4:customelevel)\n", levelchoice);
+		fprintf(out, "%d\t;level(0: 4dan, 1:3dan, 2:2dan, 3:1dan, 5:6dan, 6:9dan, 7: meijin, 8: unlimited time 4:customelevel)\n", levelchoice);
 		fprintf(out, "%d\t;time limit(turn)\n", timeoutturn/1000);
 		fprintf(out, "%d\t;time limit(match)\n", timeoutmatch/1000);
 		fprintf(out, "%d\t;style(rash 0 ~ 2 cautious)\n", cautionfactor);
@@ -2564,7 +2575,7 @@ void load_setting()
 		t = read_int_from_file(in);
 		if(t == 1) computerside |= 2;
 		levelchoice = read_int_from_file(in);
-		if(levelchoice < 0 || levelchoice > 7) levelchoice = 4;
+		if(levelchoice < 0 || levelchoice > 8) levelchoice = 4;
 		timeoutturn = read_int_from_file(in) * 1000;
 		if(timeoutturn <= 0 || timeoutturn > 1000000000) timeoutturn = 5000;
 		timeoutmatch = read_int_from_file(in) * 1000;
