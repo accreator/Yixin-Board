@@ -3,7 +3,7 @@ Yixin-Board
 
 Special-designed GUI for Yixin
 
-To run Yixin Board, you need GTK+ environment.
+Now GTK+ environment has been integrated with Yixin-Board. However, to run old versions of Yixin-Board, you may need to install GTK+ environment manually.
   
   * For windows, I recommend gtk-2.16.0(http://downloads.sourceforge.net/gtk-win/gtk2-runtime-2.16.0-2009-03-22-ash.exe?download), because many other GTK+ runtime environments lost the file named "gspawn-win32-helper-console.exe" or report warning about fonts.
   
@@ -17,6 +17,8 @@ Features:
   
   * Although Yixin Board is designed for Yixin, it also supports engines (Tito, for example) which are compatible with Yixin's protocol.
 
+Because Gomocup protocol has some limitation, Yixin-Board uses a new protocol which modifies and extends Gomocup protocol. The new protocol is described in https://github.com/accreator/Yixin-protocol .
+
 For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@gmail.com
 
 弈心界面程序
@@ -24,7 +26,7 @@ For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@g
 
 为弈心引擎设计的图形用户界面
 
-弈心界面程序采用GTK+编写，因而需要用户安装GTK+环境。
+GTK+运行库已与最新的弈心界面程序整合。然而，如果用户要运行老版本的弈心界面程序，用户需手动安装GTK+运行库。
 
   * 对于windows用户，推荐安装gtk-2.16.0(http://downloads.sourceforge.net/gtk-win/gtk2-runtime-2.16.0-2009-03-22-ash.exe?download)。
   
@@ -37,6 +39,8 @@ For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@g
   * 开源（基于Simplified BSD协议）
   
   * 尽管本程序最初是为弈心设计的，它也支持与弈心协议兼容的引擎，如你可以在无禁规则下使用Tito等引擎。
+
+因为Gomocup协议有部分局限，弈心界面程序采用了一套修改并扩充于Gomocup协议的新协议。新协议的描述可见于 https://github.com/accreator/Yixin-protocol
 
 为什么开源？
 
