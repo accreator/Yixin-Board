@@ -178,6 +178,13 @@ int printf_log(char *fmt, ...)
 				i += 5;
 				continue;
 			}
+			if(strncmp(buffer+i, "BLOCK", 5) == 0)
+			{
+				strcpy(p, "ÅÅ³ý");
+				p += 4;
+				i += 5;
+				continue;
+			}
 			if(strncmp(buffer+i, "NODE", 4) == 0)
 			{
 				strcpy(p, "½áµãÊý");
@@ -1772,6 +1779,9 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" getpos\n");
 			printf_log(" putpos\n");
 			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1?"Àý":"Example");
+			printf_log(" block\n");
+			printf_log("   %s: block h8\n", language==1?"Àý":"Example");
+			printf_log(" block reset\n");
 		}
 		else if(strncmp(command, "clear", 5) == 0)
 		{
@@ -1880,6 +1890,33 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				printf_log("%c%d", movepath[i]%boardsize+'a', boardsize-1-movepath[i]/boardsize+1);
 			}
 			printf_log("\n");
+		}
+		else if(strncmp(command, "block reset", 11) == 0)
+		{
+			send_command("yxblockreset\n");
+		}
+		else if(strncmp(command, "block", 5) == 0)
+		{
+			gchar _command[80];
+			do
+			{
+				int x, y;
+				if(command[6] >= 'a' && command[6] <= 'z') command[6] = command[6] - 'a' + 'A';
+				if(command[6] < 'A' || command[6] > 'Z') break;
+				x = command[6] - 'A';
+				y = command[7] - '0';
+				if(command[8] >= '0' && command[8] <= '9')
+				{
+					y = y*10 + command[8] - '0';
+				}
+				y --;
+				if(x<0 || x>=boardsize || y<0 || y>=boardsize) break;
+				send_command("yxblock\n");
+				//printf_log("block %d %d\n", x, y);
+				sprintf(_command, "%d,%d\n", boardsize-1-y, x);
+				send_command(_command);
+				send_command("done\n");
+			} while(0);
 		}
 		else
 		{
