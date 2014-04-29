@@ -1912,11 +1912,14 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				y --;
 				if(x<0 || x>=boardsize || y<0 || y>=boardsize) break;
 				send_command("yxblock\n");
-				//printf_log("block %d %d\n", x, y);
 				sprintf(_command, "%d,%d\n", boardsize-1-y, x);
 				send_command(_command);
 				send_command("done\n");
 			} while(0);
+		}
+		else if(strncmp(command, "makebook", 8) == 0)
+		{
+			; //TODO
 		}
 		else
 		{
