@@ -33,6 +33,9 @@ int board[MAX_SIZE][MAX_SIZE];
 int boardnumber[MAX_SIZE][MAX_SIZE];
 int movepath[MAX_SIZE*MAX_SIZE];
 int forbid[MAX_SIZE][MAX_SIZE];
+int boardblock[MAX_SIZE][MAX_SIZE];
+int boardbest[MAX_SIZE][MAX_SIZE];
+int boardlose[MAX_SIZE][MAX_SIZE];
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
 int useopenbook = 1;
@@ -50,8 +53,8 @@ GtkWidget *tableboard;
 GtkWidget *imageboard[MAX_SIZE][MAX_SIZE];
 GtkWidget *labelboard[2][MAX_SIZE];
 GtkWidget *vboxwindowmain;
-GdkPixbuf *pixbufboard[9][7];
-GdkPixbuf *pixbufboardnumber[9][7][MAX_SIZE*MAX_SIZE+1][2];
+GdkPixbuf *pixbufboard[9][11];
+GdkPixbuf *pixbufboardnumber[9][11][MAX_SIZE*MAX_SIZE+1][2];
 int imgtypeboard[MAX_SIZE][MAX_SIZE];
 char piecepicname[80] = "piece.bmp";
 /* log */
@@ -338,6 +341,12 @@ void refresh_board()
 			{
 				int f = 0;
 				if(inforule == 2 && (computerside&1)==0 && piecenum%2==0 && forbid[i][j] && isgameover==0 && isthinking==0) f = 2;
+				if(f == 0)
+				{
+					if(boardblock[i][j]) f = 10;
+					else if(boardlose[i][j]) f = 7;
+					else if(boardbest[i][j]) f = 8;
+				}
 				if(imgtypeboard[i][j] <= 8)
 					gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), pixbufboard[imgtypeboard[i][j]][max(0, f)]);
 				else
@@ -381,6 +390,18 @@ void refresh_board()
 			}
 		}
 	}
+	/*
+	for(i=0; i<boardsize; i++)
+	{
+		for(j=0; j<boardsize; j++)
+		{
+			if(i <= 8 && j <= 10)
+			{
+				gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), pixbufboard[i][j]);
+			}
+		}
+	}
+	*/
 }
 int is_legal_move(int y, int x)
 {
@@ -400,6 +421,10 @@ void make_move(int y, int x)
 
 	piecenum ++;
 	if(piecenum == boardsize*boardsize) isgameover = 1;
+
+	memset(boardbest, 0, sizeof(boardbest));
+	memset(boardlose, 0, sizeof(boardlose));
+	
 	refresh_board();
 	for(i=0; i<8; i+=2)
 	{
@@ -1624,6 +1649,8 @@ void new_game(GtkWidget *widget, gpointer data)
 	timeused = 0;
 	memset(board, 0, sizeof(board));
 	memset(forbid, 0, sizeof(forbid));
+	memset(boardbest, 0, sizeof(boardbest));
+	memset(boardlose, 0, sizeof(boardlose));
 	refresh_board();
 	if(isthinking) isneedomit ++;
 	isthinking = 0;
@@ -1894,6 +1921,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		else if(strncmp(command, "block reset", 11) == 0)
 		{
 			send_command("yxblockreset\n");
+			memset(boardblock, 0, sizeof(boardblock));
+			refresh_board();
 		}
 		else if(strncmp(command, "block", 5) == 0)
 		{
@@ -1915,6 +1944,9 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				sprintf(_command, "%d,%d\n", boardsize-1-y, x);
 				send_command(_command);
 				send_command("done\n");
+
+				boardblock[boardsize-1-y][x] = 1;
+				refresh_board();
 			} while(0);
 		}
 		else if(strncmp(command, "makebook", 8) == 0)
@@ -2038,7 +2070,7 @@ void create_windowmain()
 	sample = gdk_pixbuf_get_bits_per_sample(pixbuf);
 	alpha = gdk_pixbuf_get_has_alpha(pixbuf);
 	colorspace = gdk_pixbuf_get_colorspace(pixbuf);
-	background = gdk_pixbuf_new_subpixbuf(pixbuf, size*9, 3, 1, 1);
+	background = gdk_pixbuf_new_subpixbuf(pixbuf, size*13, 3, 1, 1);
 	pixbufboard[0][0] = copy_subpixbuf(pixbuf, 0, 0, size, size);
 	channels = gdk_pixbuf_get_n_channels(pixbufboard[0][0]);
 	rowstride = gdk_pixbuf_get_rowstride(pixbufboard[0][0]);
@@ -2160,6 +2192,34 @@ void create_windowmain()
 			pbt = copy_subpixbuf(pixbuf, size*5, 0, size, size);
 			pixbufboard[i][j] = gdk_pixbuf_new(colorspace, alpha, sample, size, size);
 			pixels1 = gdk_pixbuf_get_pixels(pixbufboard[i][j-2]);
+			pixels2 = gdk_pixbuf_get_pixels(pbt);
+			pixels3 = gdk_pixbuf_get_pixels(background);
+			pixels4 = gdk_pixbuf_get_pixels(pixbufboard[i][j]);
+			for(k=0; k<size; k++)
+			{
+				for(l=0; l<size; l++)
+				{
+					guchar *p1, *p2, *p3, *p4;
+					p1 = pixels1 + k*rowstride + l*channels;
+					p2 = pixels2 + k*rowstride + l*channels;
+					p3 = pixels3;
+					p4 = pixels4 + k*rowstride + l*channels;
+					if(memcmp(p2, p3, channels) != 0)
+						memcpy(p4, p2, channels);
+					else
+						memcpy(p4, p1, channels);
+				}
+			}
+			g_object_unref(pbt);
+			pbt = NULL;
+		}
+		for(j=7; j<=10; j++)
+		{
+			GdkPixbuf *pbt;
+			guchar *pixels1, *pixels2, *pixels3, *pixels4;
+			pbt = copy_subpixbuf(pixbuf, size*(j+2), 0, size, size);
+			pixbufboard[i][j] = gdk_pixbuf_new(colorspace, alpha, sample, size, size);
+			pixels1 = gdk_pixbuf_get_pixels(pixbufboard[i][0]);
 			pixels2 = gdk_pixbuf_get_pixels(pbt);
 			pixels3 = gdk_pixbuf_get_pixels(background);
 			pixels4 = gdk_pixbuf_get_pixels(pixbufboard[i][j]);
@@ -2434,6 +2494,27 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 		{
 			printf_log("%s", string);
 			g_free(string);
+			continue;
+		}
+		if(strncmp(string, "MESSAGE REALTIME", 16) == 0)
+		{
+			char *p = string + 16 + 1;
+			if(*p == 'B') //"BEST"
+			{
+				p += 5;
+				sscanf(p, "%d,%d", &y, &x);
+				//printf_log("%d,%d\n", y, x);
+				memset(boardbest, 0, sizeof(boardbest));
+				boardbest[y][x] = 1;
+				refresh_board();
+			}
+			else if(*p == 'L') //"LOSE"
+			{
+				p += 5;
+				sscanf(p, "%d,%d", &y, &x);
+				boardlose[y][x] = 1;
+				refresh_board();
+			}
 			continue;
 		}
 		if(strncmp(string, "MESSAGE", 7) == 0)
