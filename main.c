@@ -21,6 +21,7 @@ int openbooknum = 0;
 int zobristflag = 1;
 I64 zobrist[MAX_SIZE][MAX_SIZE][3];
 int boardsize = 15;
+int rboardsize = 15;
 int inforule = 0;
 int specialrule = 0;
 int timeoutturn = 5000;
@@ -45,6 +46,7 @@ int shownumber = 1;
 int showlog = 1;
 int showanalysis = 1;
 int language = 0; /* 0: English 1: Chinese */
+int rlanguage = 0;
 int movx[8] = {  0,  0,  1, -1,  1,  1, -1, -1}; /* 顺序与检测胜负的函数有关 */
 int movy[8] = {  1, -1,  0,  0,  1, -1,  1, -1}; 
 /* engine */
@@ -1823,6 +1825,10 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: block h8\n", language==1?"例":"Example");
 			printf_log(" block reset\n");
 			printf_log(" bestline\n");
+			printf_log(" boardsize\n");
+			printf_log("   %s: boardsize 15\n", language==1?"例":"Example");
+			printf_log(" language [en,cn]\n");
+			printf_log("   %s: language en\n", language==1?"例":"Example");
 		}
 		else if(strncmp(command, "clear", 5) == 0)
 		{
@@ -1967,6 +1973,37 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			printf_log("BESTLINE: %s\n", bestline);
 		}
+		else if(strncmp(command, "boardsize", 9) == 0)
+		{
+			int s;
+			s = (command[10] - '0')*10 + (command[11] - '0');
+			if(s < 10 || s > 20)
+			{
+				printf_log(language==0?"Sorry, board size should be 10~20.\n":"抱歉，棋盘大小范围应在10~20。\n");
+			}
+			else
+			{
+				rboardsize = s;
+				printf_log(language==0?"Board size will be %d after you restart Yixin.\n":"在重启Yixin后棋盘大小将变为%d。\n", s);
+			}
+		}
+		else if(strncmp(command, "language", 8) == 0)
+		{
+			if(command[9] == 'c' || command[9] == 'C')
+			{
+				rlanguage = 1;
+				printf_log(language==0?"Language will be Chinese after you restart Yixin.\n":"在重启Yixin后语言将设定为中文。\n");
+			}
+			else if(command[9] == 'e' || command[9] == 'E')
+			{
+				rlanguage = 0;
+				printf_log(language==0?"Language will be English after you restart Yixin.\n":"在重启Yixin后语言将设定为英文。\n");
+			}
+			else
+			{
+				printf_log(language==0?"Sorry, language should be Chinese[cn] or English[en].\n":"抱歉，语言应为中文[cn]或英文[en]。\n");
+			}
+		}
 		else if(strncmp(command, "makebook", 8) == 0)
 		{
 			; //TODO
@@ -1993,8 +2030,8 @@ void yixin_quit()
 	FILE *out;
 	if((out = fopen("settings.txt", "w")) != NULL)
 	{
-		fprintf(out, "%d\t;board size (10 ~ 20)\n", boardsize);
-		fprintf(out, "%d\t;language (0: English, 1: Chinese)\n", language);
+		fprintf(out, "%d\t;board size (10 ~ 20)\n", rboardsize);
+		fprintf(out, "%d\t;language (0: English, 1: Chinese)\n", rlanguage);
 		fprintf(out, "%d\t;rule (0:freestyle, 1:standard, 2:free renju, 3:swap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
 		fprintf(out, "%d\t;openbook (0:not use, 1:use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0:no, 1:yes)\n", computerside&1);
@@ -2706,6 +2743,8 @@ void load_setting()
 		boardsize = read_int_from_file(in);
 		if(boardsize > MAX_SIZE || boardsize < 5) boardsize = 15;
 		language = read_int_from_file(in);
+		rboardsize = boardsize;
+		rlanguage = language;
 		if(language < 0 || language > 1) language = 0;
 		inforule = read_int_from_file(in);
 		if(inforule < 0 || inforule > 4) inforule = 0;
