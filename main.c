@@ -38,6 +38,7 @@ int boardbest[MAX_SIZE][MAX_SIZE];
 int boardlose[MAX_SIZE][MAX_SIZE];
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
+char bestline[MAX_SIZE*MAX_SIZE*5+1] = "";
 int useopenbook = 1;
 int levelchoice = 4;
 int shownumber = 1;
@@ -425,6 +426,8 @@ void make_move(int y, int x)
 
 	piecenum ++;
 	if(piecenum == boardsize*boardsize) isgameover = 1;
+
+	memset(bestline, 0, sizeof(bestline));
 
 	memset(boardbest, 0, sizeof(boardbest));
 	memset(boardlose, 0, sizeof(boardlose));
@@ -1653,6 +1656,7 @@ void new_game(GtkWidget *widget, gpointer data)
 	timeused = 0;
 	memset(board, 0, sizeof(board));
 	memset(forbid, 0, sizeof(forbid));
+	memset(bestline, 0, sizeof(bestline));
 	memset(boardbest, 0, sizeof(boardbest));
 	memset(boardlose, 0, sizeof(boardlose));
 	refresh_board();
@@ -1818,6 +1822,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" block\n");
 			printf_log("   %s: block h8\n", language==1?"Àý":"Example");
 			printf_log(" block reset\n");
+			printf_log(" bestline\n");
 		}
 		else if(strncmp(command, "clear", 5) == 0)
 		{
@@ -1957,6 +1962,10 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				boardblock[boardsize-1-y][x] = 1;
 				refresh_board();
 			} while(0);
+		}
+		else if(strncmp(command, "bestline", 8) == 0)
+		{
+			printf_log("BESTLINE: %s\n", bestline);
 		}
 		else if(strncmp(command, "makebook", 8) == 0)
 		{
@@ -2531,6 +2540,12 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				boardlose[y][x] = 1;
 				refresh_board();
 			}
+			else if(*p == 'P') //"PV"
+			{
+				p += 3;
+				strcpy(bestline, p);
+			}
+			g_free(string);
 			continue;
 		}
 		if(strncmp(string, "MESSAGE", 7) == 0)
