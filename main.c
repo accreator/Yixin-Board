@@ -42,6 +42,7 @@ int useopenbook = 1;
 int levelchoice = 4;
 int shownumber = 1;
 int showlog = 1;
+int showanalysis = 1;
 int language = 0; /* 0: English 1: Chinese */
 int movx[8] = {  0,  0,  1, -1,  1,  1, -1, -1}; /* 顺序与检测胜负的函数有关 */
 int movy[8] = {  1, -1,  0,  0,  1, -1,  1, -1}; 
@@ -344,8 +345,11 @@ void refresh_board()
 				if(f == 0)
 				{
 					if(boardblock[i][j]) f = 10;
-					else if(boardlose[i][j]) f = 7;
-					else if(boardbest[i][j]) f = 8;
+					else if(showanalysis)
+					{
+						if(boardlose[i][j]) f = 7;
+						else if(boardbest[i][j]) f = 8;
+					}
 				}
 				if(imgtypeboard[i][j] <= 8)
 					gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), pixbufboard[imgtypeboard[i][j]][max(0, f)]);
@@ -1711,6 +1715,11 @@ void use_openbook(GtkWidget *widget, gpointer data)
 {
 	useopenbook ^= 1;
 }
+void view_analysis(GtkWidget *widget, gpointer data)
+{
+	showanalysis ^= 1;
+	refresh_board();
+}
 void view_numeration(GtkWidget *widget, gpointer data)
 {
 	shownumber ^= 1;
@@ -2034,7 +2043,7 @@ void create_windowmain()
 	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemopenbook, *menuitemquit, *menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5, *menuitemnewrule[10];
 	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemsettings;
 	//GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemchinese;
-	GtkWidget *menuitemnumeration, *menuitemlog;
+	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis;
 	GtkWidget *menuitemabout;
 
 	GtkWidget *toolbar;
@@ -2308,6 +2317,7 @@ void create_windowmain()
 	menuitemopenbook = gtk_check_menu_item_new_with_label(language==0?"Use Openbook":(language==1?_T("使用开局库"):""));
 	menuitemnumeration = gtk_check_menu_item_new_with_label(language==0?"Numeration":(language==1?_T("显示数字"):""));
 	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":(language==1?_T("显示日志"):""));
+	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":(language==1?_T("显示分析"):""));
 	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":(language==1?_T("退出"):""));
 	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":(language==1?_T("关于"):""));
 	menuitemsettings = gtk_menu_item_new_with_label(language==0?"Settings":(language==1?_T("设置"):""));
@@ -2347,6 +2357,10 @@ void create_windowmain()
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemlog), TRUE);
 	}
+	if(showanalysis)
+	{
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemanalysis), TRUE);
+	}
 	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer plays black":(language==1?_T("计算机执黑"):""));
 	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer plays white":(language==1?_T("计算机执白"):""));
 	if(computerside&1)
@@ -2380,6 +2394,7 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemquit);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemnumeration);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlog);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemanalysis);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplaysblack);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplayswhite);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemsettings);
@@ -2396,6 +2411,7 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemopenbook), "activate", G_CALLBACK(use_openbook), NULL);
 	g_signal_connect(G_OBJECT(menuitemnumeration), "activate", G_CALLBACK(view_numeration), NULL);
 	g_signal_connect(G_OBJECT(menuitemlog), "activate", G_CALLBACK(view_log), NULL);
+	g_signal_connect(G_OBJECT(menuitemanalysis), "activate", G_CALLBACK(view_analysis), NULL);
 	g_signal_connect(G_OBJECT(menuitemquit), "activate", G_CALLBACK(yixin_quit), NULL);
 	g_signal_connect(G_OBJECT(menuitemabout), "activate", G_CALLBACK(show_dialog_about), GTK_WINDOW(windowmain));
 	g_signal_connect(G_OBJECT(menuitemsettings), "activate", G_CALLBACK(show_dialog_settings), GTK_WINDOW(windowmain));
