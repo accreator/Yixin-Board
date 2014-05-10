@@ -45,6 +45,8 @@ int levelchoice = 4;
 int shownumber = 1;
 int showlog = 1;
 int showanalysis = 1;
+int showtoolbarboth = 1;
+int showsmallfont = 0;
 int language = 0; /* 0: English 1: Chinese */
 int rlanguage = 0;
 int movx[8] = {  0,  0,  1, -1,  1,  1, -1, -1}; /* 顺序与检测胜负的函数有关 */
@@ -290,7 +292,7 @@ void show_thanklist()
 	printf_log("\n");
 }
 
-GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color)
+GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color, int type)
 { 
 	GdkPixmap *pm;
 	GdkGC *gc;
@@ -308,11 +310,17 @@ GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color)
 	gtk_widget_realize(scratch);
 	layout = gtk_widget_create_pango_layout(scratch, NULL);
 	gtk_widget_destroy(scratch);
-	sprintf(format, "<big><b><span foreground='%s'>%%s</span></b></big>", color);
+	if(type == 0)
+		sprintf(format, "<big><b><span foreground='%s'>%%s</span></b></big>", color);
+	else
+		sprintf(format, "<b><span foreground='%s'>%%s</span></b>", color);
 	markup = g_strdup_printf(format, text);
 	pango_layout_set_markup(layout, markup, -1);
 	g_free(markup);
-	gdk_draw_layout(pm, gc, w/2-strlen(text)*4, h/2-10, layout);
+	if(type == 0)
+		gdk_draw_layout(pm, gc, w/2-strlen(text)*4, h/2-10, layout);
+	else
+		gdk_draw_layout(pm, gc, w/2-strlen(text)*4, h/2-8, layout);
 	g_object_unref(layout); 
 	ret = gdk_pixbuf_get_from_drawable(NULL, pm, NULL, 0, 0, 0, 0, w, h);
 	return ret;
@@ -376,14 +384,14 @@ void refresh_board()
 						sprintf(n, "%d", boardnumber[i][j]-z);
 						if(f || _f)
 						{
-							pixbufboardnumber[y][x][boardnumber[i][j]-z][1] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#FF0000");
+							pixbufboardnumber[y][x][boardnumber[i][j]-z][1] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#FF0000", showsmallfont);
 						}
 						else
 						{
 							if(boardnumber[i][j] % 2 == 1)
-								pixbufboardnumber[y][x][boardnumber[i][j]-z][0] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#FFFFFF");
+								pixbufboardnumber[y][x][boardnumber[i][j]-z][0] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#FFFFFF", showsmallfont);
 							else
-								pixbufboardnumber[y][x][boardnumber[i][j]-z][0] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#000000");
+								pixbufboardnumber[y][x][boardnumber[i][j]-z][0] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#000000", showsmallfont);
 						}
 					}
 					gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), pixbufboardnumber[y][x][boardnumber[i][j]-z][(f || _f)?1:0]);
@@ -398,6 +406,7 @@ void refresh_board()
 		}
 	}
 	/*
+	//for debug
 	for(i=0; i<boardsize; i++)
 	{
 		for(j=0; j<boardsize; j++)
@@ -2040,6 +2049,7 @@ void yixin_quit()
 		fprintf(out, "%d\t;time limit(turn)\n", timeoutturn/1000);
 		fprintf(out, "%d\t;time limit(match)\n", timeoutmatch/1000);
 		fprintf(out, "%d\t;style(rash 0 ~ 2 cautious)\n", cautionfactor);
+		fprintf(out, "%d\t;toolbar style 0 or 1\n", showtoolbarboth);
 		fclose(out);
 	}
 	gtk_main_quit();
@@ -2345,6 +2355,8 @@ void create_windowmain()
 	g_object_unref(pixbuf);
 	pixbuf = NULL;
 
+	showsmallfont = (size < 24);
+
 	menubar = gtk_menu_bar_new();
 	menugame = gtk_menu_new();
 	menuplayers = gtk_menu_new();
@@ -2470,8 +2482,10 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemcomputerplayswhite), "activate", G_CALLBACK(change_side), (gpointer)2);
 
 	toolbar = gtk_toolbar_new();
-	//gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_ICONS);
-	gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH);
+	if(!showtoolbarboth)
+		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_ICONS);
+	else
+		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH);
 	gtk_toolbar_set_orientation((GtkToolbar*)toolbar, GTK_ORIENTATION_VERTICAL);
 	toolgofirst = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_FIRST);
 	gtk_tool_button_set_label(toolgofirst, language==0 ? "Undo All": _T("首步"));
@@ -2504,13 +2518,13 @@ void create_windowmain()
 	buffertextlog = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textlog));
 	scrolledtextlog = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolledtextlog), textlog);
-	gtk_widget_set_size_request(scrolledtextlog, 400, 400);
+	gtk_widget_set_size_request(scrolledtextlog, 400, max(0,size*boardsize-50));
 
 	textcommand = gtk_text_view_new();
 	buffertextcommand = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textcommand));
 	scrolledtextcommand = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolledtextcommand), textcommand);
-	//gtk_widget_set_size_request(scrolledtextcommand, 400, 100);
+	gtk_widget_set_size_request(scrolledtextcommand, 400, 50);
 	g_signal_connect(textcommand, "key-release-event", G_CALLBACK(key_command), NULL);
 
 	vbox[0] = gtk_vbox_new(FALSE, 0);
@@ -2773,6 +2787,8 @@ void load_setting()
 		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 1000000;
 		cautionfactor = read_int_from_file(in);
 		if(cautionfactor < 0 || cautionfactor > 2) cautionfactor = 0;
+		showtoolbarboth = read_int_from_file(in);
+		if(showtoolbarboth < 0 || showtoolbarboth > 1) showtoolbarboth = 1;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", boardsize);
