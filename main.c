@@ -1531,40 +1531,76 @@ void show_dialog_load(GtkWidget *widget, gpointer data)
 	gtk_file_filter_add_pattern(filter, "*.[Ss][Aa][Vv]");
 	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
 
+	filter = gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "POS");
+	gtk_file_filter_add_pattern(filter, "*.[Pp][Oo][Ss]");
+	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+
 	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_MOUSE);
 	if(gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
 	{
 		char *filenameutf, *filename;
+		int nl;
 		filenameutf = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 		filename = g_locale_from_utf8(filenameutf, -1, NULL, NULL, NULL);
 		printf_log("%s\n", filename);
-		if((in = fopen(filename, "r")) != NULL)
+		nl = strlen(filename);
+		if((filename[nl-3] == 'P' || filename[nl-3] == 'p') &&
+		   (filename[nl-2] == 'O' || filename[nl-2] == 'o') &&
+		   (filename[nl-1] == 'S' || filename[nl-1] == 's'))
 		{
-			int i, num;
-			new_game(NULL, NULL);
-			fscanf(in, "%d", &boardsize);
-			fscanf(in, "%*d");
-			/*
-			fscanf(in, "%d", &inforule);
-			switch(inforule)
+			if((in = fopen(filename, "rb")) != NULL)
 			{
-				case 0: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule1), TRUE); break;
-				case 1: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule2), TRUE); break;
-				case 2: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule3), TRUE); break;
-				case 3: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule4), TRUE); break;
+				int i;
+				unsigned char num;
+				new_game(NULL, NULL);
+				fread(&num, 1, 1, in);
+				for(i=0; i<num; i++)
+				{
+					unsigned char xy;
+					int x, y;
+					fread(&xy, 1, 1, in);
+					x = xy % 15;
+					y = xy / 15;
+					make_move(x, y);
+					//printf_log("[%d/%d] %d %d (%d)\n", i, (int)num, x, y, (int)xy);
+				}
+				fclose(in);
+				show_forbid();
 			}
-			*/
-			change_rule(NULL, (gpointer)inforule); //warning!
+		}
+		else if ((filename[nl-3] == 'S' || filename[nl-3] == 's') &&
+		   (filename[nl-2] == 'A' || filename[nl-2] == 'a') &&
+		   (filename[nl-1] == 'V' || filename[nl-1] == 'v'))
+		{
+			if((in = fopen(filename, "r")) != NULL)
+			{
+				int i, num;
+				new_game(NULL, NULL);
+				fscanf(in, "%d", &boardsize);
+				fscanf(in, "%*d");
+				/*
+				fscanf(in, "%d", &inforule);
+				switch(inforule)
+				{
+					case 0: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule1), TRUE); break;
+					case 1: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule2), TRUE); break;
+					case 2: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule3), TRUE); break;
+					case 3: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule4), TRUE); break;
+				}
+				*/
+				change_rule(NULL, (gpointer)inforule); //warning!
 			
-			fscanf(in, "%d", &num);
-			for(i=0; i<num; i++)
-			{
-				int x, y;
-				fscanf(in, "%d %d", &x, &y);
-				make_move(x, y);
+				fscanf(in, "%d", &num);
+				for(i=0; i<num; i++)
+				{
+					int x, y;
+					fscanf(in, "%d %d", &x, &y);
+					make_move(x, y);
+				}
+				fclose(in);
+				show_forbid();
 			}
-			fclose(in);
-			show_forbid();
 		}
 		g_free(filenameutf);
 		g_free(filename);
