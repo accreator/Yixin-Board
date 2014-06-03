@@ -1,5 +1,7 @@
 #include <cairo.h>
 #include <gtk/gtk.h>
+#include "gdk/gdkkeysyms.h"
+
 void send_command(char *command);
 void make_move(int y, int x);
 gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, GdkWindowEdge edge);
@@ -22,4 +24,4 @@ void load_engine();
 void init_engine();
 #define max(x, y) ((x)>(y)?(x):(y))
 #define min(x, y) ((x)<(y)?(x):(y))
-#define VERSION "1.0"
+#define VERSION "1.1"

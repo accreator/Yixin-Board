@@ -11,6 +11,7 @@
 typedef long long I64;
 #define MAX_SIZE 20
 #define OPENBOOK_SIZE 8000000
+#define CAUTION_NUM 3  //0..CAUTION_NUM
 typedef struct
 {
 	I64 zobkey;
@@ -40,6 +41,7 @@ int boardlose[MAX_SIZE][MAX_SIZE];
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
 char bestline[MAX_SIZE*MAX_SIZE*5+1] = "";
+int bestval;
 int useopenbook = 1;
 int levelchoice = 4;
 int shownumber = 1;
@@ -1313,7 +1315,7 @@ void set_cautionfactor(int x)
 {
 	gchar command[80];
 	if(x < 0) x = 0;
-	if(x > 2) x = 2;
+	if(x > CAUTION_NUM) x = CAUTION_NUM;
 	cautionfactor = x;
 	sprintf(command, "INFO caution_factor %d\n", cautionfactor);
 	send_command(command);
@@ -1431,7 +1433,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[3], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[8], FALSE, FALSE, 3);
 
-	scalecaution = gtk_hscale_new_with_range(0, 2, 1);
+	scalecaution = gtk_hscale_new_with_range(0, CAUTION_NUM, 1);
 	//gtk_scale_set_value_pos(GTK_SCALE(scalecaution), GTK_POS_LEFT);
 	gtk_range_set_value(GTK_RANGE(scalecaution), cautionfactor);
 	gtk_widget_set_size_request(scalecaution, 100, -1);
@@ -1849,7 +1851,16 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 	{
 		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextcommand), &start, &end);
 		command = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(buffertextcommand), &start, &end, FALSE);
-		if(strncmp(command, "help", 4) == 0)
+		if(strncmp(command, "help key", 8) == 0)
+		{
+			printf_log(" F11\n  %s\n", language==1?"计算":"Start thinking");
+			printf_log(" Esc\n  %s\n", language==1?"停止计算":"Stop thinking");
+			printf_log(" Ctrl+Left\n  %s\n", language==1?"前一步":"Undo");
+			printf_log(" Ctrl+Right\n  %s\n", language==1?"后一步":"Redo");
+			printf_log(" Ctrl+Up\n  %s\n", language==1?"首步":"Undo all");
+			printf_log(" Ctrl+Down\n  %s\n", language==1?"末步":"Redo all");
+		}
+		else if(strncmp(command, "help", 4) == 0)
 		{
 			if(language == 1)
 			{
@@ -1860,9 +1871,11 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				printf_log("Command Lists:\n");
 			}
 			printf_log(" help\n");
+			printf_log(" help key\n");
 			printf_log(" clear\n");
 			printf_log(" rotate [90,180,270]\n");
 			printf_log(" flip [/,\\,-,|]\n");
+			printf_log(" move [^,v,<,>]\n");
 			printf_log(" getpos\n");
 			printf_log(" putpos\n");
 			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1?"例":"Example");
@@ -1950,6 +1963,78 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
 			show_forbid();
 		}
+		else if(strncmp(command, "move", 4) == 0)
+		{
+			int p = piecenum;
+			int k = 0;
+			int f = 1;
+			if(strlen(command) >= 6)
+			{
+				if(command[5] == '^') k = 0;
+				else if(command[5] == 'v') k = 1;
+				else if(command[5] == '<') k = 2;
+				else if(command[5] == '>') k = 3;
+			}
+			refreshboardflag = 0;
+			for(i=0; i<p; i++)
+			{
+				int _x, _y, x, y;
+				_y = movepath[i] / boardsize;
+				_x = movepath[i] % boardsize;
+				switch(k)
+				{
+				case 0:
+					y = _y - 1;
+					x = _x;
+					break;
+				case 1:
+					y = _y + 1;
+					x = _x;
+					break;
+				case 2:
+					y = _y;
+					x = _x - 1;
+					break;
+				case 3:
+					y = _y;
+					x = _x + 1;
+					break;
+				}
+				if(x < 0 || x > boardsize - 1 || _y < 0 || _y > boardsize - 1) f = 0;
+			}
+			if(f)
+			{
+				for(i=0; i<p; i++)
+				{
+					int _x, _y, x, y;
+					_y = movepath[i] / boardsize;
+					_x = movepath[i] % boardsize;
+					switch(k)
+					{
+					case 0:
+						y = _y - 1;
+						x = _x;
+						break;
+					case 1:
+						y = _y + 1;
+						x = _x;
+						break;
+					case 2:
+						y = _y;
+						x = _x - 1;
+						break;
+					case 3:
+						y = _y;
+						x = _x + 1;
+						break;
+					}
+					movepath[i] = y*boardsize + x;
+				}
+			}
+			new_game(NULL, NULL);
+			for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
+			show_forbid();
+		}
 		else if(strncmp(command, "putpos", 6) == 0)
 		{
 			new_game(NULL, NULL);
@@ -2016,7 +2101,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		}
 		else if(strncmp(command, "bestline", 8) == 0)
 		{
-			printf_log("BESTLINE: %s\n", bestline);
+			printf_log("BESTLINE: %s ", bestline);
+			printf_log("VAL: %d\n", bestval);
 		}
 		else if(strncmp(command, "boardsize", 9) == 0)
 		{
@@ -2084,7 +2170,7 @@ void yixin_quit()
 		fprintf(out, "%d\t;level(0: 4dan, 1:3dan, 2:2dan, 3:1dan, 5:6dan, 6:9dan, 7: meijin, 8: unlimited time 4:customelevel)\n", levelchoice);
 		fprintf(out, "%d\t;time limit(turn)\n", timeoutturn/1000);
 		fprintf(out, "%d\t;time limit(match)\n", timeoutmatch/1000);
-		fprintf(out, "%d\t;style(rash 0 ~ 2 cautious)\n", cautionfactor);
+		fprintf(out, "%d\t;style(rash 0 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
 		fprintf(out, "%d\t;toolbar style 0 or 1\n", showtoolbarboth);
 		fclose(out);
 	}
@@ -2140,6 +2226,8 @@ void create_windowmain()
 
 	GtkWidget *toolbar;
 	GtkToolItem *toolgofirst, *toolgoback, *toolgoforward, *toolgolast, *toolstop, *toolplay;
+
+	GtkAccelGroup *accelgroup;
 
 	GtkWidget *textcommand;
 
@@ -2550,6 +2638,15 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(toolstop), "clicked", G_CALLBACK(stop_thinking), NULL);
 	g_signal_connect(G_OBJECT(toolplay), "clicked", G_CALLBACK(start_thinking), NULL);
 
+	accelgroup = gtk_accel_group_new();
+	gtk_window_add_accel_group(GTK_WINDOW(windowmain), accelgroup);
+	gtk_widget_add_accelerator(toolgofirst, "clicked", accelgroup, GDK_Up, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(toolgolast, "clicked", accelgroup, GDK_Down, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(toolgoback, "clicked", accelgroup, GDK_Left, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(toolgoforward, "clicked", accelgroup, GDK_Right, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(toolstop, "clicked", accelgroup, GDK_Escape, 0, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(toolplay, "clicked", accelgroup, GDK_F11, 0, GTK_ACCEL_VISIBLE);
+
 	textlog = gtk_text_view_new();
 	buffertextlog = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textlog));
 	scrolledtextlog = gtk_scrolled_window_new(NULL, NULL);
@@ -2619,6 +2716,11 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				memset(boardbest, 0, sizeof(boardbest));
 				boardbest[y][x] = 1;
 				refresh_board();
+			}
+			else if(*p == 'V') //"VAL"
+			{
+				p += 4;
+				sscanf(p, "%d", &bestval);
 			}
 			else if(*p == 'L') //"LOSE"
 			{
@@ -2822,7 +2924,7 @@ void load_setting()
 		timeoutmatch = read_int_from_file(in) * 1000;
 		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 1000000;
 		cautionfactor = read_int_from_file(in);
-		if(cautionfactor < 0 || cautionfactor > 2) cautionfactor = 0;
+		if(cautionfactor < 0 || cautionfactor > CAUTION_NUM) cautionfactor = 1;
 		showtoolbarboth = read_int_from_file(in);
 		if(showtoolbarboth < 0 || showtoolbarboth > 1) showtoolbarboth = 1;
 		fclose(in);
