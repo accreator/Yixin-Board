@@ -295,7 +295,7 @@ void show_thanklist()
 }
 
 GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color, int type)
-{ 
+{
 	GdkPixmap *pm;
 	GdkGC *gc;
 	GtkWidget *scratch;
@@ -304,9 +304,9 @@ GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color, i
 	GdkPixbuf *ret;
 	gchar format[100];
 	
-	pm = gdk_pixmap_new(NULL, w, h, 24);
+	pm = gdk_pixmap_new(windowmain->window, w, h, -1);
 	gdk_drawable_set_colormap(pm, gdk_colormap_get_system());
-	gc = gdk_gc_new(pm); 
+	gc = gdk_gc_new(pm);
 	gdk_draw_pixbuf(pm, gc, pb, 0, 0, 0, 0, w, h, GDK_RGB_DITHER_NONE, 0, 0);
 	scratch = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_widget_realize(scratch);
@@ -323,7 +323,7 @@ GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color, i
 		gdk_draw_layout(pm, gc, w/2-strlen(text)*4, h/2-10, layout);
 	else
 		gdk_draw_layout(pm, gc, w/2-strlen(text)*4, h/2-8, layout);
-	g_object_unref(layout); 
+	g_object_unref(layout);
 	ret = gdk_pixbuf_get_from_drawable(NULL, pm, NULL, 0, 0, 0, 0, w, h);
 	return ret;
 }
@@ -386,14 +386,14 @@ void refresh_board()
 						sprintf(n, "%d", boardnumber[i][j]-z);
 						if(f || _f)
 						{
-							pixbufboardnumber[y][x][boardnumber[i][j]-z][1] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#FF0000", showsmallfont);
+							pixbufboardnumber[y][x][boardnumber[i][j]-z][1] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_height(pixbufboard[y][x]), n, "#FF0000", showsmallfont);
 						}
 						else
 						{
 							if(boardnumber[i][j] % 2 == 1)
-								pixbufboardnumber[y][x][boardnumber[i][j]-z][0] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#FFFFFF", showsmallfont);
+								pixbufboardnumber[y][x][boardnumber[i][j]-z][0] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_height(pixbufboard[y][x]), n, "#FFFFFF", showsmallfont);
 							else
-								pixbufboardnumber[y][x][boardnumber[i][j]-z][0] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_width(pixbufboard[y][x]), n, "#000000", showsmallfont);
+								pixbufboardnumber[y][x][boardnumber[i][j]-z][0] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_height(pixbufboard[y][x]), n, "#000000", showsmallfont);
 						}
 					}
 					gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), pixbufboardnumber[y][x][boardnumber[i][j]-z][(f || _f)?1:0]);
