@@ -290,6 +290,7 @@ void show_thanklist()
 	printf_log("  Saturn|Titan\n");
 	printf_log("  元\n");
 	printf_log("  TZ\n");
+	printf_log("  舒自均\n");
 	printf_log("  濤声依旧\n");
 	printf_log("\n");
 }
@@ -707,7 +708,7 @@ int move_openbook(int *besty, int *bestx)
 //结果将存于besty, bestx两个数组中
 int move_openbook_n(int n, int *besty, int *bestx, int force)
 {
-	int i, j, k, l, o;
+	int i, j, k, l;
 	double d[4][4];
 	int px[4], py[4];
 	int sy[3] = {0};
@@ -1348,7 +1349,7 @@ void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 
 void show_dialog_settings(GtkWidget *widget, gpointer data)
 {
-	gchar command[80];
+	//gchar command[80];
 	gchar text[80];
 	const gchar *ptext;
 	GtkWidget *dialog;
@@ -1820,7 +1821,7 @@ void stop_thinking(GtkWidget *widget, gpointer data)
 void start_thinking(GtkWidget *widget, gpointer data)
 {
 	GdkEventButton event;
-	GdkWindowEdge edge;
+	GdkWindowEdge edge = GDK_WINDOW_EDGE_NORTH_WEST; // not useful
 	if(isthinking) return;
 	if(piecenum%2 == 1 && (computerside & 1))
 		change_side_menu(-1, NULL);
@@ -2218,7 +2219,8 @@ void create_windowmain()
 {
 	GtkWidget *menubar, *menugame, *menuplayers, *menuview, *menuhelp, *menurule;
 	GtkWidget *menuitemgame, *menuitemplayers, *menuitemview, *menuitemhelp;
-	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemopenbook, *menuitemquit, *menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5, *menuitemnewrule[10];
+	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemopenbook, *menuitemquit, *menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5;
+	//GtkWidget *menuitemnewrule[10]; //TODO
 	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemsettings;
 	//GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemchinese;
 	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis;
@@ -2230,8 +2232,6 @@ void create_windowmain()
 	GtkAccelGroup *accelgroup;
 
 	GtkWidget *textcommand;
-
-	GtkWidget *labellog, *labelcommand;
 
 	GdkPixbuf *pixbuf;
 
@@ -2612,17 +2612,17 @@ void create_windowmain()
 		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH);
 	gtk_toolbar_set_orientation((GtkToolbar*)toolbar, GTK_ORIENTATION_VERTICAL);
 	toolgofirst = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_FIRST);
-	gtk_tool_button_set_label(toolgofirst, language==0 ? "Undo All": _T("首步"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgofirst), language==0 ? "Undo All": _T("首步"));
 	toolgoback = gtk_tool_button_new_from_stock(GTK_STOCK_GO_BACK);
-	gtk_tool_button_set_label(toolgoback, language==0 ? "Undo": _T("前一步"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoback), language==0 ? "Undo": _T("前一步"));
 	toolgoforward = gtk_tool_button_new_from_stock(GTK_STOCK_GO_FORWARD);
-	gtk_tool_button_set_label(toolgoforward, language==0 ? "Redo": _T("后一步"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoforward), language==0 ? "Redo": _T("后一步"));
 	toolgolast = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_LAST);
-	gtk_tool_button_set_label(toolgolast, language==0 ? "Redo All": _T("末步"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgolast), language==0 ? "Redo All": _T("末步"));
 	toolstop = gtk_tool_button_new_from_stock(GTK_STOCK_STOP);
-	gtk_tool_button_set_label(toolstop, language==0 ? "Stop": _T("立即出招"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolstop), language==0 ? "Stop": _T("立即出招"));
 	toolplay = gtk_tool_button_new_from_stock(GTK_STOCK_EXECUTE);
-	gtk_tool_button_set_label(toolplay, language==0 ? "Play": _T("计算"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolplay), language==0 ? "Play": _T("计算"));
 
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgofirst, -1);
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgoback, -1);
@@ -2640,12 +2640,12 @@ void create_windowmain()
 
 	accelgroup = gtk_accel_group_new();
 	gtk_window_add_accel_group(GTK_WINDOW(windowmain), accelgroup);
-	gtk_widget_add_accelerator(toolgofirst, "clicked", accelgroup, GDK_Up, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(toolgolast, "clicked", accelgroup, GDK_Down, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(toolgoback, "clicked", accelgroup, GDK_Left, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(toolgoforward, "clicked", accelgroup, GDK_Right, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(toolstop, "clicked", accelgroup, GDK_Escape, 0, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(toolplay, "clicked", accelgroup, GDK_F11, 0, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(GTK_WIDGET(toolgofirst), "clicked", accelgroup, GDK_Up, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(GTK_WIDGET(toolgolast), "clicked", accelgroup, GDK_Down, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(GTK_WIDGET(toolgoback), "clicked", accelgroup, GDK_Left, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(GTK_WIDGET(toolgoforward), "clicked", accelgroup, GDK_Right, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(GTK_WIDGET(toolstop), "clicked", accelgroup, GDK_Escape, 0, GTK_ACCEL_VISIBLE);
+	gtk_widget_add_accelerator(GTK_WIDGET(toolplay), "clicked", accelgroup, GDK_F11, 0, GTK_ACCEL_VISIBLE);
 
 	textlog = gtk_text_view_new();
 	buffertextlog = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textlog));
