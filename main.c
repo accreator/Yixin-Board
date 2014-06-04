@@ -52,7 +52,7 @@ int showsmallfont = 0;
 int language = 0; /* 0: English 1: Chinese */
 int rlanguage = 0;
 int movx[8] = {  0,  0,  1, -1,  1,  1, -1, -1}; /* 顺序与检测胜负的函数有关 */
-int movy[8] = {  1, -1,  0,  0,  1, -1,  1, -1}; 
+int movy[8] = {  1, -1,  0,  0,  1, -1,  1, -1};
 /* engine */
 GIOChannel *iochannelin, *iochannelout, *iochannelerr;
 /* windowmain */
@@ -2885,15 +2885,22 @@ int read_int_from_file(FILE *in)
 	}
 	return (flag&4)?-num:num;
 }
-void load_setting()
+void load_setting(int def_boardsize)
 {
 	FILE *in;
 	char s[80];
 	int t;
 	if((in = fopen("settings.txt", "r")) != NULL)
 	{
-		boardsize = read_int_from_file(in);
-		if(boardsize > MAX_SIZE || boardsize < 5) boardsize = 15;
+		if (def_boardsize >= 5 && def_boardsize <= MAX_SIZE)
+		{
+			boardsize = def_boardsize;
+		}
+		else
+		{
+			boardsize = read_int_from_file(in);
+			if(boardsize > MAX_SIZE || boardsize < 5) boardsize = 15;
+		}
 		language = read_int_from_file(in);
 		rboardsize = boardsize;
 		rlanguage = language;
@@ -2984,11 +2991,25 @@ void init_engine()
 	set_level(levelchoice);
 	set_cautionfactor(cautionfactor);
 }
-int main(int argc, char** argv)  
+int main(int argc, char** argv)
 {
-	gtk_init(&argc, &argv);
+	static GOptionEntry options[] =
+	{
+		{ "size", 's', 0, G_OPTION_ARG_INT, NULL,
+			"Board size to use", "Integer"
+		},
+		{
+			NULL
+		},
+	};
+	GError *error = NULL;
+	gint boardsize = 0;
+
+	options[0].arg_data = &boardsize;
+
+	gtk_init_with_args(&argc, &argv, NULL, options, NULL, &error);
 	srand((unsigned)time(NULL));
-	load_setting();
+	load_setting(boardsize);
 	load_engine();
 	init_engine();
 	gtk_window_set_default_icon(gdk_pixbuf_new_from_file("icon.ico", NULL)); /* 所有窗口默认图标 */
