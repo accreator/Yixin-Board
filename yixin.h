@@ -22,6 +22,6 @@ gboolean iochannelerr_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 void load_setting();
 void load_engine();
 void init_engine();
-#define max(x, y) ((x)>(y)?(x):(y))
-#define min(x, y) ((x)<(y)?(x):(y))
+//#define max(x, y) ((x)>(y)?(x):(y))
+//#define min(x, y) ((x)<(y)?(x):(y))
 #define VERSION "1.1"
