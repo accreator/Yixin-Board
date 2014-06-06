@@ -2892,15 +2892,12 @@ void load_setting(int def_boardsize)
 	int t;
 	if((in = fopen("settings.txt", "r")) != NULL)
 	{
+		boardsize = read_int_from_file(in);
 		if (def_boardsize >= 5 && def_boardsize <= MAX_SIZE)
 		{
 			boardsize = def_boardsize;
 		}
-		else
-		{
-			boardsize = read_int_from_file(in);
-			if(boardsize > MAX_SIZE || boardsize < 5) boardsize = 15;
-		}
+		if(boardsize > MAX_SIZE || boardsize < 5) boardsize = 15;
 		language = read_int_from_file(in);
 		rboardsize = boardsize;
 		rlanguage = language;
