@@ -19,7 +19,7 @@ GdkPixbuf * copy_subpixbuf(GdkPixbuf *_src, int src_x, int src_y, int width, int
 void create_windowmain();
 gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer data);
 gboolean iochannelerr_watch(GIOChannel *channel, GIOCondition cond, gpointer data);
-void load_setting();
+void load_setting(int def_boardsize, int def_language, int def_toolbar);
 void load_engine();
 void init_engine();
 //#define max(x, y) ((x)>(y)?(x):(y))

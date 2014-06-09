@@ -2885,7 +2885,7 @@ int read_int_from_file(FILE *in)
 	}
 	return (flag&4)?-num:num;
 }
-void load_setting(int def_boardsize)
+void load_setting(int def_boardsize, int def_language, int def_toolbar)
 {
 	FILE *in;
 	char s[80];
@@ -2893,7 +2893,7 @@ void load_setting(int def_boardsize)
 	if((in = fopen("settings.txt", "r")) != NULL)
 	{
 		boardsize = read_int_from_file(in);
-		if (def_boardsize >= 5 && def_boardsize <= MAX_SIZE)
+		if(def_boardsize >= 5 && def_boardsize <= MAX_SIZE)
 		{
 			boardsize = def_boardsize;
 		}
@@ -2901,6 +2901,7 @@ void load_setting(int def_boardsize)
 		language = read_int_from_file(in);
 		rboardsize = boardsize;
 		rlanguage = language;
+		if(def_language >= 0 && def_language <= 1) language = def_language;
 		if(language < 0 || language > 1) language = 0;
 		inforule = read_int_from_file(in);
 		if(inforule < 0 || inforule > 4) inforule = 0;
@@ -2930,6 +2931,7 @@ void load_setting(int def_boardsize)
 		cautionfactor = read_int_from_file(in);
 		if(cautionfactor < 0 || cautionfactor > CAUTION_NUM) cautionfactor = 1;
 		showtoolbarboth = read_int_from_file(in);
+		if(def_toolbar >= 0 && def_toolbar <= 1) showtoolbarboth = def_toolbar;
 		if(showtoolbarboth < 0 || showtoolbarboth > 1) showtoolbarboth = 1;
 		fclose(in);
 	}
@@ -2995,18 +2997,28 @@ int main(int argc, char** argv)
 		{ "size", 's', 0, G_OPTION_ARG_INT, NULL,
 			"Board size to use", "Integer"
 		},
+		{ "lang", 'l', 0, G_OPTION_ARG_INT, NULL,
+			"language", "Integer"
+		},
+		{ "toolbar", '\0', 0, G_OPTION_ARG_INT, NULL,
+			"Board size to use", "Integer"
+		},
 		{
 			NULL
 		},
 	};
 	GError *error = NULL;
-	gint boardsize = 0;
+	gint boardsize = -1;
+	gint language = -1;
+	gint toolbar = -1;
 
 	options[0].arg_data = &boardsize;
+	options[1].arg_data = &language;
+	options[2].arg_data = &toolbar;
 
 	gtk_init_with_args(&argc, &argv, NULL, options, NULL, &error);
 	srand((unsigned)time(NULL));
-	load_setting(boardsize);
+	load_setting(boardsize, language, toolbar);
 	load_engine();
 	init_engine();
 	gtk_window_set_default_icon(gdk_pixbuf_new_from_file("icon.ico", NULL)); /* 所有窗口默认图标 */
