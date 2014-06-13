@@ -1,0 +1,16 @@
+*.suo
+*.user
+*.dat
+*.swp
+*.exe
+*.dll
+*.bmp
+*.txt
+*.lnk
+*.conf
+*.dtd
+*.alias
+gtkrc*
+*.immodules
+*.modules
+*.loaders
