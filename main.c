@@ -29,6 +29,8 @@ int timeoutturn = 5000;
 int timeused = 0;
 int timestart = 0;
 int timeoutmatch = 1000000;
+int maxdepth = 100;
+int maxnode = 1000000000;
 int computerside = 0; /* 0无 1黑 2白 3双方 */
 int cautionfactor = 0;
 int board[MAX_SIZE][MAX_SIZE];
@@ -1261,7 +1263,9 @@ void set_level(int x)
 		send_command(command);
 		sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 		send_command(command);
-		sprintf(command, "INFO max_node %d\n", 1000000000); //now it should not be -1
+		sprintf(command, "INFO max_node %d\n", maxnode); //now it should not be -1
+		send_command(command);
+		sprintf(command, "INFO max_depth %d\n", maxdepth);
 		send_command(command);
 	}
 	else
@@ -1309,6 +1313,8 @@ void set_level(int x)
 		send_command(command);
 		sprintf(command, "INFO timeout_turn %d\n", timeoutturn);
 		send_command(command);
+		sprintf(command, "INFO max_depth %d\n", boardsize * boardsize);
+		send_command(command);
 	}
 }
 
@@ -1324,7 +1330,7 @@ void set_cautionfactor(int x)
 
 void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 {
-	static GtkWidget *editable[2];
+	static GtkWidget *editable[4];
 	static int flag = 0;
 	int i;
 	if(widget == NULL)
@@ -1355,10 +1361,10 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *dialog;
 	GtkWidget *notebook;
 	GtkWidget *notebookvbox[2];
-	GtkWidget *hbox[2];
+	GtkWidget *hbox[3];
 	GtkWidget *radiolevel[9];
-	GtkWidget *labeltimeturn[2], *labeltimematch[2];
-	GtkWidget *entrytimeturn, *entrytimematch;
+	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2];
+	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode;
 	GtkWidget *scalecaution;
 	gint result;
 
@@ -1381,15 +1387,32 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	sprintf(text, "%d", timeoutturn/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrytimeturn), text);
 	labeltimeturn[1] = gtk_label_new(language==0?"s  ":(language==1?_T("秒  "):""));
+
 	labeltimematch[0] = gtk_label_new(language==0?"Match:":(language==1?_T("局时:"):""));
-	entrytimematch =  gtk_entry_new();
+	entrytimematch = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrytimematch), 6);
 	sprintf(text, "%d", timeoutmatch/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrytimematch), text);
 	labeltimematch[1] = gtk_label_new(language==0?"s  ":(language==1?_T("秒  "):""));
 
+	labelmaxdepth[0] = gtk_label_new(language==0?"Max depth:":(language==1?_T("最大深度:"):""));
+	entrymaxdepth = gtk_entry_new();
+	gtk_entry_set_width_chars(GTK_ENTRY(entrymaxdepth), 3);
+	sprintf(text, "%d", maxdepth);
+	gtk_entry_set_text(GTK_ENTRY(entrymaxdepth), text);
+	labelmaxdepth[1] = gtk_label_new(language==0?"ply  ":(language==1?_T("层  "):""));
+
+	labelmaxnode[0] = gtk_label_new(language==0?"Max node number:":(language==1?_T("最大结点数:"):""));
+	entrymaxnode = gtk_entry_new();
+	gtk_entry_set_width_chars(GTK_ENTRY(entrymaxnode), 6);
+	sprintf(text, "%d", maxnode/1000);
+	gtk_entry_set_text(GTK_ENTRY(entrymaxnode), text);
+	labelmaxnode[1] = gtk_label_new(language==0?"M  ":(language==1?_T("百万  "):""));
+
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimeturn);
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimematch);
+	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxdepth);
+	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxnode);
 
 	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language==0?"4 dan":(language==1?_T("职业四段"):""));
 	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language==0?"3 dan":(language==1?_T("职业三段"):""));
@@ -1423,8 +1446,17 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(hbox[0]), entrytimematch, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[0]), labeltimematch[1], FALSE, FALSE, 3);
 
+	hbox[2] = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), labelmaxdepth[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), entrymaxdepth, FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), labelmaxdepth[1], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), labelmaxnode[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), entrymaxnode, FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), labelmaxnode[1], FALSE, FALSE, 3);
+
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[4], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), hbox[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), hbox[2], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[7], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[6], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[5], FALSE, FALSE, 3);
@@ -1469,6 +1501,21 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 					if(timeoutmatch < 1) timeoutmatch = 1;
 					timeoutmatch *= 1000;
 					if(timeoutmatch < timeoutturn) timeoutmatch = timeoutturn;
+				}
+				ptext = gtk_entry_get_text(GTK_ENTRY(entrymaxdepth));
+				if(is_integer(ptext))
+				{
+					sscanf(ptext, "%d", &maxdepth);
+					if(maxdepth > boardsize*boardsize) maxdepth = boardsize*boardsize;
+					if(maxdepth < 2) maxdepth = 2;
+				}
+				ptext = gtk_entry_get_text(GTK_ENTRY(entrymaxnode));
+				if(is_integer(ptext))
+				{
+					sscanf(ptext, "%d", &maxnode);
+					if(maxnode > 1000000) maxnode = 1000000;
+					if(maxnode < 1) maxnode = 1;
+					maxnode *= 1000;
 				}
 				set_level(4);
 				//sprintf(command, "INFO max_depth %d\n", boardsize * boardsize);
@@ -2171,6 +2218,8 @@ void yixin_quit()
 		fprintf(out, "%d\t;level(0: 4dan, 1:3dan, 2:2dan, 3:1dan, 5:6dan, 6:9dan, 7: meijin, 8: unlimited time 4:customelevel)\n", levelchoice);
 		fprintf(out, "%d\t;time limit(turn)\n", timeoutturn/1000);
 		fprintf(out, "%d\t;time limit(match)\n", timeoutmatch/1000);
+		fprintf(out, "%d\t;max depth\n", maxdepth);
+		fprintf(out, "%d\t;max node\n", maxnode);
 		fprintf(out, "%d\t;style(rash 0 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
 		fprintf(out, "%d\t;toolbar style 0 or 1\n", showtoolbarboth);
 		fclose(out);
@@ -2928,6 +2977,10 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		if(timeoutturn <= 0 || timeoutturn > 1000000000) timeoutturn = 5000;
 		timeoutmatch = read_int_from_file(in) * 1000;
 		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 1000000;
+		maxdepth = read_int_from_file(in);
+		if(maxdepth < 2 || maxdepth > boardsize*boardsize) maxdepth = boardsize*boardsize;
+		maxnode = read_int_from_file(in);
+		if(maxnode < 1000 || maxnode > 1000000000) maxnode = 1000000000;
 		cautionfactor = read_int_from_file(in);
 		if(cautionfactor < 0 || cautionfactor > CAUTION_NUM) cautionfactor = 1;
 		showtoolbarboth = read_int_from_file(in);
