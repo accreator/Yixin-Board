@@ -1355,6 +1355,7 @@ void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 
 void show_dialog_settings(GtkWidget *widget, gpointer data)
 {
+	int i;
 	//gchar command[80];
 	gchar text[80];
 	const gchar *ptext;
@@ -1363,9 +1364,10 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *notebookvbox[2];
 	GtkWidget *hbox[3];
 	GtkWidget *radiolevel[9];
-	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2];
+	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelblank[6];
 	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode;
 	GtkWidget *scalecaution;
+	GtkWidget *tablesetting;
 	gint result;
 
 	show_dialog_settings_custom_entry(NULL, 0);
@@ -1381,33 +1383,47 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	notebookvbox[1] = gtk_vbox_new(FALSE, 0);
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[1], gtk_label_new(language==0?"Style":(language==1?_T("棋风"):"")));
 
-	labeltimeturn[0] = gtk_label_new(language==0?"Turn:":(language==1?_T("步时:"):""));
+	for(i=0; i<6; i++)
+	{
+		labelblank[i] = gtk_label_new(" ");
+		gtk_label_set_width_chars(GTK_LABEL(labelblank[i]), 6);
+	}
+
+	labeltimeturn[0] = gtk_label_new(language==0?"Turn time:":(language==1?_T("步时:"):""));
 	entrytimeturn = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrytimeturn), 6);
 	sprintf(text, "%d", timeoutturn/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrytimeturn), text);
-	labeltimeturn[1] = gtk_label_new(language==0?"s  ":(language==1?_T("秒  "):""));
+	labeltimeturn[1] = gtk_label_new(language==0?"s":(language==1?_T("秒"):""));
+	gtk_misc_set_alignment(GTK_MISC(labeltimeturn[0]), 1, 0.5);
+	gtk_misc_set_alignment(GTK_MISC(labeltimeturn[1]), 0, 0.5);
 
-	labeltimematch[0] = gtk_label_new(language==0?"Match:":(language==1?_T("局时:"):""));
+	labeltimematch[0] = gtk_label_new(language==0?"Match time:":(language==1?_T("局时:"):""));
 	entrytimematch = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrytimematch), 6);
 	sprintf(text, "%d", timeoutmatch/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrytimematch), text);
-	labeltimematch[1] = gtk_label_new(language==0?"s  ":(language==1?_T("秒  "):""));
+	labeltimematch[1] = gtk_label_new(language==0?"s":(language==1?_T("秒"):""));
+	gtk_misc_set_alignment(GTK_MISC(labeltimematch[0]), 1, 0.5);
+	gtk_misc_set_alignment(GTK_MISC(labeltimematch[1]), 0, 0.5);
 
 	labelmaxdepth[0] = gtk_label_new(language==0?"Max depth:":(language==1?_T("最大深度:"):""));
 	entrymaxdepth = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrymaxdepth), 3);
 	sprintf(text, "%d", maxdepth);
 	gtk_entry_set_text(GTK_ENTRY(entrymaxdepth), text);
-	labelmaxdepth[1] = gtk_label_new(language==0?"ply  ":(language==1?_T("层  "):""));
+	labelmaxdepth[1] = gtk_label_new(language==0?"ply":(language==1?_T("层"):""));
+	gtk_misc_set_alignment(GTK_MISC(labelmaxdepth[0]), 1, 0.5);
+	gtk_misc_set_alignment(GTK_MISC(labelmaxdepth[1]), 0, 0.5);
 
 	labelmaxnode[0] = gtk_label_new(language==0?"Max node number:":(language==1?_T("最大结点数:"):""));
 	entrymaxnode = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrymaxnode), 6);
 	sprintf(text, "%d", maxnode/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrymaxnode), text);
-	labelmaxnode[1] = gtk_label_new(language==0?"M  ":(language==1?_T("百万  "):""));
+	labelmaxnode[1] = gtk_label_new(language==0?"M":(language==1?_T("百万"):""));
+	gtk_misc_set_alignment(GTK_MISC(labelmaxnode[0]), 1, 0.5);
+	gtk_misc_set_alignment(GTK_MISC(labelmaxnode[1]), 0, 0.5);
 
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimeturn);
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimematch);
@@ -1438,25 +1454,31 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[levelchoice]), TRUE);
 
-	hbox[0] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[0]), labeltimeturn[0], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[0]), entrytimeturn, FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[0]), labeltimeturn[1], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[0]), labeltimematch[0], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[0]), entrytimematch, FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[0]), labeltimematch[1], FALSE, FALSE, 3);
+	tablesetting = gtk_table_new(2, 9, FALSE);
+	gtk_table_set_row_spacings(GTK_TABLE(tablesetting), 0); /* 行元素间距为0 */
+	gtk_table_set_col_spacings(GTK_TABLE(tablesetting), 0); /* 列元素间距为0 */
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[0], 0, 1, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[1], 4, 5, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[2], 8, 9, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labeltimeturn[0], 1, 2, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entrytimeturn, 2, 3, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labeltimeturn[1], 3, 4, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labeltimematch[0], 5, 6, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entrytimematch, 6, 7, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labeltimematch[1], 7, 8, 0, 1);
 
-	hbox[2] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), labelmaxdepth[0], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), entrymaxdepth, FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), labelmaxdepth[1], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), labelmaxnode[0], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), entrymaxnode, FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), labelmaxnode[1], FALSE, FALSE, 3);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[3], 0, 1, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[4], 4, 5, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[5], 8, 9, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxdepth[0], 1, 2, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entrymaxdepth, 2, 3, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxdepth[1], 3, 4, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxnode[0], 5, 6, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entrymaxnode, 6, 7, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxnode[1], 7, 8, 1, 2);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[4], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), hbox[0], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), hbox[2], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), tablesetting, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[7], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[6], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[5], FALSE, FALSE, 3);
