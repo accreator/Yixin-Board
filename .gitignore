@@ -14,3 +14,5 @@ gtkrc*
 *.immodules
 *.modules
 *.loaders
+*~
+!/release/*.exe
