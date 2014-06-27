@@ -40,6 +40,7 @@ int forbid[MAX_SIZE][MAX_SIZE];
 int boardblock[MAX_SIZE][MAX_SIZE];
 int boardbest[MAX_SIZE][MAX_SIZE];
 int boardlose[MAX_SIZE][MAX_SIZE];
+int blockautoreset = 0;
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
 char bestline[MAX_SIZE*MAX_SIZE*5+1] = "";
@@ -1952,6 +1953,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" block\n");
 			printf_log("   %s: block h8\n", language==1?"Àý":"Example");
 			printf_log(" block reset\n");
+			printf_log(" block autoreset [on,off]\n");
 			printf_log(" bestline\n");
 			printf_log(" boardsize\n");
 			printf_log("   %s: boardsize 15\n", language==1?"Àý":"Example");
@@ -2144,6 +2146,20 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			memset(boardblock, 0, sizeof(boardblock));
 			refresh_board();
 		}
+		else if(strncmp(command, "block autoreset", 15) == 0)
+		{
+			if(strlen(command) >= 18)
+			{
+				if(command[17] == 'n' || command[17] == 'N')
+				{
+					blockautoreset = 1;
+				}
+				else
+				{
+					blockautoreset = 0;
+				}
+			}
+		}
 		else if(strncmp(command, "block", 5) == 0)
 		{
 			gchar _command[80];
@@ -2244,6 +2260,7 @@ void yixin_quit()
 		fprintf(out, "%d\t;max node\n", maxnode);
 		fprintf(out, "%d\t;style(rash 0 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
 		fprintf(out, "%d\t;toolbar style 0 or 1\n", showtoolbarboth);
+		fprintf(out, "%d\t;block autoreset (0:no, 1:yes)\n", blockautoreset);
 		fclose(out);
 	}
 	gtk_main_quit();
@@ -2870,6 +2887,12 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			{
 				printf_log("Time Left: %dms\n\n", timeoutmatch-timeused);
 			}
+			if(blockautoreset)
+			{
+				send_command("yxblockreset\n");
+				memset(boardblock, 0, sizeof(boardblock));
+				refresh_board();
+			}
 			if(is_legal_move(y, x))
 			{
 				make_move(y, x);
@@ -3008,6 +3031,8 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		showtoolbarboth = read_int_from_file(in);
 		if(def_toolbar >= 0 && def_toolbar <= 1) showtoolbarboth = def_toolbar;
 		if(showtoolbarboth < 0 || showtoolbarboth > 1) showtoolbarboth = 1;
+		blockautoreset = read_int_from_file(in);
+		if(blockautoreset < 0 || blockautoreset > 1) blockautoreset = 0;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", boardsize);
