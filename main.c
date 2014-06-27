@@ -81,7 +81,8 @@ char * _T(char *s)
 void print_log(char *text)
 {
 	GtkTextIter start, end;
-	GtkAdjustment *adj;
+	GtkTextMark *endmark;
+	static int init = 0;
 	static int flag = 0, fspace = 0;
 	int len;
 	int i;
@@ -127,13 +128,16 @@ void print_log(char *text)
 	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
 	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buffertextlog), &end, text, strlen(text));
 
-	/*
-	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
-	gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(textlog), &end, 0, FALSE, 0, 0);
-	*/
-
-	adj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledtextlog));
-	gtk_adjustment_set_value(adj, gtk_adjustment_get_upper(adj) - gtk_adjustment_get_lower(adj));
+	gtk_text_buffer_get_end_iter(GTK_TEXT_BUFFER(buffertextlog), &end);
+	gtk_text_iter_set_line_offset(&end, 0);
+	if(init == 0)
+	{
+		init = 1;
+		gtk_text_buffer_create_mark(GTK_TEXT_BUFFER(buffertextlog), "scroll", &end, TRUE);
+	}
+	endmark = gtk_text_buffer_get_mark(GTK_TEXT_BUFFER(buffertextlog), "scroll");
+	gtk_text_buffer_move_mark(GTK_TEXT_BUFFER(buffertextlog), endmark, &end);
+	gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(textlog), endmark);
 }
 
 int printf_log(char *fmt, ...)
@@ -1930,6 +1934,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" Ctrl+Right\n  %s\n", language==1?"后一步":"Redo");
 			printf_log(" Ctrl+Up\n  %s\n", language==1?"首步":"Undo all");
 			printf_log(" Ctrl+Down\n  %s\n", language==1?"末步":"Redo all");
+			printf_log("\n");
 		}
 		else if(strncmp(command, "help", 4) == 0)
 		{
@@ -1959,6 +1964,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: boardsize 15\n", language==1?"例":"Example");
 			printf_log(" language [en,cn]\n");
 			printf_log("   %s: language en\n", language==1?"例":"Example");
+			printf_log("\n");
 		}
 		else if(strncmp(command, "clear", 5) == 0)
 		{
@@ -2738,7 +2744,7 @@ void create_windowmain()
 	textlog = gtk_text_view_new();
 	buffertextlog = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textlog));
 	scrolledtextlog = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolledtextlog), textlog);
+	gtk_container_add(GTK_CONTAINER(scrolledtextlog), textlog);
 	gtk_widget_set_size_request(scrolledtextlog, 400, max(0,size*boardsize-50));
 
 	textcommand = gtk_text_view_new();
