@@ -52,6 +52,7 @@ int showlog = 1;
 int showanalysis = 1;
 int showtoolbarboth = 1;
 int showsmallfont = 0;
+int showwarning = 1;
 int language = 0; /* 0: English 1: Chinese */
 int rlanguage = 0;
 int movx[8] = {  0,  0,  1, -1,  1,  1, -1, -1}; /* 顺序与检测胜负的函数有关 */
@@ -849,6 +850,25 @@ int eval_openbook()
 	return 0;
 }
 
+void show_dialog_undo_warning_query(GtkWidget *window)
+{
+	GtkWidget *dialog;
+	gint result;
+	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"The operation will stop the calculation. Do you want to continue?":(language==1?_T("此操作将终止当前的计算，确定要继续吗?"):""));
+	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+	switch(result)
+	{
+		case GTK_RESPONSE_YES:
+			change_piece(window, (gpointer)1);
+			break;
+		case GTK_RESPONSE_NO:
+			break;
+	}
+	gtk_widget_destroy(dialog);
+}
+
 void show_dialog_swap_query(GtkWidget *window)
 {
 	GtkWidget *dialog;
@@ -1228,7 +1248,10 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 	}
 	if(event->type == GDK_BUTTON_PRESS && event->button == 3)
 	{
-		change_piece(widget, (gpointer)1);
+		if(showwarning && isthinking)
+			show_dialog_undo_warning_query(widget);
+		else
+			change_piece(widget, (gpointer)1);
 	}
 	return FALSE; /* 为什么是FALSE? */
 }
@@ -2244,7 +2267,7 @@ void yixin_quit()
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside&1);
 		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside>>1);
-		fprintf(out, "%d\t;level(0: 4dan, 1: 3dan, 2: 2dan, 3: 1dan, 5: 6dan, 6: 9dan, 7: meijin, 8: unlimited time 4: custom level)\n", levelchoice);
+		fprintf(out, "%d\t;level (0: 4dan, 1: 3dan, 2: 2dan, 3: 1dan, 5: 6dan, 6: 9dan, 7: meijin, 8: unlimited time 4: custom level)\n", levelchoice);
 		fprintf(out, "%d\t;time limit (turn)\n", timeoutturn/1000);
 		fprintf(out, "%d\t;time limit (match)\n", timeoutmatch/1000);
 		fprintf(out, "%d\t;max depth\n", maxdepth);
@@ -2254,6 +2277,7 @@ void yixin_quit()
 		fprintf(out, "%d\t;show log (0: no, 1: yes)\n", showlog);
 		fprintf(out, "%d\t;show number (0: no, 1: yes)\n", shownumber);
 		fprintf(out, "%d\t;show analysis (0: no, 1: yes)\n", showanalysis);
+		fprintf(out, "%d\t;show warning (0: no, 1: yes)\n", showwarning);
 		fprintf(out, "%d\t;block autoreset (0: no, 1: yes)\n", blockautoreset);
 		fclose(out);
 	}
@@ -3032,6 +3056,8 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		if(shownumber < 0 || shownumber > 1) shownumber = 1;
 		showanalysis = read_int_from_file(in);
 		if(showanalysis < 0 || showanalysis > 1) showanalysis = 1;
+		showwarning = read_int_from_file(in);
+		if(showwarning < 0 || showwarning > 1) showwarning = 0;
 		blockautoreset = read_int_from_file(in);
 		if(blockautoreset < 0 || blockautoreset > 1) blockautoreset = 0;
 		fclose(in);

@@ -24,4 +24,4 @@ void load_engine();
 void init_engine();
 //#define max(x, y) ((x)>(y)?(x):(y))
 //#define min(x, y) ((x)<(y)?(x):(y))
-#define VERSION "1.1"
+#define VERSION "1.2"
