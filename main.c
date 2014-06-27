@@ -243,7 +243,6 @@ int printf_log(char *fmt, ...)
 void print_command(char *text)
 {
 	GtkTextIter start, end;
-	//GtkAdjustment *adj;
 
 	if(buffertextcommand == NULL)
 	{
@@ -253,9 +252,6 @@ void print_command(char *text)
 
 	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextcommand), &start, &end);
 	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buffertextcommand), &end, text, strlen(text));
-
-	//adj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scrolledtextcommand));
-	//gtk_adjustment_set_value(adj, gtk_adjustment_get_upper(adj) - gtk_adjustment_get_lower(adj));
 }
 
 int printf_command(char *fmt, ...)
@@ -341,15 +337,7 @@ void send_command(char *command)
 	gsize size;
 	g_io_channel_write_chars(iochannelin, command, -1, &size, NULL);
 	g_io_channel_flush(iochannelin, NULL);
-	//printf("---> %s", command);
 }
-
-/*
-void engine_restart()
-{
-	;
-}
-*/
 
 int refreshboardflag = 0; //当为rif规则且正值2打时, refreshboardflag为1。其余时间为0
 void refresh_board()
@@ -688,7 +676,6 @@ int move_openbook(int *besty, int *bestx)
 		}
 	}
 	//fclose(out);
-	//printf("%d\n", search_openbook(-8487387668129966474ll));
 	if(resultnum == 0) return 0;
 	p = rand() % resultnum;
 	k = 0;
@@ -1545,8 +1532,6 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 					maxnode *= 1000;
 				}
 				set_level(4);
-				//sprintf(command, "INFO max_depth %d\n", boardsize * boardsize);
-				//send_command(command);
 			}
 			else
 			{
@@ -1795,7 +1780,7 @@ void new_game(GtkWidget *widget, gpointer data)
 void set_rule()
 {
 	char command[80];
-	//printf_log("INFO rule %d\n", inforule); fflush(stdout);
+	//printf_log("INFO rule %d\n", inforule);
 	sprintf(command, "INFO rule %d\n", inforule);
 	send_command(command);
 	isneedrestart = 1;
@@ -2255,18 +2240,21 @@ void yixin_quit()
 	{
 		fprintf(out, "%d\t;board size (10 ~ 20)\n", rboardsize);
 		fprintf(out, "%d\t;language (0: English, 1: Chinese)\n", rlanguage);
-		fprintf(out, "%d\t;rule (0:freestyle, 1:standard, 2:free renju, 3:swap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
-		fprintf(out, "%d\t;openbook (0:not use, 1:use)\n", useopenbook);
-		fprintf(out, "%d\t;computer play black (0:no, 1:yes)\n", computerside&1);
-		fprintf(out, "%d\t;computer play white (0:no, 1:yes)\n", computerside>>1);
-		fprintf(out, "%d\t;level(0: 4dan, 1:3dan, 2:2dan, 3:1dan, 5:6dan, 6:9dan, 7: meijin, 8: unlimited time 4:customelevel)\n", levelchoice);
-		fprintf(out, "%d\t;time limit(turn)\n", timeoutturn/1000);
-		fprintf(out, "%d\t;time limit(match)\n", timeoutmatch/1000);
+		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3:s wap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
+		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
+		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside&1);
+		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside>>1);
+		fprintf(out, "%d\t;level(0: 4dan, 1: 3dan, 2: 2dan, 3: 1dan, 5: 6dan, 6: 9dan, 7: meijin, 8: unlimited time 4: custom level)\n", levelchoice);
+		fprintf(out, "%d\t;time limit (turn)\n", timeoutturn/1000);
+		fprintf(out, "%d\t;time limit (match)\n", timeoutmatch/1000);
 		fprintf(out, "%d\t;max depth\n", maxdepth);
 		fprintf(out, "%d\t;max node\n", maxnode);
-		fprintf(out, "%d\t;style(rash 0 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
-		fprintf(out, "%d\t;toolbar style 0 or 1\n", showtoolbarboth);
-		fprintf(out, "%d\t;block autoreset (0:no, 1:yes)\n", blockautoreset);
+		fprintf(out, "%d\t;style (rash 0 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
+		fprintf(out, "%d\t;toolbar style (0: only icon, 1: both icon and words)\n", showtoolbarboth);
+		fprintf(out, "%d\t;show log (0: no, 1: yes)\n", showlog);
+		fprintf(out, "%d\t;show number (0: no, 1: yes)\n", shownumber);
+		fprintf(out, "%d\t;show analysis (0: no, 1: yes)\n", showanalysis);
+		fprintf(out, "%d\t;block autoreset (0: no, 1: yes)\n", blockautoreset);
 		fclose(out);
 	}
 	gtk_main_quit();
@@ -2750,7 +2738,8 @@ void create_windowmain()
 	textcommand = gtk_text_view_new();
 	buffertextcommand = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textcommand));
 	scrolledtextcommand = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolledtextcommand), textcommand);
+	//gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolledtextcommand), textcommand);
+	gtk_container_add(GTK_CONTAINER(scrolledtextcommand), textcommand);
 	gtk_widget_set_size_request(scrolledtextcommand, 400, 50);
 	g_signal_connect(textcommand, "key-release-event", G_CALLBACK(key_command), NULL);
 
@@ -3037,6 +3026,12 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		showtoolbarboth = read_int_from_file(in);
 		if(def_toolbar >= 0 && def_toolbar <= 1) showtoolbarboth = def_toolbar;
 		if(showtoolbarboth < 0 || showtoolbarboth > 1) showtoolbarboth = 1;
+		showlog = read_int_from_file(in);
+		if(showlog < 0 || showlog > 1) showlog = 1;
+		shownumber = read_int_from_file(in);
+		if(shownumber < 0 || shownumber > 1) shownumber = 1;
+		showanalysis = read_int_from_file(in);
+		if(showanalysis < 0 || showanalysis > 1) showanalysis = 1;
 		blockautoreset = read_int_from_file(in);
 		if(blockautoreset < 0 || blockautoreset > 1) blockautoreset = 0;
 		fclose(in);
