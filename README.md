@@ -1,7 +1,7 @@
 Yixin-Board
 ===========
 
-Special-designed GUI for Yixin
+Specially designed GUI for Yixin
 
 Now GTK+ environment has been integrated with Yixin-Board. However, to run old versions of Yixin-Board, you may need to install GTK+ environment manually.
   
