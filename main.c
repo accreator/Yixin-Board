@@ -1742,6 +1742,66 @@ void show_dialog_save(GtkWidget *widget, gpointer data)
 	gtk_widget_destroy (dialog);
 }
 
+void show_dialog_size(GtkWidget *widget, gpointer data)
+{
+#ifdef G_OS_WIN32
+	gchar *argv[] = {"Yixin.exe", NULL};
+#else
+	gchar *argv[] = {"./Yixin", NULL};
+#endif
+	gchar text[80];
+	const gchar *ptext;
+	GtkWidget *dialog;
+	GtkWidget *hbox;
+	GtkWidget *label;
+	GtkWidget *entry;
+	gint result;
+
+	show_dialog_settings_custom_entry(NULL, 0);
+
+	dialog = gtk_dialog_new_with_buttons("Settings", GTK_WINDOW(windowmain), GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "OK", 1, "Cancel", 2, NULL);
+	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
+	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+
+	hbox = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), hbox, FALSE, FALSE, 3);
+
+	label = gtk_label_new(language==0?"Board Size (10 ~ 20):":(language==1?_T("棋盘大小 (10 ~ 20):"):""));
+	entry = gtk_entry_new();
+	sprintf(text, "%d", boardsize);
+	gtk_entry_set_text(GTK_ENTRY(entry), text);
+
+	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox), entry, FALSE, FALSE, 3);
+
+	gtk_widget_show_all(dialog);
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+	switch(result)
+	{
+		case 1:
+			ptext = gtk_entry_get_text(GTK_ENTRY(entry));
+			if(is_integer(ptext))
+			{
+				int s;
+				sscanf(ptext, "%d", &s);
+				if(s <= 20 && s >= 10)
+				{
+					rboardsize = s;
+					if(boardsize != s)
+					{
+						save_setting();
+						g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+						yixin_quit();
+					}
+				}
+			}
+			break;
+		case 2:
+			break;
+	}
+	gtk_widget_destroy(dialog);
+}
+
 void show_dialog_about(GtkWidget *widget, gpointer data)
 {
 	GtkWidget *dialog;
@@ -1847,6 +1907,7 @@ void change_side_menu(int flag, GtkWidget *w)
 		case 2: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(rec[1]), TRUE); break;
 	}
 }
+
 void use_openbook(GtkWidget *widget, gpointer data)
 {
 	useopenbook ^= 1;
@@ -1874,6 +1935,19 @@ void view_log(GtkWidget *widget, gpointer data)
 		gtk_widget_hide(scrolledtextlog);
 		gtk_widget_hide(scrolledtextcommand);
 	}
+}
+void change_language(GtkWidget *widget, gpointer data)
+{
+#ifdef G_OS_WIN32
+	gchar *argv[] = {"Yixin.exe", NULL};
+#else
+	gchar *argv[] = {"./Yixin", NULL};
+#endif
+	if(language == data) return;
+	rlanguage = (int)data;
+	save_setting();
+	g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+	yixin_quit();
 }
 void change_piece(GtkWidget *widget, gpointer data)
 {
@@ -1929,6 +2003,13 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 	GtkTextIter start, end;
 	gchar *command;
 	int i;
+/*
+#ifdef G_OS_WIN32
+	gchar *argv[] = {"Yixin.exe", NULL};
+#else
+	gchar *argv[] = {"./Yixin", NULL};
+#endif
+*/
 
 	if(event->keyval == 0xff0d) // warning: 0xff0d == GDK_KEY_Return
 	{
@@ -2216,6 +2297,12 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			{
 				rboardsize = s;
 				printf_log(language==0?"Board size will be %d after you restart Yixin.\n":"在重启Yixin后棋盘大小将变为%d。\n", s);
+
+				/*
+				save_setting();
+				g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+				yixin_quit();
+				*/
 			}
 		}
 		else if(strncmp(command, "language", 8) == 0)
@@ -2224,11 +2311,23 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			{
 				rlanguage = 1;
 				printf_log(language==0?"Language will be Chinese after you restart Yixin.\n":"在重启Yixin后语言将设定为中文。\n");
+
+				/*
+				save_setting();
+				g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+				yixin_quit();
+				*/
 			}
 			else if(command[9] == 'e' || command[9] == 'E')
 			{
 				rlanguage = 0;
 				printf_log(language==0?"Language will be English after you restart Yixin.\n":"在重启Yixin后语言将设定为英文。\n");
+				
+				/*
+				save_setting();
+				g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+				yixin_quit();
+				*/
 			}
 			else
 			{
@@ -2256,7 +2355,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 	return FALSE;
 }
 
-void yixin_quit()
+void save_setting()
 {
 	FILE *out;
 	if((out = fopen("settings.txt", "w")) != NULL)
@@ -2281,6 +2380,11 @@ void yixin_quit()
 		fprintf(out, "%d\t;block autoreset (0: no, 1: yes)\n", blockautoreset);
 		fclose(out);
 	}
+}
+
+void yixin_quit()
+{
+	save_setting();
 	gtk_main_quit();
 }
 
@@ -2323,12 +2427,13 @@ GdkPixbuf * copy_subpixbuf(GdkPixbuf *_src, int src_x, int src_y, int width, int
 }
 void create_windowmain()
 {
-	GtkWidget *menubar, *menugame, *menuplayers, *menuview, *menuhelp, *menurule;
+	GtkWidget *menubar, *menugame, *menuplayers, *menuview, *menuhelp, *menurule, *menulanguage;
 	GtkWidget *menuitemgame, *menuitemplayers, *menuitemview, *menuitemhelp;
-	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemopenbook, *menuitemquit, *menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5;
+	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemsize, *menuitemopenbook, *menuitemquit,
+		*menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5;
 	//GtkWidget *menuitemnewrule[10]; //TODO
 	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemsettings;
-	//GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemchinese;
+	GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemchinese;
 	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis;
 	GtkWidget *menuitemabout;
 
@@ -2593,6 +2698,7 @@ void create_windowmain()
 	menuview = gtk_menu_new();
 	menuhelp = gtk_menu_new();
 	menurule = gtk_menu_new();
+	menulanguage = gtk_menu_new();
 
 	menuitemgame = gtk_menu_item_new_with_label(language==0?"Game":(language==1?_T("游戏"):""));
 	menuitemplayers = gtk_menu_item_new_with_label(language==0?"Players":(language==1?_T("设置"):""));
@@ -2602,18 +2708,24 @@ void create_windowmain()
 	menuitemload = gtk_menu_item_new_with_label(language==0?"Load":(language==1?_T("载入"):""));
 	menuitemsave = gtk_menu_item_new_with_label(language==0?"Save":(language==1?_T("保存"):""));
 	menuitemrule = gtk_menu_item_new_with_label(language==0?"Rule":(language==1?_T("规则"):""));
+	menuitemsize = gtk_menu_item_new_with_label(language==0?"Board Size":(language==1?_T("棋盘大小"):""));
 	menuitemopenbook = gtk_check_menu_item_new_with_label(language==0?"Use Openbook":(language==1?_T("使用开局库"):""));
 	menuitemnumeration = gtk_check_menu_item_new_with_label(language==0?"Numeration":(language==1?_T("显示数字"):""));
 	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":(language==1?_T("显示日志"):""));
 	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":(language==1?_T("显示分析"):""));
+	menuitemlanguage = gtk_menu_item_new_with_label(language==0?"Language":(language==1?_T("语言"):""));
 	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":(language==1?_T("退出"):""));
 	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":(language==1?_T("关于"):""));
 	menuitemsettings = gtk_menu_item_new_with_label(language==0?"Settings":(language==1?_T("设置"):""));
+	
 	menuitemrule1 = gtk_radio_menu_item_new_with_label(NULL, language==0?"Freestyle gomoku":(language==1?_T("无禁手"):""));
 	menuitemrule2 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Standrad gomoku":(language==1?_T("无禁手(六不赢)"):""));
 	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Free renju":(language==1?_T("有禁手"):""));
 	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"RIF opening rule":(language==1?_T("RIF规则"):""));
 	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Swap after 1st move":(language==1?_T("一手交换"):""));
+	
+	menuitemenglish = gtk_radio_menu_item_new_with_label(NULL, "English");
+	menuitemchinese = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemenglish)), _T("简体中文"));
 	
 	switch(inforule)
 	{
@@ -2632,6 +2744,12 @@ void create_windowmain()
 			break;
 	}
 	set_rule();
+
+	switch(language)
+	{
+		case 1: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemchinese), TRUE); break;
+		default: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemenglish), TRUE); break;
+	}
 
 	if(useopenbook)
 	{
@@ -2667,6 +2785,7 @@ void create_windowmain()
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitemview), menuview);
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitemhelp), menuhelp);
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitemrule), menurule);
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitemlanguage), menulanguage);
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule1);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule2);
@@ -2674,15 +2793,20 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule4);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule5);
 
+	gtk_menu_shell_append(GTK_MENU_SHELL(menulanguage), menuitemenglish);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menulanguage), menuitemchinese);
+
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemnewgame);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemload);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemsave);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemrule);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemsize);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemopenbook);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemquit);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemnumeration);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlog);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemanalysis);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlanguage);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplaysblack);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplayswhite);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemsettings);
@@ -2708,8 +2832,11 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemrule3), "activate", G_CALLBACK(change_rule), (gpointer)2);
 	g_signal_connect(G_OBJECT(menuitemrule4), "activate", G_CALLBACK(change_rule), (gpointer)3);
 	g_signal_connect(G_OBJECT(menuitemrule5), "activate", G_CALLBACK(change_rule), (gpointer)4);
+	g_signal_connect(G_OBJECT(menuitemsize), "activate", G_CALLBACK(show_dialog_size), 0);
 	g_signal_connect(G_OBJECT(menuitemcomputerplaysblack), "activate", G_CALLBACK(change_side), (gpointer)1);
 	g_signal_connect(G_OBJECT(menuitemcomputerplayswhite), "activate", G_CALLBACK(change_side), (gpointer)2);
+	g_signal_connect(G_OBJECT(menuitemenglish), "activate", G_CALLBACK(change_language), (gpointer)0);
+	g_signal_connect(G_OBJECT(menuitemchinese), "activate", G_CALLBACK(change_language), (gpointer)1);
 
 	toolbar = gtk_toolbar_new();
 	if(!showtoolbarboth)
