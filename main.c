@@ -2918,6 +2918,12 @@ void create_windowmain()
 
 	gtk_container_add(GTK_CONTAINER(windowmain), vboxwindowmain);
 	gtk_widget_show_all(windowmain);
+
+	if(!showlog)
+	{
+		gtk_widget_hide(scrolledtextlog);
+		gtk_widget_hide(scrolledtextcommand);
+	}
 }
 
 gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer data)
