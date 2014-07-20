@@ -16,6 +16,7 @@ void change_side(GtkWidget *widget, gpointer data);
 void change_side_menu(int flag, GtkWidget *w);
 void change_size(GtkWidget *widget, gpointer data);
 void change_piece(GtkWidget *widget, gpointer data);
+void stop_thinking(GtkWidget *widget, gpointer data);
 GdkPixbuf * copy_subpixbuf(GdkPixbuf *_src, int src_x, int src_y, int width, int height);
 void create_windowmain();
 gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer data);

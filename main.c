@@ -40,6 +40,7 @@ int forbid[MAX_SIZE][MAX_SIZE];
 int boardblock[MAX_SIZE][MAX_SIZE];
 int boardbest[MAX_SIZE][MAX_SIZE];
 int boardlose[MAX_SIZE][MAX_SIZE];
+int boardpos[MAX_SIZE][MAX_SIZE];
 int blockautoreset = 0;
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
@@ -65,8 +66,8 @@ GtkWidget *tableboard;
 GtkWidget *imageboard[MAX_SIZE][MAX_SIZE];
 GtkWidget *labelboard[2][MAX_SIZE];
 GtkWidget *vboxwindowmain;
-GdkPixbuf *pixbufboard[9][11];
-GdkPixbuf *pixbufboardnumber[9][11][MAX_SIZE*MAX_SIZE+1][2];
+GdkPixbuf *pixbufboard[9][12];
+GdkPixbuf *pixbufboardnumber[9][12][MAX_SIZE*MAX_SIZE+1][2];
 int imgtypeboard[MAX_SIZE][MAX_SIZE];
 char piecepicname[80] = "piece.bmp";
 /* log */
@@ -359,6 +360,8 @@ void refresh_board()
 					{
 						if(boardlose[i][j]) f = 7;
 						else if(boardbest[i][j]) f = 8;
+						else if(boardpos[i][j] == 1) f = 9;
+						else if(boardpos[i][j] == 2) f = 11;
 					}
 				}
 				if(imgtypeboard[i][j] <= 8)
@@ -441,6 +444,7 @@ void make_move(int y, int x)
 
 	memset(boardbest, 0, sizeof(boardbest));
 	memset(boardlose, 0, sizeof(boardlose));
+	memset(boardpos, 0, sizeof(boardpos));
 	
 	refresh_board();
 	for(i=0; i<8; i+=2)
@@ -1851,6 +1855,7 @@ void new_game(GtkWidget *widget, gpointer data)
 	memset(bestline, 0, sizeof(bestline));
 	memset(boardbest, 0, sizeof(boardbest));
 	memset(boardlose, 0, sizeof(boardlose));
+	memset(boardpos, 0, sizeof(boardpos));
 	refresh_board();
 	if(isthinking) isneedomit ++;
 	isthinking = 0;
@@ -1943,7 +1948,7 @@ void change_language(GtkWidget *widget, gpointer data)
 #else
 	gchar *argv[] = {"./Yixin", NULL};
 #endif
-	if(language == data) return;
+	if(language == (int)data) return;
 	rlanguage = (int)data;
 	save_setting();
 	g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
@@ -1966,6 +1971,8 @@ void change_piece(GtkWidget *widget, gpointer data)
 	new_game(NULL, NULL);
 	for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
 	show_forbid();
+
+	stop_thinking(widget, data);
 }
 void stop_thinking(GtkWidget *widget, gpointer data)
 {
@@ -2613,7 +2620,7 @@ void create_windowmain()
 			g_object_unref(pbt);
 			pbt = NULL;
 		}
-		for(j=7; j<=10; j++)
+		for(j=7; j<=11; j++)
 		{
 			GdkPixbuf *pbt;
 			guchar *pixels1, *pixels2, *pixels3, *pixels4;
@@ -2918,7 +2925,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 	gchar *string;
 	gsize size;
 	int x, y;
-	int i;
+	int i, j;
 	char command[80];
 
 	if(cond & G_IO_HUP)
@@ -2963,10 +2970,28 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				boardlose[y][x] = 1;
 				refresh_board();
 			}
-			else if(*p == 'P') //"PV"
+			else if(*p == 'P' && *(p+1) == 'V') //"PV"
 			{
 				p += 3;
 				strcpy(bestline, p);
+			}
+			else if(*p == 'P' && *(p+1) == 'O') //"POS"
+			{
+				p += 4;
+				sscanf(p, "%d,%d", &y, &x);
+				for(i=0; i<boardsize; i++)
+				{
+					for(j=0; j<boardsize; j++)
+					{
+						if(boardpos[i][j] != 0) boardpos[i][j] = 1;
+					}
+				}
+				boardpos[y][x] = 2;
+				refresh_board();
+			}
+			else if(*p == 'R') //"REFRESH"
+			{
+				memset(boardpos, 0, sizeof(boardpos));
 			}
 			g_free(string);
 			continue;
