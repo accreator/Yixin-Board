@@ -12,6 +12,9 @@ typedef long long I64;
 #define MAX_SIZE 20
 #define OPENBOOK_SIZE 8000000
 #define CAUTION_NUM 3  //0..CAUTION_NUM
+#define MAX_THREAD_NUM 16 //1..MAX_THREAD_NUM
+#define MAX_HASH_SIZE 21
+
 typedef struct
 {
 	I64 zobkey;
@@ -33,6 +36,8 @@ int maxdepth = 100;
 int maxnode = 1000000000;
 int computerside = 0; /* 0无 1黑 2白 3双方 */
 int cautionfactor = 0;
+int threadnum = 1;
+int hashsize = 19;
 int board[MAX_SIZE][MAX_SIZE];
 int boardnumber[MAX_SIZE][MAX_SIZE];
 int movepath[MAX_SIZE*MAX_SIZE];
@@ -101,7 +106,7 @@ void print_log(char *text)
 	if(strncmp(text, "ERROR", 5) == 0) text += 5;
 	if(strncmp(text, "UNKNOWN", 7) == 0) text += 7;
 	//if(strncmp(text, "FORBID", 6) == 0) text += 6;
-	if(strncmp(text, "YIXIN", 5) == 0)
+	if(strncmp(text, "YIXIN", 5) == 0 || strncmp(text, "DEEP YIXIN", 10) == 0)
 	{
 		if(flag == 0) flag = 1; else return;
 	}
@@ -1347,6 +1352,27 @@ void set_cautionfactor(int x)
 	send_command(command);
 }
 
+void set_threadnum(int x)
+{
+	gchar command[80];
+	if(x < 1) x = 1;
+	if(x > MAX_THREAD_NUM) x = MAX_THREAD_NUM;
+	threadnum = x;
+	sprintf(command, "INFO thread_num %d\n", threadnum);
+	send_command(command);
+}
+
+void set_hashsize(int x)
+{
+	gchar command[80];
+	if(x < 1) x = 1;
+	if(x > MAX_HASH_SIZE) x = MAX_HASH_SIZE;
+	hashsize = x;
+	sprintf(command, "INFO hash_size %d\n", (1<<hashsize));
+	send_command(command);
+}
+
+
 void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 {
 	static GtkWidget *editable[4];
@@ -1380,12 +1406,12 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	const gchar *ptext;
 	GtkWidget *dialog;
 	GtkWidget *notebook;
-	GtkWidget *notebookvbox[2];
-	GtkWidget *hbox[3];
+	GtkWidget *notebookvbox[3];
+	GtkWidget *hbox[4];
 	GtkWidget *radiolevel[9];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelblank[6];
 	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode;
-	GtkWidget *scalecaution;
+	GtkWidget *scalecaution, *scalethreads, *scalehash;
 	GtkWidget *tablesetting;
 	gint result;
 
@@ -1401,6 +1427,8 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[0], gtk_label_new(language==0?"Level":(language==1?_T("棋力"):"")));
 	notebookvbox[1] = gtk_vbox_new(FALSE, 0);
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[1], gtk_label_new(language==0?"Style":(language==1?_T("棋风"):"")));
+	notebookvbox[2] = gtk_vbox_new(FALSE, 0);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[2], gtk_label_new(language==0?"Resource":(language==1?_T("资源"):"")));
 
 	for(i=0; i<6; i++)
 	{
@@ -1512,12 +1540,31 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_range_set_value(GTK_RANGE(scalecaution), cautionfactor);
 	gtk_widget_set_size_request(scalecaution, 100, -1);
 
+	scalethreads = gtk_hscale_new_with_range(1, MAX_THREAD_NUM, 1);
+	gtk_range_set_value(GTK_RANGE(scalethreads), threadnum);
+	gtk_widget_set_size_request(scalethreads, 100, -1);
+
+	scalehash = gtk_hscale_new_with_range(1, MAX_HASH_SIZE, 1);
+	gtk_range_set_value(GTK_RANGE(scalehash), hashsize);
+	gtk_widget_set_size_request(scalehash, 100, -1);
+
 	hbox[1] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Rash":(language==1?_T("冒进"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), scalecaution, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":(language==1?_T("谨慎"):"")), FALSE, FALSE, 3);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[1], FALSE, FALSE, 3);
+
+	hbox[2] = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language==0?"Number of Threads":(language==1?_T("线程数"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), scalethreads, FALSE, FALSE, 3);
+	hbox[3] = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size":(language==1?_T("哈希表大小"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[3]), scalehash, FALSE, FALSE, 3);
+
+	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[2], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[3], FALSE, FALSE, 3);
+
 
 	gtk_widget_show_all(dialog);
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
@@ -1597,6 +1644,11 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 			}
 
 			set_cautionfactor((int)(gtk_range_get_value(GTK_RANGE(scalecaution))+1e-8));
+
+			set_threadnum((int)(gtk_range_get_value(GTK_RANGE(scalethreads))+1e-8));
+
+			set_hashsize((int)(gtk_range_get_value(GTK_RANGE(scalehash))+1e-8));
+
 			break;
 		case 2:
 			break;
@@ -2385,6 +2437,8 @@ void save_setting()
 		fprintf(out, "%d\t;show analysis (0: no, 1: yes)\n", showanalysis);
 		fprintf(out, "%d\t;show warning (0: no, 1: yes)\n", showwarning);
 		fprintf(out, "%d\t;block autoreset (0: no, 1: yes)\n", blockautoreset);
+		fprintf(out, "%d\t;number of threads\n", threadnum);
+		fprintf(out, "%d\t;hash size\n", hashsize);
 		fclose(out);
 	}
 }
@@ -3218,6 +3272,10 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		if(showwarning < 0 || showwarning > 1) showwarning = 0;
 		blockautoreset = read_int_from_file(in);
 		if(blockautoreset < 0 || blockautoreset > 1) blockautoreset = 0;
+		threadnum = read_int_from_file(in);
+		if(threadnum < 1 || threadnum > MAX_THREAD_NUM) threadnum = 1;
+		hashsize = read_int_from_file(in);
+		if(hashsize < 1 || hashsize > MAX_HASH_SIZE) hashsize = 1;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", boardsize);
@@ -3274,6 +3332,8 @@ void init_engine()
 	send_command(command);
 	set_level(levelchoice);
 	set_cautionfactor(cautionfactor);
+	set_threadnum(threadnum);
+	set_hashsize(hashsize);
 }
 int main(int argc, char** argv)
 {
