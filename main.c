@@ -2107,6 +2107,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: block h8\n", language==1?"Àý":"Example");
 			printf_log(" block reset\n");
 			printf_log(" block autoreset [on,off]\n");
+			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
 			printf_log(" boardsize\n");
 			printf_log("   %s: boardsize 15\n", language==1?"Àý":"Example");
@@ -2338,6 +2339,10 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				boardblock[boardsize-1-y][x] = 1;
 				refresh_board();
 			} while(0);
+		}
+		else if(strncmp(command, "hash clear", 10) == 0)
+		{
+			send_command("yxhashclear\n");
 		}
 		else if(strncmp(command, "bestline", 8) == 0)
 		{
