@@ -126,10 +126,10 @@ void print_log(char *text)
 	if(fspace >= 2) return;
 
 	len = gtk_text_buffer_get_line_count(GTK_TEXT_BUFFER(buffertextlog));
-	if(len > 200)
+	if(len > 400)
 	{
 		gtk_text_buffer_get_iter_at_line(GTK_TEXT_BUFFER(buffertextlog), &start, 0);
-		gtk_text_buffer_get_iter_at_line(GTK_TEXT_BUFFER(buffertextlog), &end, len-200);
+		gtk_text_buffer_get_iter_at_line(GTK_TEXT_BUFFER(buffertextlog), &end, len-400);
 		gtk_text_buffer_delete(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
 	}
 	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
@@ -296,11 +296,11 @@ void show_thanklist()
 	printf_log("  雨中飞燕\n");
 	printf_log("  Tuyen Do\n");
 	printf_log("  Tianyi Hao\n");
+	printf_log("  舒自均\n");
 	printf_log("  肥国乃乃\n");
 	printf_log("  Saturn|Titan\n");
 	printf_log("  元\n");
 	printf_log("  TZ\n");
-	printf_log("  舒自均\n");
 	printf_log("  濤声依旧\n");
 	printf_log("\n");
 }
@@ -1365,10 +1365,10 @@ void set_threadnum(int x)
 void set_hashsize(int x)
 {
 	gchar command[80];
-	if(x < 1) x = 1;
+	if(x < 0) x = 0;
 	if(x > MAX_HASH_SIZE) x = MAX_HASH_SIZE;
 	hashsize = x;
-	sprintf(command, "INFO hash_size %d\n", (1<<hashsize));
+	sprintf(command, "INFO hash_size %d\n", hashsize==0 ? 0 : (1<<hashsize));
 	send_command(command);
 }
 
@@ -1544,7 +1544,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_range_set_value(GTK_RANGE(scalethreads), threadnum);
 	gtk_widget_set_size_request(scalethreads, 100, -1);
 
-	scalehash = gtk_hscale_new_with_range(1, MAX_HASH_SIZE, 1);
+	scalehash = gtk_hscale_new_with_range(0, MAX_HASH_SIZE, 1);
 	gtk_range_set_value(GTK_RANGE(scalehash), hashsize);
 	gtk_widget_set_size_request(scalehash, 100, -1);
 
@@ -2348,6 +2348,10 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			printf_log("BESTLINE: %s ", bestline);
 			printf_log("VAL: %d\n", bestval);
+		}
+		else if(strncmp(command, "info debug", 10) == 0)
+		{
+			send_command("yxdebuginfo\n");
 		}
 		else if(strncmp(command, "boardsize", 9) == 0)
 		{
@@ -3280,7 +3284,7 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		threadnum = read_int_from_file(in);
 		if(threadnum < 1 || threadnum > MAX_THREAD_NUM) threadnum = 1;
 		hashsize = read_int_from_file(in);
-		if(hashsize < 1 || hashsize > MAX_HASH_SIZE) hashsize = 1;
+		if(hashsize < 0 || hashsize > MAX_HASH_SIZE) hashsize = 19;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", boardsize);
