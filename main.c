@@ -3337,6 +3337,7 @@ void load_engine()
 void init_engine()
 {
 	char command[80];
+	send_command("info show_detail 1\n");
 	sprintf(command, "START %d\n", boardsize);
 	send_command(command);
 	set_level(levelchoice);
@@ -3355,7 +3356,7 @@ int main(int argc, char** argv)
 			"language", "Integer"
 		},
 		{ "toolbar", '\0', 0, G_OPTION_ARG_INT, NULL,
-			"Board size to use", "Integer"
+			"Tool bar style", "Integer"
 		},
 		{
 			NULL
