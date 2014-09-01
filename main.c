@@ -14,6 +14,8 @@ typedef long long I64;
 #define CAUTION_NUM 3  //0..CAUTION_NUM
 #define MAX_THREAD_NUM 16 //1..MAX_THREAD_NUM
 #define MAX_HASH_SIZE 21
+#define MIN_SPLIT_DEPTH 5
+#define MAX_SPLIT_DEPTH 20
 
 typedef struct
 {
@@ -38,6 +40,7 @@ int computerside = 0; /* 0无 1黑 2白 3双方 */
 int cautionfactor = 0;
 int threadnum = 1;
 int hashsize = 19;
+int threadsplitdepth = 7;
 int board[MAX_SIZE][MAX_SIZE];
 int boardnumber[MAX_SIZE][MAX_SIZE];
 int movepath[MAX_SIZE*MAX_SIZE];
@@ -1362,6 +1365,16 @@ void set_threadnum(int x)
 	send_command(command);
 }
 
+void set_threadsplitdepth(int x)
+{
+	gchar command[80];
+	if(x < MIN_SPLIT_DEPTH) x = 5;
+	if(x > MAX_SPLIT_DEPTH) x = 20;
+	threadsplitdepth = x;
+	sprintf(command, "INFO thread_split_depth %d\n", threadsplitdepth);
+	send_command(command);
+}
+
 void set_hashsize(int x)
 {
 	gchar command[80];
@@ -1407,11 +1420,11 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *dialog;
 	GtkWidget *notebook;
 	GtkWidget *notebookvbox[3];
-	GtkWidget *hbox[4];
+	GtkWidget *hbox[5];
 	GtkWidget *radiolevel[9];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelblank[6];
 	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode;
-	GtkWidget *scalecaution, *scalethreads, *scalehash;
+	GtkWidget *scalecaution, *scalethreads, *scalesplitdepth, *scalehash;
 	GtkWidget *tablesetting;
 	gint result;
 
@@ -1544,6 +1557,10 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_range_set_value(GTK_RANGE(scalethreads), threadnum);
 	gtk_widget_set_size_request(scalethreads, 100, -1);
 
+	scalesplitdepth = gtk_hscale_new_with_range(MIN_SPLIT_DEPTH, MAX_SPLIT_DEPTH, 1);
+	gtk_range_set_value(GTK_RANGE(scalesplitdepth), threadsplitdepth);
+	gtk_widget_set_size_request(scalesplitdepth, 100, -1);
+
 	scalehash = gtk_hscale_new_with_range(0, MAX_HASH_SIZE, 1);
 	gtk_range_set_value(GTK_RANGE(scalehash), hashsize);
 	gtk_widget_set_size_request(scalehash, 100, -1);
@@ -1558,11 +1575,15 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	hbox[2] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language==0?"Number of Threads":(language==1?_T("线程数"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[2]), scalethreads, FALSE, FALSE, 3);
+	hbox[4] = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox[4]), gtk_label_new(language==0?"Split Depth":(language==1?_T("分裂深度"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[4]), scalesplitdepth, FALSE, FALSE, 3);
 	hbox[3] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size":(language==1?_T("哈希表大小"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), scalehash, FALSE, FALSE, 3);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[2], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[4], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[3], FALSE, FALSE, 3);
 
 
@@ -1646,6 +1667,8 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 			set_cautionfactor((int)(gtk_range_get_value(GTK_RANGE(scalecaution))+1e-8));
 
 			set_threadnum((int)(gtk_range_get_value(GTK_RANGE(scalethreads))+1e-8));
+
+			set_threadsplitdepth((int)(gtk_range_get_value(GTK_RANGE(scalesplitdepth))+1e-8));
 
 			set_hashsize((int)(gtk_range_get_value(GTK_RANGE(scalehash))+1e-8));
 
@@ -2448,6 +2471,7 @@ void save_setting()
 		fprintf(out, "%d\t;block autoreset (0: no, 1: yes)\n", blockautoreset);
 		fprintf(out, "%d\t;number of threads\n", threadnum);
 		fprintf(out, "%d\t;hash size\n", hashsize);
+		fprintf(out, "%d\t;split depth\n", threadsplitdepth);
 		fclose(out);
 	}
 }
@@ -3285,6 +3309,8 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		if(threadnum < 1 || threadnum > MAX_THREAD_NUM) threadnum = 1;
 		hashsize = read_int_from_file(in);
 		if(hashsize < 0 || hashsize > MAX_HASH_SIZE) hashsize = 19;
+		threadsplitdepth = read_int_from_file(in);
+		if(threadsplitdepth < MIN_SPLIT_DEPTH || threadsplitdepth > MAX_SPLIT_DEPTH) threadsplitdepth = 7;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", boardsize);
