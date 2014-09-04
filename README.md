@@ -1,13 +1,7 @@
 Yixin-Board
 ===========
 
-Specially designed GUI for Yixin
-
-Now GTK+ environment has been integrated with Yixin-Board. However, to run old versions of Yixin-Board, you may need to install GTK+ environment manually.
-  
-  * For windows, I recommend gtk-2.16.0(http://downloads.sourceforge.net/gtk-win/gtk2-runtime-2.16.0-2009-03-22-ash.exe?download), because many other GTK+ runtime environments lost the file named "gspawn-win32-helper-console.exe" or report warning about fonts.
-  
-  * For Mac, Linux and BSD, you are supposed to compile it by yourself.
+Specially designed GUI for [**Yixin**](http://www.aiexp.info/pages/yixin.html)
   
 Features:
   
@@ -24,13 +18,7 @@ For more information, please visit www.aiexp.info and send me e-mail: sunkaicn@g
 弈心界面程序
 ============
 
-为弈心引擎设计的图形用户界面
-
-GTK+运行库已与最新的弈心界面程序整合。然而，如果用户要运行老版本的弈心界面程序，用户需手动安装GTK+运行库。
-
-  * 对于windows用户，推荐安装gtk-2.16.0(http://downloads.sourceforge.net/gtk-win/gtk2-runtime-2.16.0-2009-03-22-ash.exe?download)。
-  
-  * 对于Mac、Linux和BSD用户，你需要在自行编译代码。
+为[**弈心**](http://www.aiexp.info/pages/yixin.html)引擎设计的图形用户界面
 
 特性：
 
