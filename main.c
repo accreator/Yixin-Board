@@ -234,6 +234,13 @@ int printf_log(char *fmt, ...)
 				i += 2;
 				continue;
 			}
+			if(strncmp(buffer+i, "RULE", 4) == 0)
+			{
+				strcpy(p, "πÊ‘Ú");
+				p += 4;
+				i += 4;
+				continue;
+			}
 			*p = buffer[i];
 			p ++;
 			i ++;
@@ -3072,19 +3079,18 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			{
 				p += 4;
 				sscanf(p, "%d,%d", &y, &x);
-				for(i=0; i<boardsize; i++)
-				{
-					for(j=0; j<boardsize; j++)
-					{
-						if(boardpos[i][j] != 0) boardpos[i][j] = 1;
-					}
-				}
 				boardpos[y][x] = 2;
 				refresh_board();
 			}
 			else if(*p == 'R') //"REFRESH"
 			{
 				memset(boardpos, 0, sizeof(boardpos));
+			}
+			else if(*p == 'D') //"DONE"
+			{
+				p += 5;
+				sscanf(p, "%d,%d", &y, &x);
+				if(boardpos[y][x] == 2) boardpos[y][x] = 1;
 			}
 			g_free(string);
 			continue;
