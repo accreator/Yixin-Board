@@ -49,6 +49,8 @@ int boardblock[MAX_SIZE][MAX_SIZE];
 int boardbest[MAX_SIZE][MAX_SIZE];
 int boardlose[MAX_SIZE][MAX_SIZE];
 int boardpos[MAX_SIZE][MAX_SIZE];
+int boardfieldon = 0;
+double boardfield[MAX_SIZE][MAX_SIZE];
 int blockautoreset = 0;
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
@@ -1355,7 +1357,7 @@ void set_level(int x)
 void set_cautionfactor(int x)
 {
 	gchar command[80];
-	if(x < 0) x = 0;
+	if(x < -1) x = -1;
 	if(x > CAUTION_NUM) x = CAUTION_NUM;
 	cautionfactor = x;
 	sprintf(command, "INFO caution_factor %d\n", cautionfactor);
@@ -1555,7 +1557,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[3], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[8], FALSE, FALSE, 3);
 
-	scalecaution = gtk_hscale_new_with_range(0, CAUTION_NUM, 1);
+	scalecaution = gtk_hscale_new_with_range(-1, CAUTION_NUM, 1);
 	//gtk_scale_set_value_pos(GTK_SCALE(scalecaution), GTK_POS_LEFT);
 	gtk_range_set_value(GTK_RANGE(scalecaution), cautionfactor);
 	gtk_widget_set_size_request(scalecaution, 100, -1);
@@ -1671,7 +1673,10 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				}
 			}
 
-			set_cautionfactor((int)(gtk_range_get_value(GTK_RANGE(scalecaution))+1e-8));
+			if(gtk_range_get_value(GTK_RANGE(scalecaution)) < 0)
+				set_cautionfactor((int)(gtk_range_get_value(GTK_RANGE(scalecaution))-1e-8));
+			else
+				set_cautionfactor((int)(gtk_range_get_value(GTK_RANGE(scalecaution))+1e-8));
 
 			set_threadnum((int)(gtk_range_get_value(GTK_RANGE(scalethreads))+1e-8));
 
@@ -2139,6 +2144,9 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" block autoreset [on,off]\n");
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
+			printf_log(" field show\n");
+			printf_log("   %s: field show h8\n", language==1?"例":"Example");
+			//printf_log(" field clear\n");
 			printf_log(" boardsize\n");
 			printf_log("   %s: boardsize 15\n", language==1?"例":"Example");
 			printf_log(" language [en,cn]\n");
@@ -2374,6 +2382,40 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			send_command("yxhashclear\n");
 		}
+		else if(strncmp(command, "field show", 10) == 0)
+		{
+			gchar _command[80];
+			do
+			{
+				int x, y;
+				if(command[11] >= 'a' && command[11] <= 'z') command[11] = command[11] - 'a' + 'A';
+				if(command[11] < 'A' || command[11] > 'Z') break;
+				x = command[11] - 'A';
+				y = command[12] - '0';
+				if(command[13] >= '0' && command[13] <= '9')
+				{
+					y = y*10 + command[13] - '0';
+				}
+				y --;
+				if(x<0 || x>=boardsize || y<0 || y>=boardsize) break;
+				send_command("yxshowfield ");
+				sprintf(_command, "%d,%d\n", boardsize-1-y, x);
+				send_command(_command);
+			} while(0);
+		}
+		else if(strncmp(command, "field clear", 11) == 0)
+		{
+			int i, j;
+			for(i=0; i<boardsize; i++)
+			{
+				for(j=0; j<boardsize; j++)
+				{
+					boardfield[i][j] = 0.0;
+				}
+			}
+			boardfieldon = 0;
+			refresh_board();
+		}
 		else if(strncmp(command, "bestline", 8) == 0)
 		{
 			printf_log("BESTLINE: %s ", bestline);
@@ -2469,7 +2511,7 @@ void save_setting()
 		fprintf(out, "%d\t;time limit (match)\n", timeoutmatch/1000);
 		fprintf(out, "%d\t;max depth\n", maxdepth);
 		fprintf(out, "%d\t;max node\n", maxnode);
-		fprintf(out, "%d\t;style (rash 0 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
+		fprintf(out, "%d\t;style (rash -1 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
 		fprintf(out, "%d\t;toolbar style (0: only icon, 1: both icon and words)\n", showtoolbarboth);
 		fprintf(out, "%d\t;show log (0: no, 1: yes)\n", showlog);
 		fprintf(out, "%d\t;show number (0: no, 1: yes)\n", shownumber);
@@ -3095,6 +3137,32 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			g_free(string);
 			continue;
 		}
+		if(strncmp(string, "MESSAGE FIELDINFO", 17) == 0)
+		{
+			char *p = string + 17 + 1;
+			for(i=0; i<boardsize; i++)
+			{
+				for(j=0; j<boardsize; j++)
+				{
+					boardfield[i][j] = p[0]-'0' + (p[2]-'0')/1.e1 + (p[3]-'0')/1.e2 + (p[4]-'0')/1.e3 + (p[5]-'0')/1.e4 + (p[6]-'0')/1.e5 + (p[7]-'0')/1.e6;
+					p += 9;
+				}
+			}
+			boardfieldon = 1;
+			//TODO
+			//应以图形形式输出，目前暂以文本形式
+			for(i=0; i<boardsize; i++)
+			{
+				for(j=0; j<boardsize; j++)
+				{
+					printf_log("%7d\t", max(0,(int)(boardfield[i][j]*1000000)));
+				}
+				printf_log("\n");
+			}
+			refresh_board();
+			g_free(string);
+			continue;
+		}
 		if(strncmp(string, "MESSAGE", 7) == 0)
 		{
 			printf_log("%s", string);
@@ -3297,7 +3365,7 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		maxnode = read_int_from_file(in);
 		if(maxnode < 1000 || maxnode > 1000000000) maxnode = 1000000000;
 		cautionfactor = read_int_from_file(in);
-		if(cautionfactor < 0 || cautionfactor > CAUTION_NUM) cautionfactor = 1;
+		if(cautionfactor < -1 || cautionfactor > CAUTION_NUM) cautionfactor = 1;
 		showtoolbarboth = read_int_from_file(in);
 		if(def_toolbar >= 0 && def_toolbar <= 1) showtoolbarboth = def_toolbar;
 		if(showtoolbarboth < 0 || showtoolbarboth > 1) showtoolbarboth = 1;
