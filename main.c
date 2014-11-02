@@ -6,7 +6,7 @@
 #include <time.h>
 #include <math.h>
 #include "yixin.h"
-#include "resource.h"
+#include "resource.h" /* not needed if you are not provided with resource.h, Yixin.rc and icon.ico */
 
 typedef long long I64;
 #define MAX_SIZE 20
@@ -36,7 +36,7 @@ int timestart = 0;
 int timeoutmatch = 1000000;
 int maxdepth = 100;
 int maxnode = 1000000000;
-int computerside = 0; /* 0无 1黑 2白 3双方 */
+int computerside = 0; /* 0 none 1 black 2 while 3 black&white */
 int cautionfactor = 0;
 int threadnum = 1;
 int hashsize = 19;
@@ -66,7 +66,7 @@ int showsmallfont = 0;
 int showwarning = 1;
 int language = 0; /* 0: English 1: Chinese */
 int rlanguage = 0;
-int movx[8] = {  0,  0,  1, -1,  1,  1, -1, -1}; /* 顺序与检测胜负的函数有关 */
+int movx[8] = {  0,  0,  1, -1,  1,  1, -1, -1}; /* note that the order is related to winning checking function(s)*/
 int movy[8] = {  1, -1,  0,  0,  1, -1,  1, -1};
 /* engine */
 GIOChannel *iochannelin, *iochannelout, *iochannelerr;
@@ -358,7 +358,7 @@ void send_command(char *command)
 	g_io_channel_flush(iochannelin, NULL);
 }
 
-int refreshboardflag = 0; //当为rif规则且正值2打时, refreshboardflag为1。其余时间为0
+int refreshboardflag = 0; //it is set to 1 when making the 5th move under rif rule, otherwise, 0
 void refresh_board()
 {
 	int i, j;
@@ -546,14 +546,12 @@ int search_openbook(I64 zobkey)
 			{
 				fread(&openbook[openbooknum].zobkey, sizeof(I64), 1, in);
 				fread(&openbook[openbooknum].status, sizeof(char), 1, in);
-				//printf("%I64d %c\n", openbook[openbooknum].zobkey, openbook[openbooknum].status);
 				openbooknum ++;
 			}
 			fclose(in);
 		}
 		flag = inforule+(specialrule<<2);
 	}
-	//printf("%I64d\n", zobkey);
 	if(openbooknum == 0) return 0;
 	l = 0;
 	r = openbooknum-1;
@@ -581,8 +579,6 @@ int move_openbook(int *besty, int *bestx)
 	int result[MAX_SIZE][MAX_SIZE] = {{0}};
 	int resultnum = 0;
 	int bestv = 0;
-	//FILE *out;
-	//out = fopen("debug.txt", "w");
 
 	if(zobristflag)
 	{
@@ -606,12 +602,6 @@ int move_openbook(int *besty, int *bestx)
 	}
 	if(bestx==NULL && besty==NULL) return 0; //just for init zobrist
 
-	/*
-	for(i=0; i<piecenum; i++)
-	{
-		fprintf(out, "%d %d\n", movepath[i] / boardsize, movepath[i] % boardsize);
-	}
-	*/
 	for(k=0; k<8; k++)
 	{
 		int _x, _y;
@@ -654,7 +644,6 @@ int move_openbook(int *besty, int *bestx)
 					case 6: zobkey ^= zobrist[boardsize-1-_x][boardsize-1-_y][piecenum%2]; break;
 					case 7: zobkey ^= zobrist[boardsize-1-_y][boardsize-1-_x][piecenum%2]; break;
 				}
-				//fprintf(out, "%I64d\n", zobkey);
 				if(search_openbook(zobkey) == 'a')
 				{
 					if(bestv != 'a')
@@ -697,7 +686,7 @@ int move_openbook(int *besty, int *bestx)
 			}
 		}
 	}
-	//fclose(out);
+
 	if(resultnum == 0) return 0;
 	p = rand() % resultnum;
 	k = 0;
@@ -717,11 +706,11 @@ int move_openbook(int *besty, int *bestx)
 			}
 		}
 	}
-	return 1; //事实上不会走到这一步
+	return 1; //in fact this statement will never be reached
 }
 
-//这个函数生成开局库前n优的着法
-//结果将存于besty, bestx两个数组中
+//this function can generated the best n moves from the openbook
+//and store the results to besty and bestx
 int move_openbook_n(int n, int *besty, int *bestx, int force)
 {
 	int i, j, k, l;
@@ -729,7 +718,8 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 	int px[4], py[4];
 	int sy[3] = {0};
 	/*
-	不必要，因为在move_openbook中已有对board[][]的判断
+	not necessary, since the judgement of board[][] has been done in move_openbook
+
 	if(force != 2)
 	{
 		for(i=0; i<piecenum; i++)
@@ -905,7 +895,6 @@ void show_dialog_swap_query(GtkWidget *window)
 			{
 				isneedrestart = 1;
 				make_move(4, 5);
-				//computerside ^= 3;
 				if(computerside == 2)
 				{
 					change_side_menu(1, NULL);
@@ -920,7 +909,7 @@ void show_dialog_swap_query(GtkWidget *window)
 			else if(specialrule == 1)
 			{
 				isneedrestart = 1;
-				//应支持多种变化（通过开局库）
+				//TODO: should support more variations (with openbook)
 				make_move(boardsize/2-1, boardsize/2+1);
 				if(computerside == 2)
 				{
@@ -951,7 +940,6 @@ void show_dialog_swap_info(GtkWidget *window)
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	isneedrestart = 1;
-	//computerside ^= 3;
 	if(computerside == 2)
 	{
 		change_side_menu(1, NULL);
@@ -1001,7 +989,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 				if(!refreshboardflag && (specialrule!=1 || piecenum>=3 || piecenum==0) && (((computerside&1)&&piecenum%2==0) || ((computerside&2)&&piecenum%2==1)))
 				{
 					int i;
-					//一手交换第一步
+					//the first move of `swap after 1st move' rule
 					if(specialrule == 2 && piecenum == 0 && computerside != 3)
 					{
 						isneedrestart = 1;
@@ -1011,7 +999,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 					else if(specialrule == 1 && piecenum == 0 && computerside != 3)
 					{
 						isneedrestart = 1;
-						//此处未来应多样化开局(通过开局库)
+						//TODO: it should support more variations (with openbook)
 						make_move(boardsize/2, boardsize/2);
 						make_move(boardsize/2-1, boardsize/2);
 						make_move(boardsize/2-2, boardsize/2+2);
@@ -1027,7 +1015,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
 							movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
 						{
-							//应采用开局库
+							//should use openbook
 							refreshboardflag = 1;
 							move_openbook_n(2, besty, bestx, 1);
 							make_move(besty[0], bestx[0]);
@@ -1109,7 +1097,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							int _x, _y;
 							_x = min(x, boardsize-1-x);
 							_y = min(y, boardsize-1-y);
-							//一手交换条件
+							//the condition for swapping under `swap after 1st move' rule
 							if((((_x==2&&_y==3)||(_x==3&&_y==2))&&rand()%2==1) || (_x>1 && _y>1 && _x+_y>5))
 							{
 								show_dialog_swap_info(widget);
@@ -1117,7 +1105,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						}
 						if(specialrule == 1 && piecenum == 3 && /*computerside != 0 &&*/ computerside != 1)
 						{
-							//判断是否是26种rif开局之一
+							//check whether the current opening is one of the 26 standard openings
 							if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
 								movepath[1]%boardsize <= boardsize/2+1 && movepath[1]%boardsize >= boardsize/2-1 &&
 								movepath[1]/boardsize <= boardsize/2+1 && movepath[1]/boardsize >= boardsize/2-1 &&
@@ -1135,7 +1123,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						}
 						if(specialrule == 1 && piecenum == 3 && computerside != 0 && computerside != 1)
 						{
-							//应通过开局库决定是否交换
+							//TODO: should be decided by openbook
 							if(eval_openbook() <= 'C' && eval_openbook() >= 'A')
 							{
 								show_dialog_swap_info(widget);
@@ -1154,7 +1142,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
 							{
 								refreshboardflag = 1;
-								//采用开局库
+								//use openbook
 								move_openbook_n(2, besty, bestx, 1);
 								make_move(besty[0], bestx[0]);
 								make_move(besty[1], bestx[1]);
@@ -1184,7 +1172,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
 								movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
 							{
-								//采用开局库(应同时+计算)
+								//use openbook (should analyze at the same time)
 								y1 = movepath[piecenum-1] / boardsize;
 								x1 = movepath[piecenum-1] % boardsize;
 								y2 = movepath[piecenum-2] / boardsize;
@@ -1274,7 +1262,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 		else
 			change_piece(widget, (gpointer)1);
 	}
-	return FALSE; /* 为什么是FALSE? */
+	return FALSE; /* why FALSE? */
 }
 
 int is_integer(const char *str)
@@ -1524,8 +1512,8 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[levelchoice]), TRUE);
 
 	tablesetting = gtk_table_new(2, 9, FALSE);
-	gtk_table_set_row_spacings(GTK_TABLE(tablesetting), 0); /* 行元素间距为0 */
-	gtk_table_set_col_spacings(GTK_TABLE(tablesetting), 0); /* 列元素间距为0 */
+	gtk_table_set_row_spacings(GTK_TABLE(tablesetting), 0); /* set the row distance between elements to be 0 */
+	gtk_table_set_col_spacings(GTK_TABLE(tablesetting), 0); /* set the column distance between elements to be 0 */
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[0], 0, 1, 0, 1);
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[1], 4, 5, 0, 1);
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[2], 8, 9, 0, 1);
@@ -1698,10 +1686,7 @@ void show_dialog_load(GtkWidget *widget, gpointer data)
 	FILE *in;
 	dialog = gtk_file_chooser_dialog_new("Load", data, GTK_FILE_CHOOSER_ACTION_OPEN,
 		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT, NULL);
-	//filter = gtk_file_filter_new();
-	//gtk_file_filter_set_name(filter, "All files");
-	//gtk_file_filter_add_pattern(filter, "*");
-	//gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+	
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "Yixin saved positions");
 	gtk_file_filter_add_pattern(filter, "*.[Ss][Aa][Vv]");
@@ -2097,13 +2082,6 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 	GtkTextIter start, end;
 	gchar *command;
 	int i;
-/*
-#ifdef G_OS_WIN32
-	gchar *argv[] = {"Yixin.exe", NULL};
-#else
-	gchar *argv[] = {"./Yixin", NULL};
-#endif
-*/
 
 	if(event->keyval == 0xff0d) // warning: 0xff0d == GDK_KEY_Return
 	{
@@ -2599,14 +2577,14 @@ void create_windowmain()
 	int i, j, k, l;
 
 	windowmain = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_resizable(GTK_WINDOW(windowmain), FALSE); /* 禁用最大化 */
+	gtk_window_set_resizable(GTK_WINDOW(windowmain), FALSE); /* do not allow maximizing the window */
 	g_signal_connect(GTK_OBJECT(windowmain), "destroy", G_CALLBACK(yixin_quit), NULL);
-	gtk_widget_add_events(windowmain, GDK_BUTTON_PRESS_MASK); /* 添加按钮点击事件 */
+	gtk_widget_add_events(windowmain, GDK_BUTTON_PRESS_MASK); /* add the button clicking event */
 	gtk_signal_connect(GTK_OBJECT(windowmain), "button_press_event", G_CALLBACK(on_button_press_windowmain), NULL);
 	gtk_window_set_title(GTK_WINDOW(windowmain), "Yixin");
 	tableboard = gtk_table_new(boardsize+1, boardsize+1, TRUE);
-	gtk_table_set_row_spacings(GTK_TABLE(tableboard), 0); /* 行元素间距为0 */
-	gtk_table_set_col_spacings(GTK_TABLE(tableboard), 0); /* 列元素间距为0 */
+	gtk_table_set_row_spacings(GTK_TABLE(tableboard), 0); /* set the row distance between elements to be 0 */
+	gtk_table_set_col_spacings(GTK_TABLE(tableboard), 0); /* set the column distance between elements to be 0 */
 
 	pixbuf = gdk_pixbuf_new_from_file(piecepicname, NULL);
 	size = gdk_pixbuf_get_height(pixbuf);
@@ -3149,8 +3127,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				}
 			}
 			boardfieldon = 1;
-			//TODO
-			//应以图形形式输出，目前暂以文本形式
+			//TODO: should output the information with graph rather than text
 			for(i=0; i<boardsize; i++)
 			{
 				for(j=0; j<boardsize; j++)
@@ -3267,7 +3244,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			}
 		}
 	} while(g_io_channel_get_buffer_condition(channel) == G_IO_IN);
-	return TRUE; /* TRUE表示回调函数在之后仍然正常运转，FALSE则不再执行 */
+	return TRUE; /* TRUE means that the recalling function still runs later, while FALSE indicates it no longer runs */
 }
 gboolean iochannelerr_watch(GIOChannel *channel, GIOCondition cond, gpointer data)
 {
@@ -3476,7 +3453,7 @@ int main(int argc, char** argv)
 	load_setting(boardsize, language, toolbar);
 	load_engine();
 	init_engine();
-	gtk_window_set_default_icon(gdk_pixbuf_new_from_file("icon.ico", NULL)); /* 所有窗口默认图标 */
+	gtk_window_set_default_icon(gdk_pixbuf_new_from_file("icon.ico", NULL)); /* set the default icon for all windows */
 	create_windowmain();
 	show_welcome();
 	gtk_main();
