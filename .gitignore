@@ -16,3 +16,4 @@ gtkrc*
 *.loaders
 *~
 !/release/*.exe
+!/skin/*.bmp
