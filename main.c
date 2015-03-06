@@ -11,8 +11,8 @@
 typedef long long I64;
 #define MAX_SIZE 20
 #define OPENBOOK_SIZE 8000000
-#define CAUTION_NUM 3  //0..CAUTION_NUM
-#define MAX_THREAD_NUM 16 //1..MAX_THREAD_NUM
+#define CAUTION_NUM 3  //-1..CAUTION_NUM
+#define MAX_THREAD_NUM 64 //1..MAX_THREAD_NUM
 #define MAX_HASH_SIZE 21
 #define MIN_SPLIT_DEPTH 5
 #define MAX_SPLIT_DEPTH 20
@@ -49,8 +49,6 @@ int boardblock[MAX_SIZE][MAX_SIZE];
 int boardbest[MAX_SIZE][MAX_SIZE];
 int boardlose[MAX_SIZE][MAX_SIZE];
 int boardpos[MAX_SIZE][MAX_SIZE];
-int boardfieldon = 0;
-double boardfield[MAX_SIZE][MAX_SIZE];
 int blockautoreset = 0;
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
@@ -314,6 +312,7 @@ void show_thanklist()
 	printf_log("  Ôª\n");
 	printf_log("  TZ\n");
 	printf_log("  ýÉùÒÀ¾É\n");
+	printf_log("  ÕÅÎýÉ­");
 	printf_log("\n");
 }
 
@@ -2122,9 +2121,6 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" block autoreset [on,off]\n");
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
-			printf_log(" field show\n");
-			printf_log("   %s: field show h8\n", language==1?"Àý":"Example");
-			//printf_log(" field clear\n");
 			printf_log(" boardsize\n");
 			printf_log("   %s: boardsize 15\n", language==1?"Àý":"Example");
 			printf_log(" language [en,cn]\n");
@@ -2360,40 +2356,6 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			send_command("yxhashclear\n");
 		}
-		else if(strncmp(command, "field show", 10) == 0)
-		{
-			gchar _command[80];
-			do
-			{
-				int x, y;
-				if(command[11] >= 'a' && command[11] <= 'z') command[11] = command[11] - 'a' + 'A';
-				if(command[11] < 'A' || command[11] > 'Z') break;
-				x = command[11] - 'A';
-				y = command[12] - '0';
-				if(command[13] >= '0' && command[13] <= '9')
-				{
-					y = y*10 + command[13] - '0';
-				}
-				y --;
-				if(x<0 || x>=boardsize || y<0 || y>=boardsize) break;
-				send_command("yxshowfield ");
-				sprintf(_command, "%d,%d\n", boardsize-1-y, x);
-				send_command(_command);
-			} while(0);
-		}
-		else if(strncmp(command, "field clear", 11) == 0)
-		{
-			int i, j;
-			for(i=0; i<boardsize; i++)
-			{
-				for(j=0; j<boardsize; j++)
-				{
-					boardfield[i][j] = 0.0;
-				}
-			}
-			boardfieldon = 0;
-			refresh_board();
-		}
 		else if(strncmp(command, "bestline", 8) == 0)
 		{
 			printf_log("BESTLINE: %s ", bestline);
@@ -2591,7 +2553,7 @@ void create_windowmain()
 	sample = gdk_pixbuf_get_bits_per_sample(pixbuf);
 	alpha = gdk_pixbuf_get_has_alpha(pixbuf);
 	colorspace = gdk_pixbuf_get_colorspace(pixbuf);
-	background = gdk_pixbuf_new_subpixbuf(pixbuf, size*13, 3, 1, 1);
+	background = gdk_pixbuf_new_subpixbuf(pixbuf, size*14, 3, 1, 1);
 	pixbufboard[0][0] = copy_subpixbuf(pixbuf, 0, 0, size, size);
 	channels = gdk_pixbuf_get_n_channels(pixbufboard[0][0]);
 	rowstride = gdk_pixbuf_get_rowstride(pixbufboard[0][0]);
@@ -3045,7 +3007,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 	gchar *string;
 	gsize size;
 	int x, y;
-	int i, j;
+	int i;
 	char command[80];
 
 	if(cond & G_IO_HUP)
@@ -3112,31 +3074,6 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				sscanf(p, "%d,%d", &y, &x);
 				if(boardpos[y][x] == 2) boardpos[y][x] = 1;
 			}
-			g_free(string);
-			continue;
-		}
-		if(strncmp(string, "MESSAGE FIELDINFO", 17) == 0)
-		{
-			char *p = string + 17 + 1;
-			for(i=0; i<boardsize; i++)
-			{
-				for(j=0; j<boardsize; j++)
-				{
-					boardfield[i][j] = p[0]-'0' + (p[2]-'0')/1.e1 + (p[3]-'0')/1.e2 + (p[4]-'0')/1.e3 + (p[5]-'0')/1.e4 + (p[6]-'0')/1.e5 + (p[7]-'0')/1.e6;
-					p += 9;
-				}
-			}
-			boardfieldon = 1;
-			//TODO: should output the information with graph rather than text
-			for(i=0; i<boardsize; i++)
-			{
-				for(j=0; j<boardsize; j++)
-				{
-					printf_log("%7d\t", max(0,(int)(boardfield[i][j]*1000000)));
-				}
-				printf_log("\n");
-			}
-			refresh_board();
 			g_free(string);
 			continue;
 		}
