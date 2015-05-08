@@ -10,9 +10,8 @@
 
 typedef long long I64;
 #define MAX_SIZE 20
-#define OPENBOOK_SIZE 8000000
-#define CAUTION_NUM 3  //-1..CAUTION_NUM
-#define MAX_THREAD_NUM 64 //1..MAX_THREAD_NUM
+#define CAUTION_NUM 3  //0..CAUTION_NUM
+#define MAX_THREAD_NUM 1 //1..MAX_THREAD_NUM
 #define MAX_HASH_SIZE 21
 #define MIN_SPLIT_DEPTH 5
 #define MAX_SPLIT_DEPTH 20
@@ -22,7 +21,8 @@ typedef struct
 	I64 zobkey;
 	char status;
 } BOOK;
-BOOK openbook[OPENBOOK_SIZE];
+BOOK *openbook = NULL;
+int openbooksize = 0;
 int openbooknum = 0;
 int zobristflag = 1;
 I64 zobrist[MAX_SIZE][MAX_SIZE][3];
@@ -302,11 +302,11 @@ void show_thanklist()
 			(language==1?"感谢那些对弈心的设计与编写提供支持帮助的朋友！他们是：\n":""));
 	printf_log("  彼方\n");
 	printf_log("  XR\n");
+	printf_log("  舒自均\n");
 	printf_log("  吴豪\n");
 	printf_log("  雨中飞燕\n");
 	printf_log("  Tuyen Do\n");
 	printf_log("  Tianyi Hao\n");
-	printf_log("  舒自均\n");
 	printf_log("  肥国乃乃\n");
 	printf_log("  Saturn|Titan\n");
 	printf_log("  元\n");
@@ -518,6 +518,24 @@ void show_forbid()
 	sprintf(command, "yxshowforbid\n");
 	send_command(command);
 }
+void openbook_enlarge()
+{
+	BOOK *newbook;
+	int i;
+	if (openbooknum + 1 < openbooksize) return;
+	if (openbooksize == 0) openbooksize = 256;
+	openbooksize *= 2;
+	newbook = (BOOK *)malloc(openbooksize * sizeof(BOOK));
+	if (openbook != NULL)
+	{
+		for (i = 0; i < openbooknum; i++)
+		{
+			newbook[i] = openbook[i];
+		}
+		free(openbook);
+	}
+	openbook = newbook;
+}
 int search_openbook(I64 zobkey)
 {
 	int l, r, m;
@@ -543,6 +561,7 @@ int search_openbook(I64 zobkey)
 		{
 			while(!feof(in))
 			{
+				openbook_enlarge();
 				fread(&openbook[openbooknum].zobkey, sizeof(I64), 1, in);
 				fread(&openbook[openbooknum].status, sizeof(char), 1, in);
 				openbooknum ++;
@@ -1344,7 +1363,7 @@ void set_level(int x)
 void set_cautionfactor(int x)
 {
 	gchar command[80];
-	if(x < -1) x = -1;
+	if(x < 0) x = 0;
 	if(x > CAUTION_NUM) x = CAUTION_NUM;
 	cautionfactor = x;
 	sprintf(command, "INFO caution_factor %d\n", cautionfactor);
@@ -1544,7 +1563,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[3], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[8], FALSE, FALSE, 3);
 
-	scalecaution = gtk_hscale_new_with_range(-1, CAUTION_NUM, 1);
+	scalecaution = gtk_hscale_new_with_range(0, CAUTION_NUM, 1);
 	//gtk_scale_set_value_pos(GTK_SCALE(scalecaution), GTK_POS_LEFT);
 	gtk_range_set_value(GTK_RANGE(scalecaution), cautionfactor);
 	gtk_widget_set_size_request(scalecaution, 100, -1);
@@ -1568,12 +1587,14 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[1], FALSE, FALSE, 3);
 
+#if MAX_THREAD_NUM > 1
 	hbox[2] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language==0?"Number of Threads":(language==1?_T("线程数"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[2]), scalethreads, FALSE, FALSE, 3);
 	hbox[4] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[4]), gtk_label_new(language==0?"Split Depth":(language==1?_T("分裂深度"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[4]), scalesplitdepth, FALSE, FALSE, 3);
+#endif
 	hbox[3] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size":(language==1?_T("哈希表大小"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), scalehash, FALSE, FALSE, 3);
@@ -2451,7 +2472,7 @@ void save_setting()
 		fprintf(out, "%d\t;time limit (match)\n", timeoutmatch/1000);
 		fprintf(out, "%d\t;max depth\n", maxdepth);
 		fprintf(out, "%d\t;max node\n", maxnode);
-		fprintf(out, "%d\t;style (rash -1 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
+		fprintf(out, "%d\t;style (rash 0 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
 		fprintf(out, "%d\t;toolbar style (0: only icon, 1: both icon and words)\n", showtoolbarboth);
 		fprintf(out, "%d\t;show log (0: no, 1: yes)\n", showlog);
 		fprintf(out, "%d\t;show number (0: no, 1: yes)\n", shownumber);
@@ -3279,7 +3300,7 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		maxnode = read_int_from_file(in);
 		if(maxnode < 1000 || maxnode > 1000000000) maxnode = 1000000000;
 		cautionfactor = read_int_from_file(in);
-		if(cautionfactor < -1 || cautionfactor > CAUTION_NUM) cautionfactor = 1;
+		if(cautionfactor < 0 || cautionfactor > CAUTION_NUM) cautionfactor = 1;
 		showtoolbarboth = read_int_from_file(in);
 		if(def_toolbar >= 0 && def_toolbar <= 1) showtoolbarboth = def_toolbar;
 		if(showtoolbarboth < 0 || showtoolbarboth > 1) showtoolbarboth = 1;
