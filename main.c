@@ -355,7 +355,7 @@ void send_command(char *command)
 	gsize size;
 	g_io_channel_write_chars(iochannelin, command, -1, &size, NULL);
 	g_io_channel_flush(iochannelin, NULL);
-	printf_log(command); //debug
+	//printf_log(command); //for debug
 }
 
 int refreshboardflag = 0; //it is set to 1 when making the 5th move under rif rule, otherwise, 0
