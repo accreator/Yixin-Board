@@ -21,11 +21,11 @@ GdkPixbuf * copy_subpixbuf(GdkPixbuf *_src, int src_x, int src_y, int width, int
 void create_windowmain();
 gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer data);
 gboolean iochannelerr_watch(GIOChannel *channel, GIOCondition cond, gpointer data);
-void load_setting(int def_boardsize, int def_language, int def_toolbar);
+void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int def_toolbar);
 void save_setting();
 void load_engine();
 void init_engine();
 void yixin_quit();
 //#define max(x, y) ((x)>(y)?(x):(y))
 //#define min(x, y) ((x)<(y)?(x):(y))
-#define VERSION "1.4"
+#define VERSION "1.5"

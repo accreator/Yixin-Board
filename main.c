@@ -26,8 +26,8 @@ int openbooksize = 0;
 int openbooknum = 0;
 int zobristflag = 1;
 I64 zobrist[MAX_SIZE][MAX_SIZE][3];
-int boardsize = 15;
-int rboardsize = 15;
+int boardsizeh = 15, boardsizew = 15;
+int rboardsizeh = 15, rboardsizew = 15;
 int inforule = 0;
 int specialrule = 0;
 int timeoutturn = 5000;
@@ -303,10 +303,10 @@ void show_thanklist()
 	printf_log("  彼方\n");
 	printf_log("  XR\n");
 	printf_log("  舒自均\n");
+	printf_log("  Tianyi Hao\n");
 	printf_log("  吴豪\n");
 	printf_log("  雨中飞燕\n");
 	printf_log("  Tuyen Do\n");
-	printf_log("  Tianyi Hao\n");
 	printf_log("  肥国乃乃\n");
 	printf_log("  Saturn|Titan\n");
 	printf_log("  元\n");
@@ -355,15 +355,16 @@ void send_command(char *command)
 	gsize size;
 	g_io_channel_write_chars(iochannelin, command, -1, &size, NULL);
 	g_io_channel_flush(iochannelin, NULL);
+	printf_log(command); //debug
 }
 
 int refreshboardflag = 0; //it is set to 1 when making the 5th move under rif rule, otherwise, 0
 void refresh_board()
 {
 	int i, j;
-	for(i=0; i<boardsize; i++)
+	for(i=0; i<boardsizeh; i++)
 	{
-		for(j=0; j<boardsize; j++)
+		for(j=0; j<boardsizew; j++)
 		{
 			if(board[i][j] == 0)
 			{
@@ -389,8 +390,8 @@ void refresh_board()
 			{
 				int f = 0, _f = 0;
 				int x, y, z = 0;
-				if(movepath[piecenum-1]/boardsize == i && movepath[piecenum-1]%boardsize == j) f = 2;
-				if(refreshboardflag == 1 && movepath[piecenum-2]/boardsize == i && movepath[piecenum-2]%boardsize == j) _f = 2;
+				if(movepath[piecenum-1]/boardsizew == i && movepath[piecenum-1]%boardsizew == j) f = 2;
+				if(refreshboardflag == 1 && movepath[piecenum-2]/boardsizew == i && movepath[piecenum-2]%boardsizew == j) _f = 2;
 				if(refreshboardflag == 1 && f) z = 1;
 				if(shownumber)
 				{
@@ -425,9 +426,9 @@ void refresh_board()
 	}
 	/*
 	//for debug
-	for(i=0; i<boardsize; i++)
+	for(i=0; i<boardsizeh; i++)
 	{
-		for(j=0; j<boardsize; j++)
+		for(j=0; j<boardsizew; j++)
 		{
 			if(i <= 8 && j <= 10)
 			{
@@ -439,7 +440,7 @@ void refresh_board()
 }
 int is_legal_move(int y, int x)
 {
-	return y>=0 && x>=0 && y<boardsize && x<boardsize && board[y][x] == 0;
+	return y>=0 && x>=0 && y<boardsizeh && x<boardsizew && board[y][x] == 0;
 }
 void make_move(int y, int x)
 {
@@ -447,14 +448,14 @@ void make_move(int y, int x)
 
 	board[y][x] = piecenum%2+1;
 	boardnumber[y][x] = piecenum+1;
-	if(movepath[piecenum] != y*boardsize+x)
+	if(movepath[piecenum] != y*boardsizew+x)
 	{
-		movepath[piecenum] = y*boardsize+x;
+		movepath[piecenum] = y*boardsizew+x;
 		for(i=piecenum+1; i<MAX_SIZE*MAX_SIZE; i++) movepath[i] = -1;
 	}
 
 	piecenum ++;
-	if(piecenum == boardsize*boardsize) isgameover = 1;
+	if(piecenum == boardsizeh*boardsizew) isgameover = 1;
 
 	memset(bestline, 0, sizeof(bestline));
 
@@ -473,7 +474,7 @@ void make_move(int y, int x)
 		{
 			ny += movy[i];
 			nx += movx[i];
-			if(nx<0 || ny<0 || nx>=boardsize || ny>=boardsize) break;
+			if(nx<0 || ny<0 || nx>=boardsizew || ny>=boardsizeh) break;
 			if(board[ny][nx] != board[y][x]) break;
 			k ++;
 		}
@@ -483,7 +484,7 @@ void make_move(int y, int x)
 		{
 			ny -= movy[i];
 			nx -= movx[i];
-			if(nx<0 || ny<0 || nx>=boardsize || ny>=boardsize) break;
+			if(nx<0 || ny<0 || nx>=boardsizew || ny>=boardsizeh) break;
 			if(board[ny][nx] != board[y][x]) break;
 			k ++;
 		}
@@ -503,14 +504,14 @@ void show_forbid()
 		memset(forbid, 0, sizeof(forbid));
 		return;
 	}
-	sprintf(command, "start %d\n", boardsize);
+	sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
 	send_command(command);
 	sprintf(command, "yxboard\n");
 	send_command(command);
 	for(i=0; i<piecenum; i++)
 	{
-		sprintf(command, "%d,%d,%d\n", movepath[i]/boardsize,
-			movepath[i]%boardsize, piecenum%2==i%2 ? 1 : 2);
+		sprintf(command, "%d,%d,%d\n", movepath[i]/boardsizew,
+			movepath[i]%boardsizew, piecenum%2==i%2 ? 1 : 2);
 		send_command(command);
 	}
 	sprintf(command, "done\n");
@@ -547,15 +548,15 @@ int search_openbook(I64 zobkey)
 		openbooknum = 0;
 		if(specialrule == 2)
 		{
-			sprintf(name, "book3_%d.dat", boardsize);
+			sprintf(name, "book3_%d_%d.dat", boardsizeh, boardsizew);
 		}
 		else if(specialrule == 1)
 		{
-			sprintf(name, "book4_%d.dat", boardsize);
+			sprintf(name, "book4_%d_%d.dat", boardsizeh, boardsizew);
 		}
 		else
 		{
-			sprintf(name, "book%d_%d.dat", inforule, boardsize);
+			sprintf(name, "book%d_%d_%d.dat", inforule, boardsizeh, boardsizew);
 		}
 		if((in = fopen(name, "rb")) != NULL)
 		{
@@ -626,25 +627,29 @@ int move_openbook(int *besty, int *bestx)
 		I64 zobkey;
 		I64 _zobkey;
 		_zobkey = 0;
+		if (boardsizew != boardsizeh)
+		{
+			if (k == 0 || k == 2 || k == 4 || k == 6) continue;
+		}
 		for(i=0; i<piecenum; i++)
 		{
-			_y = movepath[i]/boardsize;
-			_x = movepath[i]%boardsize;
+			_y = movepath[i]/boardsizew;
+			_x = movepath[i]%boardsizew;
 			switch(k)
 			{
 				case 0: _zobkey ^= zobrist[_x][_y][i%2]; break;
 				case 1: _zobkey ^= zobrist[_y][_x][i%2]; break;
-				case 2: _zobkey ^= zobrist[boardsize-1-_x][_y][i%2]; break;
-				case 3: _zobkey ^= zobrist[boardsize-1-_y][_x][i%2]; break;
-				case 4: _zobkey ^= zobrist[_x][boardsize-1-_y][i%2]; break;
-				case 5: _zobkey ^= zobrist[_y][boardsize-1-_x][i%2]; break;
-				case 6: _zobkey ^= zobrist[boardsize-1-_x][boardsize-1-_y][i%2]; break;
-				case 7: _zobkey ^= zobrist[boardsize-1-_y][boardsize-1-_x][i%2]; break;
+				case 2: _zobkey ^= zobrist[boardsizeh-1-_x][_y][i%2]; break;
+				case 3: _zobkey ^= zobrist[boardsizeh-1-_y][_x][i%2]; break;
+				case 4: _zobkey ^= zobrist[_x][boardsizew-1-_y][i%2]; break;
+				case 5: _zobkey ^= zobrist[_y][boardsizew-1-_x][i%2]; break;
+				case 6: _zobkey ^= zobrist[boardsizeh-1-_x][boardsizew-1-_y][i%2]; break;
+				case 7: _zobkey ^= zobrist[boardsizeh-1-_y][boardsizew-1-_x][i%2]; break;
 			}
 		}
-		for(i=0; i<boardsize; i++)
+		for(i=0; i<boardsizeh; i++)
 		{
-			for(j=0; j<boardsize; j++)
+			for(j=0; j<boardsizew; j++)
 			{
 				_y = i;
 				_x = j;
@@ -655,12 +660,12 @@ int move_openbook(int *besty, int *bestx)
 				{
 					case 0: zobkey ^= zobrist[_x][_y][piecenum%2]; break;
 					case 1: zobkey ^= zobrist[_y][_x][piecenum%2]; break;
-					case 2: zobkey ^= zobrist[boardsize-1-_x][_y][piecenum%2]; break;
-					case 3: zobkey ^= zobrist[boardsize-1-_y][_x][piecenum%2]; break;
-					case 4: zobkey ^= zobrist[_x][boardsize-1-_y][piecenum%2]; break;
-					case 5: zobkey ^= zobrist[_y][boardsize-1-_x][piecenum%2]; break;
-					case 6: zobkey ^= zobrist[boardsize-1-_x][boardsize-1-_y][piecenum%2]; break;
-					case 7: zobkey ^= zobrist[boardsize-1-_y][boardsize-1-_x][piecenum%2]; break;
+					case 2: zobkey ^= zobrist[boardsizeh-1-_x][_y][piecenum%2]; break;
+					case 3: zobkey ^= zobrist[boardsizeh-1-_y][_x][piecenum%2]; break;
+					case 4: zobkey ^= zobrist[_x][boardsizew-1-_y][piecenum%2]; break;
+					case 5: zobkey ^= zobrist[_y][boardsizew-1-_x][piecenum%2]; break;
+					case 6: zobkey ^= zobrist[boardsizeh-1-_x][boardsizew-1-_y][piecenum%2]; break;
+					case 7: zobkey ^= zobrist[boardsizeh-1-_y][boardsizew-1-_x][piecenum%2]; break;
 				}
 				if(search_openbook(zobkey) == 'a')
 				{
@@ -708,9 +713,9 @@ int move_openbook(int *besty, int *bestx)
 	if(resultnum == 0) return 0;
 	p = rand() % resultnum;
 	k = 0;
-	for(i=0; i<boardsize; i++)
+	for(i=0; i<boardsizeh; i++)
 	{
-		for(j=0; j<boardsize; j++)
+		for(j=0; j<boardsizew; j++)
 		{
 			if(result[i][j])
 			{
@@ -742,14 +747,14 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 	{
 		for(i=0; i<piecenum; i++)
 		{
-			moveopenbookexclude[movepath[piecenum-1]/boardsize][movepath[piecenum-1]%boardsize] = 1;
+			moveopenbookexclude[movepath[piecenum-1]/boardsizew][movepath[piecenum-1]%boardsizew] = 1;
 		}
 	}
 	*/
 	for(i=0; i<4; i++)
 	{
-		py[i] = movepath[i] / boardsize;
-		px[i] = movepath[i] % boardsize;
+		py[i] = movepath[i] / boardsizew;
+		px[i] = movepath[i] % boardsizew;
 	}
 	for(i=0; i<4; i++)
 	{
@@ -779,9 +784,9 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 			d3 = (besty[i] - py[1])*(besty[i] - py[1]) + (bestx[i] - px[1])*(bestx[i] - px[1]);
 			d4 = (besty[i] - py[3])*(besty[i] - py[3]) + (bestx[i] - px[3])*(bestx[i] - px[3]);
 			
-			for(j=0; j<boardsize; j++)
+			for(j=0; j<boardsizeh; j++)
 			{
-				for(k=0; k<boardsize; k++)
+				for(k=0; k<boardsizew; k++)
 				{
 					double _d1, _d2, _d3, _d4;
 					if(moveopenbookexclude[j][k]) continue;
@@ -810,9 +815,9 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 	if(force == 1 && i<n)
 	{
 		int x, y, nx, ny;
-		y = movepath[piecenum-1] / boardsize;
-		x = movepath[piecenum-1] % boardsize;
-		for(j=1; j<boardsize; j++)
+		y = movepath[piecenum-1] / boardsizew;
+		x = movepath[piecenum-1] % boardsizew;
+		for(j=1; j<max(boardsizeh, boardsizew); j++)
 		{
 			for(k=-j; k<=j; k++)
 			{
@@ -821,8 +826,8 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 				{
 					nx = x + k;
 					ny = y + l;
-					if(nx < 0 || ny < 0 || nx >= boardsize || ny >= boardsize) continue;
-					movepath[piecenum-1] = ny * boardsize + nx;
+					if(nx < 0 || ny < 0 || nx >= boardsizew || ny >= boardsizeh) continue;
+					movepath[piecenum-1] = ny * boardsizew + nx;
 					i += move_openbook_n(n-i, besty+i, bestx+i, 2);
 					if(i >= n) break;
 				}
@@ -830,7 +835,7 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 			}
 			if(i >= n) break;
 		}
-		movepath[piecenum-1] = y * boardsize + x;
+		movepath[piecenum-1] = y * boardsizew + x;
 		if(i < n)
 		{
 			printf_log("ERROR opening book error");
@@ -857,20 +862,24 @@ int eval_openbook()
 		int _x, _y;
 		I64 _zobkey;
 		_zobkey = 0;
+		if (boardsizew != boardsizeh)
+		{
+			if (k == 0 || k == 2 || k == 4 || k == 6) continue;
+		}
 		for(i=0; i<piecenum; i++)
 		{
-			_y = movepath[i]/boardsize;
-			_x = movepath[i]%boardsize;
+			_y = movepath[i]/boardsizew;
+			_x = movepath[i]%boardsizew;
 			switch(k)
 			{
 				case 0: _zobkey ^= zobrist[_x][_y][i%2]; break;
 				case 1: _zobkey ^= zobrist[_y][_x][i%2]; break;
-				case 2: _zobkey ^= zobrist[boardsize-1-_x][_y][i%2]; break;
-				case 3: _zobkey ^= zobrist[boardsize-1-_y][_x][i%2]; break;
-				case 4: _zobkey ^= zobrist[_x][boardsize-1-_y][i%2]; break;
-				case 5: _zobkey ^= zobrist[_y][boardsize-1-_x][i%2]; break;
-				case 6: _zobkey ^= zobrist[boardsize-1-_x][boardsize-1-_y][i%2]; break;
-				case 7: _zobkey ^= zobrist[boardsize-1-_y][boardsize-1-_x][i%2]; break;
+				case 2: _zobkey ^= zobrist[boardsizeh-1-_x][_y][i%2]; break;
+				case 3: _zobkey ^= zobrist[boardsizeh-1-_y][_x][i%2]; break;
+				case 4: _zobkey ^= zobrist[_x][boardsizew-1-_y][i%2]; break;
+				case 5: _zobkey ^= zobrist[_y][boardsizew-1-_x][i%2]; break;
+				case 6: _zobkey ^= zobrist[boardsizeh-1-_x][boardsizew-1-_y][i%2]; break;
+				case 7: _zobkey ^= zobrist[boardsizeh-1-_y][boardsizew-1-_x][i%2]; break;
 			}
 		}
 		v = search_openbook(_zobkey);
@@ -928,7 +937,7 @@ void show_dialog_swap_query(GtkWidget *window)
 			{
 				isneedrestart = 1;
 				//TODO: should support more variations (with openbook)
-				make_move(boardsize/2-1, boardsize/2+1);
+				make_move(boardsizeh/2-1, boardsizew/2+1);
 				if(computerside == 2)
 				{
 					change_side_menu(1, NULL);
@@ -1002,7 +1011,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 				x = (int)((event->x - imageboard[0][0]->allocation.x)/size);
 				y = (int)((event->y - imageboard[0][0]->allocation.y)/size);
 			}
-			if(x>=0 && x<boardsize && y>=0 && y<boardsize && !isgameover)
+			if(x>=0 && x<boardsizew && y>=0 && y<boardsizeh && !isgameover)
 			{
 				if(!refreshboardflag && (specialrule!=1 || piecenum>=3 || piecenum==0) && (((computerside&1)&&piecenum%2==0) || ((computerside&2)&&piecenum%2==1)))
 				{
@@ -1018,20 +1027,20 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 					{
 						isneedrestart = 1;
 						//TODO: it should support more variations (with openbook)
-						make_move(boardsize/2, boardsize/2);
-						make_move(boardsize/2-1, boardsize/2);
-						make_move(boardsize/2-2, boardsize/2+2);
+						make_move(boardsizeh/2, boardsizew/2);
+						make_move(boardsizeh/2-1, boardsizew/2);
+						make_move(boardsizeh/2-2, boardsizew/2+2);
 						show_dialog_swap_query(widget);
 					}
 					else if(specialrule == 1 && piecenum == 4 && computerside != 3)
 					{
 						int besty[2], bestx[2];
 						isneedrestart = 1;
-						if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
-							movepath[1]%boardsize <= boardsize/2+1 && movepath[1]%boardsize >= boardsize/2-1 &&
-							movepath[1]/boardsize <= boardsize/2+1 && movepath[1]/boardsize >= boardsize/2-1 &&
-							movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
-							movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
+						if(movepath[0]%boardsizew == boardsizew/2 && movepath[0]/boardsizew == boardsizeh/2 &&
+							movepath[1]%boardsizew <= boardsizew/2+1 && movepath[1]%boardsizew >= boardsizew/2-1 &&
+							movepath[1]/boardsizew <= boardsizeh/2+1 && movepath[1]/boardsizew >= boardsizeh/2-1 &&
+							movepath[2]%boardsizew <= boardsizew/2+2 && movepath[2]%boardsizew >= boardsizew/2-2 &&
+							movepath[2]/boardsizew <= boardsizeh/2+2 && movepath[2]/boardsizew >= boardsizeh/2-2)
 						{
 							//should use openbook
 							refreshboardflag = 1;
@@ -1070,14 +1079,14 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						timestart = clock();
 						sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 						send_command(command);
-						sprintf(command, "start %d\n", boardsize);
+						sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
 						send_command(command);
 						sprintf(command, "board\n");
 						send_command(command);
 						for(i=0; i<piecenum; i++)
 						{
-							sprintf(command, "%d,%d,%d\n", movepath[i]/boardsize,
-								movepath[i]%boardsize, piecenum%2==i%2 ? 1 : 2);
+							sprintf(command, "%d,%d,%d\n", movepath[i]/boardsizew,
+								movepath[i]%boardsizew, piecenum%2==i%2 ? 1 : 2);
 							send_command(command);
 						}
 						sprintf(command, "done\n");
@@ -1113,8 +1122,8 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						if(specialrule == 2 && piecenum == 1 && computerside != 0)
 						{
 							int _x, _y;
-							_x = min(x, boardsize-1-x);
-							_y = min(y, boardsize-1-y);
+							_x = min(x, boardsizew-1-x);
+							_y = min(y, boardsizeh-1-y);
 							//the condition for swapping under `swap after 1st move' rule
 							if((((_x==2&&_y==3)||(_x==3&&_y==2))&&rand()%2==1) || (_x>1 && _y>1 && _x+_y>5))
 							{
@@ -1124,11 +1133,11 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						if(specialrule == 1 && piecenum == 3 && /*computerside != 0 &&*/ computerside != 1)
 						{
 							//check whether the current opening is one of the 26 standard openings
-							if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
-								movepath[1]%boardsize <= boardsize/2+1 && movepath[1]%boardsize >= boardsize/2-1 &&
-								movepath[1]/boardsize <= boardsize/2+1 && movepath[1]/boardsize >= boardsize/2-1 &&
-								movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
-								movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
+							if(movepath[0]%boardsizew == boardsizew/2 && movepath[0]/boardsizew == boardsizeh/2 &&
+								movepath[1]%boardsizew <= boardsizew/2+1 && movepath[1]%boardsizew >= boardsizew/2-1 &&
+								movepath[1]/boardsizew <= boardsizeh/2+1 && movepath[1]/boardsizew >= boardsizeh/2-1 &&
+								movepath[2]%boardsizew <= boardsizew/2+2 && movepath[2]%boardsizew >= boardsizew/2-2 &&
+								movepath[2]/boardsizew <= boardsizeh/2+2 && movepath[2]/boardsizew >= boardsizeh/2-2)
 							{
 								//do nothing
 							}
@@ -1153,11 +1162,11 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							int besty[2], bestx[2];
 							isneedrestart = 1;
 							
-							if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
-								movepath[1]%boardsize <= boardsize/2+1 && movepath[1]%boardsize >= boardsize/2-1 &&
-								movepath[1]/boardsize <= boardsize/2+1 && movepath[1]/boardsize >= boardsize/2-1 &&
-								movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
-								movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
+							if(movepath[0]%boardsizew == boardsizew/2 && movepath[0]/boardsizew == boardsizeh/2 &&
+								movepath[1]%boardsizew <= boardsizew/2+1 && movepath[1]%boardsizew >= boardsizew/2-1 &&
+								movepath[1]/boardsizew <= boardsizeh/2+1 && movepath[1]/boardsizew >= boardsizeh/2-1 &&
+								movepath[2]%boardsizew <= boardsizew/2+2 && movepath[2]%boardsizew >= boardsizew/2-2 &&
+								movepath[2]/boardsizew <= boardsizeh/2+2 && movepath[2]/boardsizew >= boardsizeh/2-2)
 							{
 								refreshboardflag = 1;
 								//use openbook
@@ -1184,17 +1193,17 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							int v1, v2;
 							refreshboardflag = 0;
 							isneedrestart = 1;
-							if(movepath[0]%boardsize == boardsize/2 && movepath[0]/boardsize == boardsize/2 &&
-								movepath[1]%boardsize <= boardsize/2+1 && movepath[1]%boardsize >= boardsize/2-1 &&
-								movepath[1]/boardsize <= boardsize/2+1 && movepath[1]/boardsize >= boardsize/2-1 &&
-								movepath[2]%boardsize <= boardsize/2+2 && movepath[2]%boardsize >= boardsize/2-2 &&
-								movepath[2]/boardsize <= boardsize/2+2 && movepath[2]/boardsize >= boardsize/2-2)
+							if(movepath[0]%boardsizew == boardsizew/2 && movepath[0]/boardsizew == boardsizeh/2 &&
+								movepath[1]%boardsizew <= boardsizew/2+1 && movepath[1]%boardsizew >= boardsizew/2-1 &&
+								movepath[1]/boardsizew <= boardsizeh/2+1 && movepath[1]/boardsizew >= boardsizeh/2-1 &&
+								movepath[2]%boardsizew <= boardsizew/2+2 && movepath[2]%boardsizew >= boardsizew/2-2 &&
+								movepath[2]/boardsizew <= boardsizeh/2+2 && movepath[2]/boardsizew >= boardsizeh/2-2)
 							{
 								//use openbook (should analyze at the same time)
-								y1 = movepath[piecenum-1] / boardsize;
-								x1 = movepath[piecenum-1] % boardsize;
-								y2 = movepath[piecenum-2] / boardsize;
-								x2 = movepath[piecenum-2] % boardsize;
+								y1 = movepath[piecenum-1] / boardsizew;
+								x1 = movepath[piecenum-1] % boardsizew;
+								y2 = movepath[piecenum-2] / boardsizew;
+								x2 = movepath[piecenum-2] % boardsizew;
 								change_piece(NULL, (gpointer)1);
 								v2 = eval_openbook();
 								change_piece(NULL, (gpointer)1);
@@ -1243,14 +1252,14 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 									timestart = clock();
 									sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 									send_command(command);
-									sprintf(command, "start %d\n", boardsize);
+									sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
 									send_command(command);
 									sprintf(command, "board\n");
 									send_command(command);
 									for(i=0; i<piecenum; i++)
 									{
-										sprintf(command, "%d,%d,%d\n", movepath[i]/boardsize,
-											movepath[i]%boardsize, piecenum%2==i%2 ? 1 : 2);
+										sprintf(command, "%d,%d,%d\n", movepath[i]/boardsizew,
+											movepath[i]%boardsizew, piecenum%2==i%2 ? 1 : 2);
 										send_command(command);
 									}
 									sprintf(command, "done\n");
@@ -1355,7 +1364,7 @@ void set_level(int x)
 		send_command(command);
 		sprintf(command, "INFO timeout_turn %d\n", timeoutturn);
 		send_command(command);
-		sprintf(command, "INFO max_depth %d\n", boardsize * boardsize);
+		sprintf(command, "INFO max_depth %d\n", boardsizeh * boardsizew);
 		send_command(command);
 	}
 }
@@ -1632,7 +1641,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				if(is_integer(ptext))
 				{
 					sscanf(ptext, "%d", &maxdepth);
-					if(maxdepth > boardsize*boardsize) maxdepth = boardsize*boardsize;
+					if(maxdepth > boardsizeh*boardsizew) maxdepth = boardsizeh*boardsizew;
 					if(maxdepth < 2) maxdepth = 2;
 				}
 				ptext = gtk_entry_get_text(GTK_ENTRY(entrymaxnode));
@@ -1758,8 +1767,8 @@ void show_dialog_load(GtkWidget *widget, gpointer data)
 			{
 				int i, num;
 				new_game(NULL, NULL);
-				fscanf(in, "%d", &boardsize);
-				fscanf(in, "%*d");
+				fscanf(in, "%*d"); //TODO: use boardsizeh?
+				fscanf(in, "%*d"); //TODO: use boardsizew or inforule?
 				/*
 				fscanf(in, "%d", &inforule);
 				switch(inforule)
@@ -1823,12 +1832,13 @@ void show_dialog_save(GtkWidget *widget, gpointer data)
 		if((out = fopen(_filename, "w")) != NULL)
 		{
 			int i;
-			fprintf(out, "%d\n", boardsize);
-			fprintf(out, "%d\n", inforule);
+			fprintf(out, "%d\n", boardsizeh);
+			fprintf(out, "%d\n", boardsizew);
+			//fprintf(out, "%d\n", inforule);
 			fprintf(out, "%d\n", piecenum);
 			for(i=0; i<piecenum; i++)
 			{
-				fprintf(out, "%d %d\n", movepath[i]/boardsize, movepath[i]%boardsize);
+				fprintf(out, "%d %d\n", movepath[i]/boardsizew, movepath[i]%boardsizew);
 			}
 			fclose(out);
 		}
@@ -1846,11 +1856,11 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	gchar *argv[] = {"./Yixin", NULL};
 #endif
 	gchar text[80];
-	const gchar *ptext;
+	const gchar *ptext[2];
 	GtkWidget *dialog;
-	GtkWidget *hbox;
-	GtkWidget *label;
-	GtkWidget *entry;
+	GtkWidget *table;
+	GtkWidget *label[2];
+	GtkWidget *entry[2];
 	gint result;
 
 	show_dialog_settings_custom_entry(NULL, 0);
@@ -1859,31 +1869,44 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
 
-	hbox = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), hbox, FALSE, FALSE, 3);
+	table = gtk_table_new(2, 2, FALSE);
+	gtk_table_set_row_spacings(GTK_TABLE(table), 0); /* set the row distance between elements to be 0 */
+	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
+	
+	label[0] = gtk_label_new(language==0?"Board Height (10 ~ 20):":(language==1?_T("棋盘长度 (10 ~ 20):"):""));
+	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 20):" : (language == 1 ? _T("棋盘宽度 (10 ~ 20):") : ""));
+	
+	entry[0] = gtk_entry_new();
+	sprintf(text, "%d", boardsizeh);
+	gtk_entry_set_text(GTK_ENTRY(entry[0]), text);
 
-	label = gtk_label_new(language==0?"Board Size (10 ~ 20):":(language==1?_T("棋盘大小 (10 ~ 20):"):""));
-	entry = gtk_entry_new();
-	sprintf(text, "%d", boardsize);
-	gtk_entry_set_text(GTK_ENTRY(entry), text);
+	entry[1] = gtk_entry_new();
+	sprintf(text, "%d", boardsizew);
+	gtk_entry_set_text(GTK_ENTRY(entry[1]), text);
 
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox), entry, FALSE, FALSE, 3);
+	gtk_table_attach_defaults(GTK_TABLE(table), label[0], 0, 1, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(table), entry[0], 1, 2, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(table), label[1], 0, 1, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(table), entry[1], 1, 2, 1, 2);
 
 	gtk_widget_show_all(dialog);
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch(result)
 	{
 		case 1:
-			ptext = gtk_entry_get_text(GTK_ENTRY(entry));
-			if(is_integer(ptext))
+			ptext[0] = gtk_entry_get_text(GTK_ENTRY(entry[0]));
+			ptext[1] = gtk_entry_get_text(GTK_ENTRY(entry[1]));
+			if (is_integer(ptext[0]) && is_integer(ptext[1]))
 			{
-				int s;
-				sscanf(ptext, "%d", &s);
-				if(s <= 20 && s >= 10)
+				int s1, s2;
+				sscanf(ptext[0], "%d", &s1);
+				sscanf(ptext[1], "%d", &s2);
+				if(s1 <= 20 && s1 >= 10 && s2 <= 20 && s2 >= 10)
 				{
-					rboardsize = s;
-					if(boardsize != s)
+					rboardsizeh = s1;
+					rboardsizew = s2;
+					if(boardsizeh != s1 || boardsizew != s2)
 					{
 						save_setting();
 						g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
@@ -2061,7 +2084,7 @@ void change_piece(GtkWidget *widget, gpointer data)
 	while(p > 0 && movepath[p-1] == -1) p --;
 
 	new_game(NULL, NULL);
-	for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
+	for(i=0; i<p; i++) make_move(movepath[i]/boardsizew, movepath[i]%boardsizew);
 	show_forbid();
 
 	stop_thinking(widget, data);
@@ -2143,7 +2166,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
 			printf_log(" boardsize\n");
-			printf_log("   %s: boardsize 15\n", language==1?"例":"Example");
+			printf_log("   %s: boardsize 15\n", language==1?"例1":"Example 1");
+			printf_log("   %s: boardsize 12 16\n", language == 1 ? "例2" : "Example 2");
 			printf_log(" language [en,cn]\n");
 			printf_log("   %s: language en\n", language==1?"例":"Example");
 			printf_log("\n");
@@ -2158,28 +2182,35 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			int p = piecenum;
 			int j, k = 1;
-			if(strlen(command) >= 8)
+			if (boardsizew != boardsizeh)
 			{
-				if(command[7] == '9') k = 1;
-				else if(command[7] == '1') k = 2;
-				else if(command[7] == '2') k = 3;
+				printf_log(language == 0 ? "Sorry, board cannot be rotated when height<>width.\n" : "抱歉，无法旋转长方形棋盘。\n");
 			}
-			refreshboardflag = 0;
-			for(j=0; j<k; j++)
+			else
 			{
-				for(i=0; i<p; i++)
+				if (strlen(command) >= 8)
 				{
-					int _x, _y, x, y;
-					_y = movepath[i] / boardsize;
-					_x = movepath[i] % boardsize;
-					y = _x;
-					x = boardsize - 1 - _y;
-					movepath[i] = y*boardsize + x;
+					if (command[7] == '9') k = 1;
+					else if (command[7] == '1') k = 2;
+					else if (command[7] == '2') k = 3;
 				}
+				refreshboardflag = 0;
+				for (j = 0; j < k; j++)
+				{
+					for (i = 0; i < p; i++)
+					{
+						int _x, _y, x, y;
+						_y = movepath[i] / boardsizew;
+						_x = movepath[i] % boardsizew;
+						y = _x;
+						x = boardsizeh - 1 - _y;
+						movepath[i] = y*boardsizew + x;
+					}
+				}
+				new_game(NULL, NULL);
+				for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
+				show_forbid();
 			}
-			new_game(NULL, NULL);
-			for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
-			show_forbid();
 		}
 		else if(strncmp(command, "flip", 4) == 0)
 		{
@@ -2192,36 +2223,43 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				else if(command[5] == '/') k = 2;
 				else if(command[5] == '\\') k = 3;
 			}
-			refreshboardflag = 0;
-			for(i=0; i<p; i++)
+			if ((k == 2 || k == 3) && (boardsizew != boardsizeh))
 			{
-				int _x, _y, x, y;
-				_y = movepath[i] / boardsize;
-				_x = movepath[i] % boardsize;
-				switch(k)
-				{
-				case 0:
-					y = boardsize - 1 - _y;
-					x = _x;
-					break;
-				case 1:
-					y = _y;
-					x = boardsize - 1 - _x;
-					break;
-				case 2:
-					y = boardsize - 1 - _y;
-					x = boardsize - 1 - _x;
-					break;
-				case 3:
-					y = _x;
-					x = _y;
-					break;
-				}
-				movepath[i] = y*boardsize + x;
+				printf_log(language == 0 ? "Sorry, board cannot be flipped with / or \\ when height<>width.\n" : "抱歉，棋盘为长方形时无法使用/或\\翻转。\n");
 			}
-			new_game(NULL, NULL);
-			for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
-			show_forbid();
+			else
+			{
+				refreshboardflag = 0;
+				for (i = 0; i < p; i++)
+				{
+					int _x, _y, x, y;
+					_y = movepath[i] / boardsizew;
+					_x = movepath[i] % boardsizew;
+					switch (k)
+					{
+					case 0:
+						y = boardsizeh - 1 - _y;
+						x = _x;
+						break;
+					case 1:
+						y = _y;
+						x = boardsizew - 1 - _x;
+						break;
+					case 2:
+						y = boardsizeh - 1 - _y;
+						x = boardsizew - 1 - _x;
+						break;
+					case 3:
+						y = _x;
+						x = _y;
+						break;
+					}
+					movepath[i] = y*boardsizew + x;
+				}
+				new_game(NULL, NULL);
+				for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
+				show_forbid();
+			}
 		}
 		else if(strncmp(command, "move", 4) == 0)
 		{
@@ -2239,8 +2277,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			for(i=0; i<p; i++)
 			{
 				int _x, _y, x, y;
-				_y = movepath[i] / boardsize;
-				_x = movepath[i] % boardsize;
+				_y = movepath[i] / boardsizew;
+				_x = movepath[i] % boardsizew;
 				switch(k)
 				{
 				case 0:
@@ -2260,15 +2298,15 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					x = _x + 1;
 					break;
 				}
-				if(x < 0 || x > boardsize - 1 || _y < 0 || _y > boardsize - 1) f = 0;
+				if(x < 0 || x > boardsizew - 1 || _y < 0 || _y > boardsizeh - 1) f = 0;
 			}
 			if(f)
 			{
 				for(i=0; i<p; i++)
 				{
 					int _x, _y, x, y;
-					_y = movepath[i] / boardsize;
-					_x = movepath[i] % boardsize;
+					_y = movepath[i] / boardsizew;
+					_x = movepath[i] % boardsizew;
 					switch(k)
 					{
 					case 0:
@@ -2288,11 +2326,11 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 						x = _x + 1;
 						break;
 					}
-					movepath[i] = y*boardsize + x;
+					movepath[i] = y*boardsizew + x;
 				}
 			}
 			new_game(NULL, NULL);
-			for(i=0; i<p; i++) make_move(movepath[i]/boardsize, movepath[i]%boardsize);
+			for(i=0; i<p; i++) make_move(movepath[i]/boardsizew, movepath[i]%boardsizew);
 			show_forbid();
 		}
 		else if(strncmp(command, "putpos", 6) == 0)
@@ -2315,8 +2353,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					i ++;
 				}
 				y = y - 1;
-				if(x<0 || x>=boardsize || y<0 || y>=boardsize) break;
-				make_move(boardsize-1-y, x);
+				if(x<0 || x>=boardsizew || y<0 || y>=boardsizeh) break;
+				make_move(boardsizeh-1-y, x);
 			}
 			show_forbid();
 		}
@@ -2324,7 +2362,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			for(i=0; i<piecenum; i++)
 			{
-				printf_log("%c%d", movepath[i]%boardsize+'a', boardsize-1-movepath[i]/boardsize+1);
+				printf_log("%c%d", movepath[i]%boardsizew+'a', boardsizeh-1-movepath[i]/boardsizew+1);
 			}
 			printf_log("\n");
 		}
@@ -2363,13 +2401,13 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					y = y*10 + command[8] - '0';
 				}
 				y --;
-				if(x<0 || x>=boardsize || y<0 || y>=boardsize) break;
+				if(x<0 || x>=boardsizew || y<0 || y>=boardsizeh) break;
 				send_command("yxblock\n");
-				sprintf(_command, "%d,%d\n", boardsize-1-y, x);
+				sprintf(_command, "%d,%d\n", boardsizeh-1-y, x);
 				send_command(_command);
 				send_command("done\n");
 
-				boardblock[boardsize-1-y][x] = 1;
+				boardblock[boardsizeh-1-y][x] = 1;
 				refresh_board();
 			} while(0);
 		}
@@ -2388,16 +2426,25 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		}
 		else if(strncmp(command, "boardsize", 9) == 0)
 		{
-			int s;
-			s = (command[10] - '0')*10 + (command[11] - '0');
-			if(s < 10 || s > 20)
+			int s1, s2;
+			s1 = (command[10] - '0')*10 + (command[11] - '0');
+			if (command[12] == ' ' && (command[13] - '0') >= 0 && (command[13] - '0') < 10 && (command[14] - '0') >= 0 && (command[14] - '0') < 10)
+			{
+				s2 = (command[13] - '0') * 10 + (command[14] - '0');
+			}
+			else
+			{
+				s2 = s1;
+			}
+			if (s1 < 10 || s1 > 20 || s2 < 10 || s2 > 20)
 			{
 				printf_log(language==0?"Sorry, board size should be 10~20.\n":"抱歉，棋盘大小范围应在10~20。\n");
 			}
 			else
 			{
-				rboardsize = s;
-				printf_log(language==0?"Board size will be %d after you restart Yixin.\n":"在重启Yixin后棋盘大小将变为%d。\n", s);
+				rboardsizeh = s1;
+				rboardsizew = s2;
+				printf_log(language==0?"Board size will be %dx%d after you restart Yixin.\n":"在重启Yixin后棋盘大小将变为%dx%d。\n", s1, s2);
 
 				/*
 				save_setting();
@@ -2461,7 +2508,7 @@ void save_setting()
 	FILE *out;
 	if((out = fopen("settings.txt", "w")) != NULL)
 	{
-		fprintf(out, "%d\t;board size (10 ~ 20)\n", rboardsize);
+		fprintf(out, "%d %d\t;board size (10 ~ 20)\n", rboardsizeh, rboardsizew);
 		fprintf(out, "%d\t;language (0: English, 1: Chinese)\n", rlanguage);
 		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3:s wap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
@@ -2565,7 +2612,7 @@ void create_windowmain()
 	gtk_widget_add_events(windowmain, GDK_BUTTON_PRESS_MASK); /* add the button clicking event */
 	gtk_signal_connect(GTK_OBJECT(windowmain), "button_press_event", G_CALLBACK(on_button_press_windowmain), NULL);
 	gtk_window_set_title(GTK_WINDOW(windowmain), "Yixin");
-	tableboard = gtk_table_new(boardsize+1, boardsize+1, TRUE);
+	tableboard = gtk_table_new(boardsizeh+1, boardsizew+1, TRUE);
 	gtk_table_set_row_spacings(GTK_TABLE(tableboard), 0); /* set the row distance between elements to be 0 */
 	gtk_table_set_col_spacings(GTK_TABLE(tableboard), 0); /* set the column distance between elements to be 0 */
 
@@ -2747,39 +2794,43 @@ void create_windowmain()
 		}
 	}
 	
-	for(i=0; i<boardsize; i++)
+	for(i=0; i<boardsizeh; i++)
 	{
-		for(j=0; j<boardsize; j++)
+		for(j=0; j<boardsizew; j++)
 		{
 			if(i==0 && j==0) imgtypeboard[i][j] = 1;
-			else if(i==0 && j==boardsize-1) imgtypeboard[i][j] = 2;
-			else if(i==boardsize-1 && j==boardsize-1) imgtypeboard[i][j] = 3;
-			else if(i==boardsize-1 && j==0) imgtypeboard[i][j] = 4;
+			else if(i==0 && j==boardsizew-1) imgtypeboard[i][j] = 2;
+			else if(i==boardsizeh-1 && j==boardsizew-1) imgtypeboard[i][j] = 3;
+			else if(i==boardsizeh-1 && j==0) imgtypeboard[i][j] = 4;
 			else if(i==0) imgtypeboard[i][j] = 5;
-			else if(j==boardsize-1) imgtypeboard[i][j] = 6;
-			else if(i==boardsize-1) imgtypeboard[i][j] = 7;
+			else if(j==boardsizew-1) imgtypeboard[i][j] = 6;
+			else if(i==boardsizeh-1) imgtypeboard[i][j] = 7;
 			else if(j==0) imgtypeboard[i][j] = 8;
-			else if(i==boardsize/2 && j==boardsize/2) imgtypeboard[i][j] = 9;
-			else if(i==boardsize/4 && j==boardsize/4) imgtypeboard[i][j] = 9;
-			else if(i==boardsize/4 && j==boardsize-1-boardsize/4) imgtypeboard[i][j] = 9;
-			else if(i==boardsize-1-boardsize/4 && j==boardsize/4) imgtypeboard[i][j] = 9;
-			else if(i==boardsize-1-boardsize/4 && j==boardsize-1-boardsize/4) imgtypeboard[i][j] = 9;
+			else if(i==boardsizeh/2 && j==boardsizew/2) imgtypeboard[i][j] = 9;
+			else if(i==boardsizeh/4 && j==boardsizew/4) imgtypeboard[i][j] = 9;
+			else if(i==boardsizeh/4 && j==boardsizew-1-boardsizew/4) imgtypeboard[i][j] = 9;
+			else if(i==boardsizeh-1-boardsizeh/4 && j==boardsizew/4) imgtypeboard[i][j] = 9;
+			else if(i==boardsizeh-1-boardsizeh/4 && j==boardsizew-1-boardsizew/4) imgtypeboard[i][j] = 9;
 			else imgtypeboard[i][j] = 0;
 		}
 	}
-	for(i=0; i<boardsize; i++)
+	for (i = 0; i < boardsizeh; i++)
 	{
 		char tlabel[3];
-		sprintf(tlabel, "%d", boardsize-i);
+		sprintf(tlabel, "%d", boardsizeh - i);
 		labelboard[0][i] = gtk_label_new(tlabel);
-		gtk_table_attach_defaults(GTK_TABLE(tableboard), labelboard[0][i], boardsize, boardsize+1, i, i+1);
+		gtk_table_attach_defaults(GTK_TABLE(tableboard), labelboard[0][i], boardsizew, boardsizew + 1, i, i + 1);
+	}
+	for (i = 0; i < boardsizew; i++)
+	{
+		char tlabel[3];
 		sprintf(tlabel, "%c", 'A'+i);
 		labelboard[1][i] = gtk_label_new(tlabel);
-		gtk_table_attach_defaults(GTK_TABLE(tableboard), labelboard[1][i], i, i+1, boardsize, boardsize+1);
+		gtk_table_attach_defaults(GTK_TABLE(tableboard), labelboard[1][i], i, i+1, boardsizeh, boardsizeh+1);
 	}
-	for(i=0; i<boardsize; i++)
+	for(i=0; i<boardsizeh; i++)
 	{
-		for(j=0; j<boardsize; j++)
+		for(j=0; j<boardsizew; j++)
 		{
 			if(imgtypeboard[i][j] <= 8)
 				imageboard[i][j] = gtk_image_new_from_pixbuf(pixbufboard[imgtypeboard[i][j]][0]);
@@ -2988,7 +3039,7 @@ void create_windowmain()
 	buffertextlog = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textlog));
 	scrolledtextlog = gtk_scrolled_window_new(NULL, NULL);
 	gtk_container_add(GTK_CONTAINER(scrolledtextlog), textlog);
-	gtk_widget_set_size_request(scrolledtextlog, 400, max(0,size*boardsize-50));
+	gtk_widget_set_size_request(scrolledtextlog, 400, max(0,size*boardsizeh-50));
 
 	textcommand = gtk_text_view_new();
 	buffertextcommand = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textcommand));
@@ -3187,14 +3238,14 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				timestart = clock();
 				sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 				send_command(command);
-				sprintf(command, "start %d\n", boardsize);
+				sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
 				send_command(command);
 				sprintf(command, "board\n");
 				send_command(command);
 				for(i=0; i<piecenum; i++)
 				{
-					sprintf(command, "%d,%d,%d\n", movepath[i]/boardsize,
-						movepath[i]%boardsize, piecenum%2==i%2 ? 1 : 2);
+					sprintf(command, "%d,%d,%d\n", movepath[i]/boardsizew,
+						movepath[i]%boardsizew, piecenum%2==i%2 ? 1 : 2);
 					send_command(command);
 				}
 				sprintf(command, "done\n");
@@ -3252,21 +3303,28 @@ int read_int_from_file(FILE *in)
 	}
 	return (flag&4)?-num:num;
 }
-void load_setting(int def_boardsize, int def_language, int def_toolbar)
+void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int def_toolbar)
 {
 	FILE *in;
 	char s[80];
 	int t;
 	if((in = fopen("settings.txt", "r")) != NULL)
 	{
-		boardsize = read_int_from_file(in);
-		if(def_boardsize >= 5 && def_boardsize <= MAX_SIZE)
+		boardsizeh = read_int_from_file(in);
+		if(def_boardsizeh >= 5 && def_boardsizeh <= MAX_SIZE)
 		{
-			boardsize = def_boardsize;
+			boardsizeh = def_boardsizeh;
 		}
-		if(boardsize > MAX_SIZE || boardsize < 5) boardsize = 15;
+		if(boardsizeh > MAX_SIZE || boardsizeh < 5) boardsizeh = 15;
+		boardsizew = read_int_from_file(in);
+		if (def_boardsizew >= 5 && def_boardsizew <= MAX_SIZE)
+		{
+			boardsizew = def_boardsizew;
+		}
+		if (boardsizew > MAX_SIZE || boardsizew < 5) boardsizew = 15;
 		language = read_int_from_file(in);
-		rboardsize = boardsize;
+		rboardsizeh = boardsizeh;
+		rboardsizew = boardsizew;
 		rlanguage = language;
 		if(def_language >= 0 && def_language <= 1) language = def_language;
 		if(language < 0 || language > 1) language = 0;
@@ -3296,7 +3354,7 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		timeoutmatch = read_int_from_file(in) * 1000;
 		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 1000000;
 		maxdepth = read_int_from_file(in);
-		if(maxdepth < 2 || maxdepth > boardsize*boardsize) maxdepth = boardsize*boardsize;
+		if(maxdepth < 2 || maxdepth > boardsizeh*boardsizew) maxdepth = boardsizeh*boardsizew;
 		maxnode = read_int_from_file(in);
 		if(maxnode < 1000 || maxnode > 1000000000) maxnode = 1000000000;
 		cautionfactor = read_int_from_file(in);
@@ -3322,7 +3380,7 @@ void load_setting(int def_boardsize, int def_language, int def_toolbar)
 		if(threadsplitdepth < MIN_SPLIT_DEPTH || threadsplitdepth > MAX_SPLIT_DEPTH) threadsplitdepth = 7;
 		fclose(in);
 	}
-	sprintf(s, "piece_%d.bmp", boardsize);
+	sprintf(s, "piece_%d.bmp", max(boardsizeh, boardsizew));
 	if((in = fopen(s, "rb")) != NULL)
 	{
 		strcpy(piecepicname, s);
@@ -3373,7 +3431,7 @@ void init_engine()
 {
 	char command[80];
 	send_command("info show_detail 1\n");
-	sprintf(command, "START %d\n", boardsize);
+	sprintf(command, "START %d %d\n", boardsizew, boardsizeh);
 	send_command(command);
 	set_level(levelchoice);
 	set_cautionfactor(cautionfactor);
@@ -3398,17 +3456,19 @@ int main(int argc, char** argv)
 		},
 	};
 	GError *error = NULL;
-	gint boardsize = -1;
+	gint boardsizeh = -1;
+	gint boardsizew = -1;
 	gint language = -1;
 	gint toolbar = -1;
 
-	options[0].arg_data = &boardsize;
-	options[1].arg_data = &language;
-	options[2].arg_data = &toolbar;
+	options[0].arg_data = &boardsizeh;
+	options[1].arg_data = &boardsizew;
+	options[2].arg_data = &language;
+	options[3].arg_data = &toolbar;
 
 	gtk_init_with_args(&argc, &argv, NULL, options, NULL, &error);
 	srand((unsigned)time(NULL));
-	load_setting(boardsize, language, toolbar);
+	load_setting(boardsizeh, boardsizew, language, toolbar);
 	load_engine();
 	init_engine();
 	gtk_window_set_default_icon(gdk_pixbuf_new_from_file("icon.ico", NULL)); /* set the default icon for all windows */
