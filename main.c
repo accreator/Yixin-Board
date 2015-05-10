@@ -56,6 +56,7 @@ char bestline[MAX_SIZE*MAX_SIZE*5+1] = "";
 int bestval;
 int useopenbook = 1;
 int levelchoice = 4;
+int commandmodel = 0;
 int shownumber = 1;
 int showlog = 1;
 int showanalysis = 1;
@@ -102,31 +103,35 @@ void print_log(char *text)
 		printf("%s", text);
 		return;
 	}
-	if(strncmp(text, "OK", 2) == 0) text += 2;
-	if(strncmp(text, "MESSAGE", 7) == 0) text += 7+1;
-	if(strncmp(text, "DETAIL", 6) == 0) text += 6+1;
-	if(strncmp(text, "DEBUG", 5) == 0) text += 5+1;
-	if(strncmp(text, "ERROR", 5) == 0) text += 5;
-	if(strncmp(text, "UNKNOWN", 7) == 0) text += 7;
-	//if(strncmp(text, "FORBID", 6) == 0) text += 6;
-	if(strncmp(text, "YIXIN", 5) == 0 || strncmp(text, "DEEP YIXIN", 10) == 0)
+
+	if (commandmodel == 0)
 	{
-		if(flag == 0) flag = 1; else return;
+		if (strncmp(text, "OK", 2) == 0) text += 2;
+		if (strncmp(text, "MESSAGE", 7) == 0) text += 7 + 1;
+		if (strncmp(text, "DETAIL", 6) == 0) text += 6 + 1;
+		if (strncmp(text, "DEBUG", 5) == 0) text += 5 + 1;
+		if (strncmp(text, "ERROR", 5) == 0) text += 5;
+		if (strncmp(text, "UNKNOWN", 7) == 0) text += 7;
+		//if(strncmp(text, "FORBID", 6) == 0) text += 6;
+		if (strncmp(text, "YIXIN", 5) == 0 || strncmp(text, "DEEP YIXIN", 10) == 0)
+		{
+			if (flag == 0) flag = 1; else return;
+		}
+
+		for (i = 0; text[i]; i++)
+		{
+			if (!isspace(text[i])) break;
+		}
+		if (text[i] == 0)
+		{
+			fspace++;
+		}
+		else
+		{
+			fspace = 0;
+		}
+		if (fspace >= 2) return;
 	}
-	
-	for(i=0; text[i]; i++)
-	{
-		if(!isspace(text[i])) break;
-	}
-	if(text[i] == 0)
-	{
-		fspace ++;
-	}
-	else
-	{
-		fspace = 0;
-	}
-	if(fspace >= 2) return;
 
 	len = gtk_text_buffer_get_line_count(GTK_TEXT_BUFFER(buffertextlog));
 	if(len > 400)
@@ -1945,7 +1950,7 @@ void show_dialog_about(GtkWidget *widget, gpointer data)
 	name = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(name), "<big><b>Yixin Board</b></big>");
 	version = gtk_label_new("Version "VERSION);
-	author = gtk_label_new("(C)2009-2014 Sun Kai");
+	author = gtk_label_new("(C)2009-2015 Kai Sun");
 	www = gtk_label_new("www.aiexp.info");
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), icon, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), name, FALSE, FALSE, 3);
@@ -2130,7 +2135,20 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 	{
 		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextcommand), &start, &end);
 		command = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(buffertextcommand), &start, &end, FALSE);
-		if(strncmp(command, "help key", 8) == 0)
+		if (strncmp(command, "command on", 10) == 0)
+		{
+			commandmodel = 1;
+		}
+		else if (strncmp(command, "command off", 11) == 0)
+		{
+			commandmodel = 0;
+		}
+		else if (commandmodel == 1)
+		{
+			printf_log(command);
+			send_command(command);
+		}
+		else if(strncmp(command, "help key", 8) == 0)
 		{
 			printf_log(" F11\n  %s\n", language==1?"¼ÆËã":"Start thinking");
 			printf_log(" Esc\n  %s\n", language==1?"Í£Ö¹¼ÆËã":"Stop thinking");
@@ -2170,6 +2188,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: boardsize 12 16\n", language == 1 ? "Àý2" : "Example 2");
 			printf_log(" language [en,cn]\n");
 			printf_log("   %s: language en\n", language==1?"Àý":"Example");
+			//printf_log(" command [on,off]\n");
 			printf_log("\n");
 		}
 		else if(strncmp(command, "clear", 5) == 0)
@@ -2419,10 +2438,6 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			printf_log("BESTLINE: %s ", bestline);
 			printf_log("VAL: %d\n", bestval);
-		}
-		else if(strncmp(command, "info debug", 10) == 0)
-		{
-			send_command("yxdebuginfo\n");
 		}
 		else if(strncmp(command, "boardsize", 9) == 0)
 		{
@@ -3090,6 +3105,14 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 	do
 	{
 		g_io_channel_read_line(channel, &string, &size, NULL, NULL);
+		
+		if (commandmodel == 1)
+		{
+			print_log(string);
+			g_free(string);
+			continue;
+		}
+
 		for(i=0; i<(int)size; i++)
 		{
 			if(string[i] >= 'a' && string[i] <= 'z') string[i] = string[i] - 'a' + 'A';
