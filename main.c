@@ -158,8 +158,8 @@ void print_log(char *text)
 int printf_log(char *fmt, ...)
 {
 	int cnt;
-	char buffer[1024];
-	char text[1024], *p = text;
+	char buffer[8192];
+	char text[8192], *p = text;
 	int i;
 	va_list va;
 	va_start(va,fmt);
@@ -2180,6 +2180,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" block\n");
 			printf_log("   %s: block h8\n", language==1?"절":"Example");
 			printf_log(" block reset\n");
+			printf_log(" block compare\n");
+			printf_log("   %s: block compare h8i8j7\n", language == 1 ? "절" : "Example");
 			printf_log(" block autoreset [on,off]\n");
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
@@ -2189,6 +2191,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" language [en,cn]\n");
 			printf_log("   %s: language en\n", language==1?"절":"Example");
 			printf_log(" balance\n");
+			printf_log("   %s: balance\n", language == 1 ? "절1" : "Example 1");
+			printf_log("   %s: balance 100\n", language == 1 ? "절2" : "Example 2");
 			//printf_log(" command [on,off]\n");
 			printf_log("\n");
 		}
@@ -2307,8 +2311,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					break;
 				case 1:
 					y = _y + 1;
-					x = _x;
-					break;
+x = _x;
+break;
 				case 2:
 					y = _y;
 					x = _x - 1;
@@ -2318,16 +2322,16 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					x = _x + 1;
 					break;
 				}
-				if(x < 0 || x > boardsizew - 1 || _y < 0 || _y > boardsizeh - 1) f = 0;
+				if (x < 0 || x > boardsizew - 1 || _y < 0 || _y > boardsizeh - 1) f = 0;
 			}
-			if(f)
+			if (f)
 			{
-				for(i=0; i<p; i++)
+				for (i = 0; i < p; i++)
 				{
 					int _x, _y, x, y;
 					_y = movepath[i] / boardsizew;
 					_x = movepath[i] % boardsizew;
-					switch(k)
+					switch (k)
 					{
 					case 0:
 						y = _y - 1;
@@ -2350,53 +2354,53 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				}
 			}
 			new_game(NULL, NULL);
-			for(i=0; i<p; i++) make_move(movepath[i]/boardsizew, movepath[i]%boardsizew);
+			for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
 			show_forbid();
 		}
-		else if(strncmp(command, "putpos", 6) == 0)
+		else if (strncmp(command, "putpos", 6) == 0)
 		{
 			new_game(NULL, NULL);
 			i = 6;
-			while(command[i] == '\t' || command[i] == ' ') i ++;
-			for(; command[i]; )
+			while (command[i] == '\t' || command[i] == ' ') i++;
+			for (; command[i];)
 			{
 				int x, y;
-				if(command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
-				if(command[i] < 'A' || command[i] > 'Z') break;
+				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+				if (command[i] < 'A' || command[i] > 'Z') break;
 				x = command[i] - 'A';
-				i ++;
+				i++;
 				y = command[i] - '0';
-				i ++;
-				if(command[i] >= '0' && command[i] <= '9')
+				i++;
+				if (command[i] >= '0' && command[i] <= '9')
 				{
-					y = y*10 + command[i] - '0';
-					i ++;
+					y = y * 10 + command[i] - '0';
+					i++;
 				}
 				y = y - 1;
-				if(x<0 || x>=boardsizew || y<0 || y>=boardsizeh) break;
-				make_move(boardsizeh-1-y, x);
+				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+				make_move(boardsizeh - 1 - y, x);
 			}
 			show_forbid();
 		}
-		else if(strncmp(command, "getpos", 6) == 0)
+		else if (strncmp(command, "getpos", 6) == 0)
 		{
-			for(i=0; i<piecenum; i++)
+			for (i = 0; i < piecenum; i++)
 			{
-				printf_log("%c%d", movepath[i]%boardsizew+'a', boardsizeh-1-movepath[i]/boardsizew+1);
+				printf_log("%c%d", movepath[i] % boardsizew + 'a', boardsizeh - 1 - movepath[i] / boardsizew + 1);
 			}
 			printf_log("\n");
 		}
-		else if(strncmp(command, "block reset", 11) == 0)
+		else if (strncmp(command, "block reset", 11) == 0)
 		{
 			send_command("yxblockreset\n");
 			memset(boardblock, 0, sizeof(boardblock));
 			refresh_board();
 		}
-		else if(strncmp(command, "block autoreset", 15) == 0)
+		else if (strncmp(command, "block autoreset", 15) == 0)
 		{
-			if(strlen(command) >= 18)
+			if (strlen(command) >= 18)
 			{
-				if(command[17] == 'n' || command[17] == 'N')
+				if (command[17] == 'n' || command[17] == 'N')
 				{
 					blockautoreset = 1;
 				}
@@ -2405,6 +2409,57 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					blockautoreset = 0;
 				}
 			}
+		}
+		else if (strncmp(command, "block compare", 13) == 0)
+		{
+			gchar _command[80];
+			int j;
+			send_command("yxblockreset\n");
+			memset(boardblock, 0, sizeof(boardblock));
+			for (i = 0; i < boardsizeh; i++)
+			{
+				for (j = 0; j < boardsizew; j++)
+				{
+					if (board[i][j] == 0)
+					{
+						boardblock[i][j] = 1;
+					}
+				}
+			}
+			i = 13;
+			while (command[i] == '\t' || command[i] == ' ') i++;
+			for (; command[i];)
+			{
+				int x, y;
+				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+				if (command[i] < 'A' || command[i] > 'Z') break;
+				x = command[i] - 'A';
+				i++;
+				y = command[i] - '0';
+				i++;
+				if (command[i] >= '0' && command[i] <= '9')
+				{
+					y = y * 10 + command[i] - '0';
+					i++;
+				}
+				y = y - 1;
+				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+				boardblock[boardsizeh - 1 - y][x] = 0;
+			}
+			for (i = 0; i < boardsizeh; i++)
+			{
+				for (j = 0; j < boardsizew; j++)
+				{
+					if (boardblock[i][j] == 1)
+					{
+						send_command("yxblock\n");
+						sprintf(_command, "%d,%d\n", i, j);
+						send_command(_command);
+						send_command("done\n");
+					}
+				}
+			}
+			refresh_board();
 		}
 		else if(strncmp(command, "block", 5) == 0)
 		{
@@ -2501,6 +2556,16 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		else if (strncmp(command, "balance", 7) == 0)
 		{
 			gchar _command[80];
+			int s = 0;
+			if (command[7] == ' ')
+			{
+				i = 8;
+				while (command[i] >= '0' && command[i] <= '9')
+				{
+					s = s * 10 + command[i] - '0';
+					i++;
+				}
+			}
 			sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
 			send_command(_command);
 			sprintf(_command, "yxboard\n");
@@ -2513,7 +2578,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			sprintf(_command, "done\n");
 			send_command(_command);
-			send_command("yxbalance\n");
+			sprintf(_command, "yxbalance %d\n", s);
+			send_command(_command);
 		}
 		else if(strncmp(command, "makebook", 8) == 0)
 		{
