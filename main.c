@@ -2311,8 +2311,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					break;
 				case 1:
 					y = _y + 1;
-x = _x;
-break;
+					x = _x;
+					break;
 				case 2:
 					y = _y;
 					x = _x - 1;
@@ -2322,7 +2322,7 @@ break;
 					x = _x + 1;
 					break;
 				}
-				if (x < 0 || x > boardsizew - 1 || _y < 0 || _y > boardsizeh - 1) f = 0;
+				if (x < 0 || x > boardsizew - 1 || y < 0 || y > boardsizeh - 1) f = 0;
 			}
 			if (f)
 			{
