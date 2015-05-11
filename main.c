@@ -2188,6 +2188,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: boardsize 12 16\n", language == 1 ? "例2" : "Example 2");
 			printf_log(" language [en,cn]\n");
 			printf_log("   %s: language en\n", language==1?"例":"Example");
+			printf_log(" balance\n");
 			//printf_log(" command [on,off]\n");
 			printf_log("\n");
 		}
@@ -2496,6 +2497,23 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			{
 				printf_log(language==0?"Sorry, language should be Chinese[cn] or English[en].\n":"抱歉，语言应为中文[cn]或英文[en]。\n");
 			}
+		}
+		else if (strncmp(command, "balance", 7) == 0)
+		{
+			gchar _command[80];
+			sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
+			send_command(_command);
+			sprintf(_command, "yxboard\n");
+			send_command(_command);
+			for (i = 0; i<piecenum; i++)
+			{
+				sprintf(_command, "%d,%d,%d\n", movepath[i] / boardsizew,
+					movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+				send_command(_command);
+			}
+			sprintf(_command, "done\n");
+			send_command(_command);
+			send_command("yxbalance\n");
 		}
 		else if(strncmp(command, "makebook", 8) == 0)
 		{
