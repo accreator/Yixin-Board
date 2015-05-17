@@ -9,7 +9,7 @@
 #include "resource.h" /* not needed if you are not provided with resource.h, Yixin.rc and icon.ico */
 
 typedef long long I64;
-#define MAX_SIZE 20
+#define MAX_SIZE 24
 #define CAUTION_NUM 3  //0..CAUTION_NUM
 #define MAX_THREAD_NUM 1 //1..MAX_THREAD_NUM
 #define MAX_HASH_SIZE 21
@@ -1879,8 +1879,8 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
 	
-	label[0] = gtk_label_new(language==0?"Board Height (10 ~ 20):":(language==1?_T("ÆåÅÌ³¤¶È (10 ~ 20):"):""));
-	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 20):" : (language == 1 ? _T("ÆåÅÌ¿í¶È (10 ~ 20):") : ""));
+	label[0] = gtk_label_new(language==0?"Board Height (10 ~ 24):":(language==1?_T("ÆåÅÌ³¤¶È (10 ~ 24):"):""));
+	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 24):" : (language == 1 ? _T("ÆåÅÌ¿í¶È (10 ~ 24):") : ""));
 	
 	entry[0] = gtk_entry_new();
 	sprintf(text, "%d", boardsizeh);
@@ -1907,7 +1907,7 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 				int s1, s2;
 				sscanf(ptext[0], "%d", &s1);
 				sscanf(ptext[1], "%d", &s2);
-				if(s1 <= 20 && s1 >= 10 && s2 <= 20 && s2 >= 10)
+				if (s1 <= MAX_SIZE && s1 >= 10 && s2 <= MAX_SIZE && s2 >= 10)
 				{
 					rboardsizeh = s1;
 					rboardsizew = s2;
@@ -2190,9 +2190,11 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: boardsize 12 16\n", language == 1 ? "Àý2" : "Example 2");
 			printf_log(" language [en,cn]\n");
 			printf_log("   %s: language en\n", language==1?"Àý":"Example");
-			printf_log(" balance\n");
-			printf_log("   %s: balance\n", language == 1 ? "Àý1" : "Example 1");
-			printf_log("   %s: balance 100\n", language == 1 ? "Àý2" : "Example 2");
+			printf_log(" balance<1,2>\n");
+			printf_log("   %s: balance1\n", language == 1 ? "Àý1" : "Example 1");
+			printf_log("   %s: balance1 100\n", language == 1 ? "Àý2" : "Example 2");
+			printf_log("   %s: balance2\n", language == 1 ? "Àý3" : "Example 3");
+			printf_log("   %s: balance2 100\n", language == 1 ? "Àý4" : "Example 4");
 			//printf_log(" command [on,off]\n");
 			printf_log("\n");
 		}
@@ -2507,9 +2509,9 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			{
 				s2 = s1;
 			}
-			if (s1 < 10 || s1 > 20 || s2 < 10 || s2 > 20)
+			if (s1 < 10 || s1 > MAX_SIZE || s2 < 10 || s2 > MAX_SIZE)
 			{
-				printf_log(language==0?"Sorry, board size should be 10~20.\n":"±§Ç¸£¬ÆåÅÌ´óÐ¡·¶Î§Ó¦ÔÚ10~20¡£\n");
+				printf_log(language == 0 ? "Sorry, board size should be 10~%d.\n" : "±§Ç¸£¬ÆåÅÌ´óÐ¡·¶Î§Ó¦ÔÚ10~%d¡£\n", MAX_SIZE);
 			}
 			else
 			{
@@ -2553,19 +2555,13 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				printf_log(language==0?"Sorry, language should be Chinese[cn] or English[en].\n":"±§Ç¸£¬ÓïÑÔÓ¦ÎªÖÐÎÄ[cn]»òÓ¢ÎÄ[en]¡£\n");
 			}
 		}
-		else if (strncmp(command, "balance", 7) == 0)
+		else if (strncmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
 		{
 			gchar _command[80];
-			int s = 0;
-			if (command[7] == ' ')
-			{
-				i = 8;
-				while (command[i] >= '0' && command[i] <= '9')
-				{
-					s = s * 10 + command[i] - '0';
-					i++;
-				}
-			}
+			int s;
+			int t;
+			t = command[7] - '0';
+			if (sscanf(command + 8, "%d", &s) != 1) s = 0;
 			sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
 			send_command(_command);
 			sprintf(_command, "yxboard\n");
@@ -2578,7 +2574,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			sprintf(_command, "done\n");
 			send_command(_command);
-			sprintf(_command, "yxbalance %d\n", s);
+			sprintf(_command, "yxbalance%s %d\n", t==1?"one":"two", s);
 			send_command(_command);
 		}
 		else if(strncmp(command, "makebook", 8) == 0)
@@ -2607,7 +2603,7 @@ void save_setting()
 	FILE *out;
 	if((out = fopen("settings.txt", "w")) != NULL)
 	{
-		fprintf(out, "%d %d\t;board size (10 ~ 20)\n", rboardsizeh, rboardsizew);
+		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
 		fprintf(out, "%d\t;language (0: English, 1: Chinese)\n", rlanguage);
 		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3:s wap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
