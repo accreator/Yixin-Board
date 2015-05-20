@@ -1362,7 +1362,7 @@ void set_level(int x)
 				break;
 		}
 		timeoutmatch = 1000000000;
-		timeoutturn = 1000000000;
+		timeoutturn = 2000000;
 		sprintf(command, "INFO timeout_match %d\n", timeoutmatch);
 		send_command(command);
 		sprintf(command, "INFO time_left %d\n", timeoutmatch);
@@ -3474,9 +3474,9 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		levelchoice = read_int_from_file(in);
 		if(levelchoice < 0 || levelchoice > 8) levelchoice = 4;
 		timeoutturn = read_int_from_file(in) * 1000;
-		if(timeoutturn <= 0 || timeoutturn > 1000000000) timeoutturn = 5000;
+		if(timeoutturn <= 0 || timeoutturn > 2000000) timeoutturn = 10000;
 		timeoutmatch = read_int_from_file(in) * 1000;
-		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 1000000;
+		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 2000000;
 		maxdepth = read_int_from_file(in);
 		if(maxdepth < 2 || maxdepth > boardsizeh*boardsizew) maxdepth = boardsizeh*boardsizew;
 		maxnode = read_int_from_file(in);
