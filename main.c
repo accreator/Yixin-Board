@@ -30,14 +30,14 @@ int boardsizeh = 15, boardsizew = 15;
 int rboardsizeh = 15, rboardsizew = 15;
 int inforule = 0;
 int specialrule = 0;
-int timeoutturn = 5000;
+int timeoutturn = 10000;
 int timeused = 0;
 int timestart = 0;
-int timeoutmatch = 1000000;
+int timeoutmatch = 2000000;
 int maxdepth = 100;
 int maxnode = 1000000000;
 int computerside = 0; /* 0 none 1 black 2 while 3 black&white */
-int cautionfactor = 0;
+int cautionfactor = 1;
 int threadnum = 1;
 int hashsize = 19;
 int threadsplitdepth = 7;
@@ -1629,8 +1629,8 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				if(is_integer(ptext))
 				{
 					sscanf(ptext, "%d", &timeoutturn);
-					if(timeoutturn > 1000000) timeoutturn = 1000000;
-					if(timeoutturn < 1) timeoutturn = 1;
+					if (timeoutturn > 2000) timeoutturn = 2000;
+					if (timeoutturn < 1) timeoutturn = 1;
 					timeoutturn *= 1000;
 				}
 				ptext = gtk_entry_get_text(GTK_ENTRY(entrytimematch));
@@ -2195,6 +2195,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: balance1 100\n", language == 1 ? "Àı2" : "Example 2");
 			printf_log("   %s: balance2\n", language == 1 ? "Àı3" : "Example 3");
 			printf_log("   %s: balance2 100\n", language == 1 ? "Àı4" : "Example 4");
+			printf_log(" nbest [2,3,...]\n");
 			//printf_log(" command [on,off]\n");
 			printf_log("\n");
 		}
@@ -2575,6 +2576,26 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			sprintf(_command, "done\n");
 			send_command(_command);
 			sprintf(_command, "yxbalance%s %d\n", t==1?"one":"two", s);
+			send_command(_command);
+		}
+		else if (strncmp(command, "nbest", 5) == 0)
+		{
+			gchar _command[80];
+			int s;
+			if (sscanf(command + 5, "%d", &s) != 1) s = 2;
+			sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
+			send_command(_command);
+			sprintf(_command, "yxboard\n");
+			send_command(_command);
+			for (i = 0; i<piecenum; i++)
+			{
+				sprintf(_command, "%d,%d,%d\n", movepath[i] / boardsizew,
+					movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+				send_command(_command);
+			}
+			sprintf(_command, "done\n");
+			send_command(_command);
+			sprintf(_command, "yxnbest %d\n", s);
 			send_command(_command);
 		}
 		else if(strncmp(command, "makebook", 8) == 0)
@@ -3305,7 +3326,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 		else
 		{
 			isthinking = 0;
-			timeused += clock() - timestart;
+			timeused += (clock() - timestart) / (CLOCKS_PER_SEC / 1000);
 			if(language == 1)
 			{
 				printf_log("Ê£ÓàÊ±¼ä: %dºÁÃë\n\n", timeoutmatch-timeused);
