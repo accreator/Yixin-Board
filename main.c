@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS /* for vs */
+ï»¿#define _CRT_SECURE_NO_WARNINGS /* for vs */
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -171,77 +171,77 @@ int printf_log(char *fmt, ...)
 		{
 			if(strncmp(buffer+i, "BESTLINE", 8) == 0)
 			{
-				strcpy(p, "×îÓÅÂ·Ïß");
+				strcpy(p, "æœ€ä¼˜è·¯çº¿");
 				p += 8;
 				i += 8;
 				continue;
 			}
 			if(strncmp(buffer+i, "COMPLEXITY", 10) == 0)
 			{
-				strcpy(p, "¾ÖÊÆ¸´ÔÓ¶È");
+				strcpy(p, "å±€åŠ¿å¤æ‚åº¦");
 				p += 10;
 				i += 10;
 				continue;
 			}
 			if(strncmp(buffer+i, "EVALUATION", 10) == 0)
 			{
-				strcpy(p, "¾ÖÃæÆÀ¼Û");
+				strcpy(p, "å±€é¢è¯„ä»·");
 				p += 8;
 				i += 10;
 				continue;
 			}
 			if(strncmp(buffer+i, "SPEED", 5) == 0)
 			{
-				strcpy(p, "ËÙ¶È");
+				strcpy(p, "é€Ÿåº¦");
 				p += 4;
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "TIME", 4) == 0)
 			{
-				strcpy(p, "ÓÃÊ±");
+				strcpy(p, "ç”¨æ—¶");
 				p += 4;
 				i += 4;
 				continue;
 			}
 			if(strncmp(buffer+i, "DEPTH", 5) == 0)
 			{
-				strcpy(p, "Éî¶È");
+				strcpy(p, "æ·±åº¦");
 				p += 4;
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "BLOCK", 5) == 0)
 			{
-				strcpy(p, "ÅÅ³ı");
+				strcpy(p, "æ’é™¤");
 				p += 4;
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "NODE", 4) == 0)
 			{
-				strcpy(p, "½áµãÊı");
+				strcpy(p, "ç»“ç‚¹æ•°");
 				p += 6;
 				i += 4;
 				continue;
 			}
 			if(strncmp(buffer+i, "VAL", 3) == 0)
 			{
-				strcpy(p, "ÆÀ¼Û");
+				strcpy(p, "è¯„ä»·");
 				p += 4;
 				i += 3;
 				continue;
 			}
 			if(strncmp(buffer+i, "MS", 2) == 0)
 			{
-				strcpy(p, "ºÁÃë");
+				strcpy(p, "æ¯«ç§’");
 				p += 4;
 				i += 2;
 				continue;
 			}
 			if(strncmp(buffer+i, "RULE", 4) == 0)
 			{
-				strcpy(p, "¹æÔò");
+				strcpy(p, "è§„åˆ™");
 				p += 4;
 				i += 4;
 				continue;
@@ -293,7 +293,7 @@ void show_welcome()
 	printf_log("Yixin Board "VERSION"\n");
 	if(language == 1)
 	{
-		printf_command("ÔÚ´ËÊäÈëhelp²¢»Ø³µÒÔ»ñÈ¡°ïÖú");
+		printf_command("åœ¨æ­¤è¾“å…¥helpå¹¶å›è½¦ä»¥è·å–å¸®åŠ©");
 	}
 	else
 	{
@@ -304,20 +304,20 @@ void show_welcome()
 void show_thanklist()
 {
 	printf_log(language==0?"I would like to thank my contributors, whose support makes Yixin what it is.\n":
-			(language==1?"¸ĞĞ»ÄÇĞ©¶ÔŞÄĞÄµÄÉè¼ÆÓë±àĞ´Ìá¹©Ö§³Ö°ïÖúµÄÅóÓÑ£¡ËûÃÇÊÇ£º\n":""));
-	printf_log("  ±Ë·½\n");
+			(language==1?"æ„Ÿè°¢é‚£äº›å¯¹å¼ˆå¿ƒçš„è®¾è®¡ä¸ç¼–å†™æä¾›æ”¯æŒå¸®åŠ©çš„æœ‹å‹ï¼ä»–ä»¬æ˜¯ï¼š\n":""));
+	printf_log("  å½¼æ–¹\n");
 	printf_log("  XR\n");
-	printf_log("  Êæ×Ô¾ù\n");
+	printf_log("  èˆ’è‡ªå‡\n");
 	printf_log("  Tianyi Hao\n");
-	printf_log("  ÎâºÀ\n");
-	printf_log("  ÓêÖĞ·ÉÑà\n");
+	printf_log("  å´è±ª\n");
+	printf_log("  é›¨ä¸­é£ç‡•\n");
 	printf_log("  Tuyen Do\n");
-	printf_log("  ·Ê¹úÄËÄË\n");
+	printf_log("  è‚¥å›½ä¹ƒä¹ƒ\n");
 	printf_log("  Saturn|Titan\n");
-	printf_log("  Ôª\n");
+	printf_log("  å…ƒ\n");
 	printf_log("  TZ\n");
-	printf_log("  ıÉùÒÀ¾É\n");
-	printf_log("  ÕÅÎıÉ­");
+	printf_log("  æ¿¤å£°ä¾æ—§\n");
+	printf_log("  å¼ é”¡æ£®");
 	printf_log("\n");
 }
 
@@ -898,7 +898,7 @@ void show_dialog_undo_warning_query(GtkWidget *window)
 	GtkWidget *dialog;
 	gint result;
 	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"The operation will stop the calculation. Do you want to continue?":(language==1?_T("´Ë²Ù×÷½«ÖÕÖ¹µ±Ç°µÄ¼ÆËã£¬È·¶¨Òª¼ÌĞøÂğ?"):""));
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"The operation will stop the calculation. Do you want to continue?":(language==1?_T("æ­¤æ“ä½œå°†ç»ˆæ­¢å½“å‰çš„è®¡ç®—ï¼Œç¡®å®šè¦ç»§ç»­å—?"):""));
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch(result)
@@ -917,7 +917,7 @@ void show_dialog_swap_query(GtkWidget *window)
 	GtkWidget *dialog;
 	gint result;
 	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"Swap?":(language==1?_T("½»»»?"):""));
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"Swap?":(language==1?_T("äº¤æ¢?"):""));
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch(result)
@@ -954,7 +954,7 @@ void show_dialog_swap_query(GtkWidget *window)
 					change_side_menu(2, NULL);
 				}
 			}
-			if(language == 1) printf_log("½»»»\n"); else printf_log("swap\n");
+			if(language == 1) printf_log("äº¤æ¢\n"); else printf_log("swap\n");
 			break;
 		case GTK_RESPONSE_NO:
 			printf_log("\n");
@@ -968,7 +968,7 @@ void show_dialog_swap_info(GtkWidget *window)
 	GtkWidget *dialog;
 	gint result;
 	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language==0?"Swap":(language==1?_T("½»»»"):""));
+		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language==0?"Swap":(language==1?_T("äº¤æ¢"):""));
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	isneedrestart = 1;
@@ -990,7 +990,7 @@ void show_dialog_illegal_opening(GtkWidget *window)
 	GtkWidget *dialog;
 	gint result;
 	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language==0?"Illegal Opening":(language==1?_T("¿ª¾Ö²»ºÏ·¨"):""));
+		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language==0?"Illegal Opening":(language==1?_T("å¼€å±€ä¸åˆæ³•"):""));
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	isneedrestart = 1;
@@ -1064,7 +1064,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						isneedrestart = 1;
 						if(language == 1)
 						{
-							printf_log("²ÉÓÃ¿ª¾Ö¿â×Å·¨\n");
+							printf_log("é‡‡ç”¨å¼€å±€åº“ç€æ³•\n");
 						}
 						else
 						{
@@ -1239,7 +1239,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							if(useopenbook && move_openbook(&y, &x) && is_legal_move(y, x))
 							{
 								isneedrestart = 1;
-								if(language) printf_log("²ÉÓÃ¿ª¾Ö¿â×Å·¨\n"); else printf_log("use openbook\n");
+								if(language) printf_log("é‡‡ç”¨å¼€å±€åº“ç€æ³•\n"); else printf_log("use openbook\n");
 								make_move(y, x);
 								if(inforule == 2 && (computerside&1)==0)
 								{
@@ -1466,11 +1466,11 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	notebook = gtk_notebook_new();
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), notebook, FALSE, FALSE, 3);
 	notebookvbox[0] = gtk_vbox_new(FALSE, 0);
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[0], gtk_label_new(language==0?"Level":(language==1?_T("ÆåÁ¦"):"")));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[0], gtk_label_new(language==0?"Level":(language==1?_T("æ£‹åŠ›"):"")));
 	notebookvbox[1] = gtk_vbox_new(FALSE, 0);
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[1], gtk_label_new(language==0?"Style":(language==1?_T("Æå·ç"):"")));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[1], gtk_label_new(language==0?"Style":(language==1?_T("æ£‹é£"):"")));
 	notebookvbox[2] = gtk_vbox_new(FALSE, 0);
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[2], gtk_label_new(language==0?"Resource":(language==1?_T("×ÊÔ´"):"")));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[2], gtk_label_new(language==0?"Resource":(language==1?_T("èµ„æº"):"")));
 
 	for(i=0; i<6; i++)
 	{
@@ -1478,39 +1478,39 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 		gtk_label_set_width_chars(GTK_LABEL(labelblank[i]), 6);
 	}
 
-	labeltimeturn[0] = gtk_label_new(language==0?"Turn time:":(language==1?_T("²½Ê±:"):""));
+	labeltimeturn[0] = gtk_label_new(language==0?"Turn time:":(language==1?_T("æ­¥æ—¶:"):""));
 	entrytimeturn = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrytimeturn), 6);
 	sprintf(text, "%d", timeoutturn/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrytimeturn), text);
-	labeltimeturn[1] = gtk_label_new(language==0?"s":(language==1?_T("Ãë"):""));
+	labeltimeturn[1] = gtk_label_new(language==0?"s":(language==1?_T("ç§’"):""));
 	gtk_misc_set_alignment(GTK_MISC(labeltimeturn[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labeltimeturn[1]), 0, 0.5);
 
-	labeltimematch[0] = gtk_label_new(language==0?"Match time:":(language==1?_T("¾ÖÊ±:"):""));
+	labeltimematch[0] = gtk_label_new(language==0?"Match time:":(language==1?_T("å±€æ—¶:"):""));
 	entrytimematch = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrytimematch), 6);
 	sprintf(text, "%d", timeoutmatch/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrytimematch), text);
-	labeltimematch[1] = gtk_label_new(language==0?"s":(language==1?_T("Ãë"):""));
+	labeltimematch[1] = gtk_label_new(language==0?"s":(language==1?_T("ç§’"):""));
 	gtk_misc_set_alignment(GTK_MISC(labeltimematch[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labeltimematch[1]), 0, 0.5);
 
-	labelmaxdepth[0] = gtk_label_new(language==0?"Max depth:":(language==1?_T("×î´óÉî¶È:"):""));
+	labelmaxdepth[0] = gtk_label_new(language==0?"Max depth:":(language==1?_T("æœ€å¤§æ·±åº¦:"):""));
 	entrymaxdepth = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrymaxdepth), 3);
 	sprintf(text, "%d", maxdepth);
 	gtk_entry_set_text(GTK_ENTRY(entrymaxdepth), text);
-	labelmaxdepth[1] = gtk_label_new(language==0?"ply":(language==1?_T("²ã"):""));
+	labelmaxdepth[1] = gtk_label_new(language==0?"ply":(language==1?_T("å±‚"):""));
 	gtk_misc_set_alignment(GTK_MISC(labelmaxdepth[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labelmaxdepth[1]), 0, 0.5);
 
-	labelmaxnode[0] = gtk_label_new(language==0?"Max node number:":(language==1?_T("×î´ó½áµãÊı:"):""));
+	labelmaxnode[0] = gtk_label_new(language==0?"Max node number:":(language==1?_T("æœ€å¤§ç»“ç‚¹æ•°:"):""));
 	entrymaxnode = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrymaxnode), 6);
 	sprintf(text, "%d", maxnode/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrymaxnode), text);
-	labelmaxnode[1] = gtk_label_new(language==0?"M":(language==1?_T("°ÙÍò"):""));
+	labelmaxnode[1] = gtk_label_new(language==0?"M":(language==1?_T("ç™¾ä¸‡"):""));
 	gtk_misc_set_alignment(GTK_MISC(labelmaxnode[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labelmaxnode[1]), 0, 0.5);
 
@@ -1519,15 +1519,15 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxdepth);
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxnode);
 
-	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language==0?"4 dan":(language==1?_T("Ö°ÒµËÄ¶Î"):""));
-	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language==0?"3 dan":(language==1?_T("Ö°ÒµÈı¶Î"):""));
-	radiolevel[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[1])), language==0?"2 dan":(language==1?_T("Ö°Òµ¶ş¶Î"):""));
-	radiolevel[3] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[2])), language==0?"1 dan":(language==1?_T("Ö°ÒµÒ»¶Î"):""));
-	radiolevel[4] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[3])), language==0?"Custom Level":(language==1?_T("×Ô¶¨Òå"):""));
-	radiolevel[5] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[4])), language==0?"6 dan (Slow)":(language==1?_T("Ö°ÒµÁù¶Î(Âı)"):""));
-	radiolevel[6] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[5])), language==0?"9 dan (Very Slow)":(language==1?_T("Ö°Òµ¾Å¶Î(ºÜÂı)"):""));
-	radiolevel[7] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[6])), language==0?"Meijin (Extremely Slow)":(language==1?_T("ÃûÈË(¼«Âı)"):""));
-	radiolevel[8] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[7])), language==0?"Unlimited Time":(language==1?_T("²»ÏŞÊ±"):""));
+	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language==0?"4 dan":(language==1?_T("èŒä¸šå››æ®µ"):""));
+	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language==0?"3 dan":(language==1?_T("èŒä¸šä¸‰æ®µ"):""));
+	radiolevel[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[1])), language==0?"2 dan":(language==1?_T("èŒä¸šäºŒæ®µ"):""));
+	radiolevel[3] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[2])), language==0?"1 dan":(language==1?_T("èŒä¸šä¸€æ®µ"):""));
+	radiolevel[4] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[3])), language==0?"Custom Level":(language==1?_T("è‡ªå®šä¹‰"):""));
+	radiolevel[5] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[4])), language==0?"6 dan (Slow)":(language==1?_T("èŒä¸šå…­æ®µ(æ…¢)"):""));
+	radiolevel[6] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[5])), language==0?"9 dan (Very Slow)":(language==1?_T("èŒä¸šä¹æ®µ(å¾ˆæ…¢)"):""));
+	radiolevel[7] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[6])), language==0?"Meijin (Extremely Slow)":(language==1?_T("åäºº(ææ…¢)"):""));
+	radiolevel[8] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[7])), language==0?"Unlimited Time":(language==1?_T("ä¸é™æ—¶"):""));
 
 	g_signal_connect(G_OBJECT(radiolevel[0]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
 	g_signal_connect(G_OBJECT(radiolevel[1]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
@@ -1595,22 +1595,22 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_widget_set_size_request(scalehash, 100, -1);
 
 	hbox[1] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Rash":(language==1?_T("Ã°½ø"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Rash":(language==1?_T("å†’è¿›"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), scalecaution, FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":(language==1?_T("½÷É÷"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":(language==1?_T("è°¨æ…"):"")), FALSE, FALSE, 3);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[1], FALSE, FALSE, 3);
 
 #if MAX_THREAD_NUM > 1
 	hbox[2] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language==0?"Number of Threads":(language==1?_T("Ïß³ÌÊı"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language==0?"Number of Threads":(language==1?_T("çº¿ç¨‹æ•°"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[2]), scalethreads, FALSE, FALSE, 3);
 	hbox[4] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[4]), gtk_label_new(language==0?"Split Depth":(language==1?_T("·ÖÁÑÉî¶È"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[4]), gtk_label_new(language==0?"Split Depth":(language==1?_T("åˆ†è£‚æ·±åº¦"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[4]), scalesplitdepth, FALSE, FALSE, 3);
 #endif
 	hbox[3] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size":(language==1?_T("¹şÏ£±í´óĞ¡"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size":(language==1?_T("å“ˆå¸Œè¡¨å¤§å°"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), scalehash, FALSE, FALSE, 3);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[2], FALSE, FALSE, 3);
@@ -1879,8 +1879,8 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
 	
-	label[0] = gtk_label_new(language==0?"Board Height (10 ~ 24):":(language==1?_T("ÆåÅÌ³¤¶È (10 ~ 24):"):""));
-	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 24):" : (language == 1 ? _T("ÆåÅÌ¿í¶È (10 ~ 24):") : ""));
+	label[0] = gtk_label_new(language==0?"Board Height (10 ~ 24):":(language==1?_T("æ£‹ç›˜é•¿åº¦ (10 ~ 24):"):""));
+	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 24):" : (language == 1 ? _T("æ£‹ç›˜å®½åº¦ (10 ~ 24):") : ""));
 	
 	entry[0] = gtk_entry_new();
 	sprintf(text, "%d", boardsizeh);
@@ -2150,19 +2150,19 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		}
 		else if(strncmp(command, "help key", 8) == 0)
 		{
-			printf_log(" F11\n  %s\n", language==1?"¼ÆËã":"Start thinking");
-			printf_log(" Esc\n  %s\n", language==1?"Í£Ö¹¼ÆËã":"Stop thinking");
-			printf_log(" Ctrl+Left\n  %s\n", language==1?"Ç°Ò»²½":"Undo");
-			printf_log(" Ctrl+Right\n  %s\n", language==1?"ºóÒ»²½":"Redo");
-			printf_log(" Ctrl+Up\n  %s\n", language==1?"Ê×²½":"Undo all");
-			printf_log(" Ctrl+Down\n  %s\n", language==1?"Ä©²½":"Redo all");
+			printf_log(" F11\n  %s\n", language==1?"è®¡ç®—":"Start thinking");
+			printf_log(" Esc\n  %s\n", language==1?"åœæ­¢è®¡ç®—":"Stop thinking");
+			printf_log(" Ctrl+Left\n  %s\n", language==1?"å‰ä¸€æ­¥":"Undo");
+			printf_log(" Ctrl+Right\n  %s\n", language==1?"åä¸€æ­¥":"Redo");
+			printf_log(" Ctrl+Up\n  %s\n", language==1?"é¦–æ­¥":"Undo all");
+			printf_log(" Ctrl+Down\n  %s\n", language==1?"æœ«æ­¥":"Redo all");
 			printf_log("\n");
 		}
 		else if(strncmp(command, "help", 4) == 0)
 		{
 			if(language == 1)
 			{
-				printf_log("ÃüÁîÁĞ±í:\n");
+				printf_log("å‘½ä»¤åˆ—è¡¨:\n");
 			}
 			else
 			{
@@ -2176,25 +2176,25 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" move [^,v,<,>]\n");
 			printf_log(" getpos\n");
 			printf_log(" putpos\n");
-			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1?"Àı":"Example");
+			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1?"ä¾‹":"Example");
 			printf_log(" block\n");
-			printf_log("   %s: block h8\n", language==1?"Àı":"Example");
+			printf_log("   %s: block h8\n", language==1?"ä¾‹":"Example");
 			printf_log(" block reset\n");
 			printf_log(" block compare\n");
-			printf_log("   %s: block compare h8i8j7\n", language == 1 ? "Àı" : "Example");
+			printf_log("   %s: block compare h8i8j7\n", language == 1 ? "ä¾‹" : "Example");
 			printf_log(" block autoreset [on,off]\n");
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
 			printf_log(" boardsize\n");
-			printf_log("   %s: boardsize 15\n", language==1?"Àı1":"Example 1");
-			printf_log("   %s: boardsize 12 16\n", language == 1 ? "Àı2" : "Example 2");
+			printf_log("   %s: boardsize 15\n", language==1?"ä¾‹1":"Example 1");
+			printf_log("   %s: boardsize 12 16\n", language == 1 ? "ä¾‹2" : "Example 2");
 			printf_log(" language [en,cn]\n");
-			printf_log("   %s: language en\n", language==1?"Àı":"Example");
+			printf_log("   %s: language en\n", language==1?"ä¾‹":"Example");
 			printf_log(" balance<1,2>\n");
-			printf_log("   %s: balance1\n", language == 1 ? "Àı1" : "Example 1");
-			printf_log("   %s: balance1 100\n", language == 1 ? "Àı2" : "Example 2");
-			printf_log("   %s: balance2\n", language == 1 ? "Àı3" : "Example 3");
-			printf_log("   %s: balance2 100\n", language == 1 ? "Àı4" : "Example 4");
+			printf_log("   %s: balance1\n", language == 1 ? "ä¾‹1" : "Example 1");
+			printf_log("   %s: balance1 100\n", language == 1 ? "ä¾‹2" : "Example 2");
+			printf_log("   %s: balance2\n", language == 1 ? "ä¾‹3" : "Example 3");
+			printf_log("   %s: balance2 100\n", language == 1 ? "ä¾‹4" : "Example 4");
 			printf_log(" nbest [2,3,...]\n");
 			//printf_log(" command [on,off]\n");
 			printf_log("\n");
@@ -2211,7 +2211,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			int j, k = 1;
 			if (boardsizew != boardsizeh)
 			{
-				printf_log(language == 0 ? "Sorry, board cannot be rotated when height<>width.\n" : "±§Ç¸£¬ÎŞ·¨Ğı×ª³¤·½ĞÎÆåÅÌ¡£\n");
+				printf_log(language == 0 ? "Sorry, board cannot be rotated when height<>width.\n" : "æŠ±æ­‰ï¼Œæ— æ³•æ—‹è½¬é•¿æ–¹å½¢æ£‹ç›˜ã€‚\n");
 			}
 			else
 			{
@@ -2252,7 +2252,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			if ((k == 2 || k == 3) && (boardsizew != boardsizeh))
 			{
-				printf_log(language == 0 ? "Sorry, board cannot be flipped with / or \\ when height<>width.\n" : "±§Ç¸£¬ÆåÅÌÎª³¤·½ĞÎÊ±ÎŞ·¨Ê¹ÓÃ/»ò\\·­×ª¡£\n");
+				printf_log(language == 0 ? "Sorry, board cannot be flipped with / or \\ when height<>width.\n" : "æŠ±æ­‰ï¼Œæ£‹ç›˜ä¸ºé•¿æ–¹å½¢æ—¶æ— æ³•ä½¿ç”¨/æˆ–\\ç¿»è½¬ã€‚\n");
 			}
 			else
 			{
@@ -2512,13 +2512,13 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			if (s1 < 10 || s1 > MAX_SIZE || s2 < 10 || s2 > MAX_SIZE)
 			{
-				printf_log(language == 0 ? "Sorry, board size should be 10~%d.\n" : "±§Ç¸£¬ÆåÅÌ´óĞ¡·¶Î§Ó¦ÔÚ10~%d¡£\n", MAX_SIZE);
+				printf_log(language == 0 ? "Sorry, board size should be 10~%d.\n" : "æŠ±æ­‰ï¼Œæ£‹ç›˜å¤§å°èŒƒå›´åº”åœ¨10~%dã€‚\n", MAX_SIZE);
 			}
 			else
 			{
 				rboardsizeh = s1;
 				rboardsizew = s2;
-				printf_log(language==0?"Board size will be %dx%d after you restart Yixin.\n":"ÔÚÖØÆôYixinºóÆåÅÌ´óĞ¡½«±äÎª%dx%d¡£\n", s1, s2);
+				printf_log(language==0?"Board size will be %dx%d after you restart Yixin.\n":"åœ¨é‡å¯Yixinåæ£‹ç›˜å¤§å°å°†å˜ä¸º%dx%dã€‚\n", s1, s2);
 
 				/*
 				save_setting();
@@ -2532,7 +2532,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			if(command[9] == 'c' || command[9] == 'C')
 			{
 				rlanguage = 1;
-				printf_log(language==0?"Language will be Chinese after you restart Yixin.\n":"ÔÚÖØÆôYixinºóÓïÑÔ½«Éè¶¨ÎªÖĞÎÄ¡£\n");
+				printf_log(language==0?"Language will be Chinese after you restart Yixin.\n":"åœ¨é‡å¯Yixinåè¯­è¨€å°†è®¾å®šä¸ºä¸­æ–‡ã€‚\n");
 
 				/*
 				save_setting();
@@ -2543,7 +2543,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			else if(command[9] == 'e' || command[9] == 'E')
 			{
 				rlanguage = 0;
-				printf_log(language==0?"Language will be English after you restart Yixin.\n":"ÔÚÖØÆôYixinºóÓïÑÔ½«Éè¶¨ÎªÓ¢ÎÄ¡£\n");
+				printf_log(language==0?"Language will be English after you restart Yixin.\n":"åœ¨é‡å¯Yixinåè¯­è¨€å°†è®¾å®šä¸ºè‹±æ–‡ã€‚\n");
 				
 				/*
 				save_setting();
@@ -2553,7 +2553,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			else
 			{
-				printf_log(language==0?"Sorry, language should be Chinese[cn] or English[en].\n":"±§Ç¸£¬ÓïÑÔÓ¦ÎªÖĞÎÄ[cn]»òÓ¢ÎÄ[en]¡£\n");
+				printf_log(language==0?"Sorry, language should be Chinese[cn] or English[en].\n":"æŠ±æ­‰ï¼Œè¯­è¨€åº”ä¸ºä¸­æ–‡[cn]æˆ–è‹±æ–‡[en]ã€‚\n");
 			}
 		}
 		else if (strncmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
@@ -2606,7 +2606,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			if(language == 1)
 			{
-				printf_log("ÊäÈëhelp²¢»Ø³µÒÔ»ñÈ¡°ïÖú\n");
+				printf_log("è¾“å…¥helpå¹¶å›è½¦ä»¥è·å–å¸®åŠ©\n");
 			}
 			else
 			{
@@ -2971,32 +2971,32 @@ void create_windowmain()
 	menurule = gtk_menu_new();
 	menulanguage = gtk_menu_new();
 
-	menuitemgame = gtk_menu_item_new_with_label(language==0?"Game":(language==1?_T("ÓÎÏ·"):""));
-	menuitemplayers = gtk_menu_item_new_with_label(language==0?"Players":(language==1?_T("ÉèÖÃ"):""));
-	menuitemview = gtk_menu_item_new_with_label(language==0?"View":(language==1?_T("ÏÔÊ¾"):""));
-	menuitemhelp = gtk_menu_item_new_with_label(language==0?"Help":(language==1?_T("°ïÖú"):""));
-	menuitemnewgame = gtk_menu_item_new_with_label(language==0?"New":(language==1?_T("ĞÂ½¨"):""));
-	menuitemload = gtk_menu_item_new_with_label(language==0?"Load":(language==1?_T("ÔØÈë"):""));
-	menuitemsave = gtk_menu_item_new_with_label(language==0?"Save":(language==1?_T("±£´æ"):""));
-	menuitemrule = gtk_menu_item_new_with_label(language==0?"Rule":(language==1?_T("¹æÔò"):""));
-	menuitemsize = gtk_menu_item_new_with_label(language==0?"Board Size":(language==1?_T("ÆåÅÌ´óĞ¡"):""));
-	menuitemopenbook = gtk_check_menu_item_new_with_label(language==0?"Use Openbook":(language==1?_T("Ê¹ÓÃ¿ª¾Ö¿â"):""));
-	menuitemnumeration = gtk_check_menu_item_new_with_label(language==0?"Numeration":(language==1?_T("ÏÔÊ¾Êı×Ö"):""));
-	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":(language==1?_T("ÏÔÊ¾ÈÕÖ¾"):""));
-	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":(language==1?_T("ÏÔÊ¾·ÖÎö"):""));
-	menuitemlanguage = gtk_menu_item_new_with_label(language==0?"Language":(language==1?_T("ÓïÑÔ"):""));
-	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":(language==1?_T("ÍË³ö"):""));
-	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":(language==1?_T("¹ØÓÚ"):""));
-	menuitemsettings = gtk_menu_item_new_with_label(language==0?"Settings":(language==1?_T("ÉèÖÃ"):""));
+	menuitemgame = gtk_menu_item_new_with_label(language==0?"Game":(language==1?_T("æ¸¸æˆ"):""));
+	menuitemplayers = gtk_menu_item_new_with_label(language==0?"Players":(language==1?_T("è®¾ç½®"):""));
+	menuitemview = gtk_menu_item_new_with_label(language==0?"View":(language==1?_T("æ˜¾ç¤º"):""));
+	menuitemhelp = gtk_menu_item_new_with_label(language==0?"Help":(language==1?_T("å¸®åŠ©"):""));
+	menuitemnewgame = gtk_menu_item_new_with_label(language==0?"New":(language==1?_T("æ–°å»º"):""));
+	menuitemload = gtk_menu_item_new_with_label(language==0?"Load":(language==1?_T("è½½å…¥"):""));
+	menuitemsave = gtk_menu_item_new_with_label(language==0?"Save":(language==1?_T("ä¿å­˜"):""));
+	menuitemrule = gtk_menu_item_new_with_label(language==0?"Rule":(language==1?_T("è§„åˆ™"):""));
+	menuitemsize = gtk_menu_item_new_with_label(language==0?"Board Size":(language==1?_T("æ£‹ç›˜å¤§å°"):""));
+	menuitemopenbook = gtk_check_menu_item_new_with_label(language==0?"Use Openbook":(language==1?_T("ä½¿ç”¨å¼€å±€åº“"):""));
+	menuitemnumeration = gtk_check_menu_item_new_with_label(language==0?"Numeration":(language==1?_T("æ˜¾ç¤ºæ•°å­—"):""));
+	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":(language==1?_T("æ˜¾ç¤ºæ—¥å¿—"):""));
+	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":(language==1?_T("æ˜¾ç¤ºåˆ†æ"):""));
+	menuitemlanguage = gtk_menu_item_new_with_label(language==0?"Language":(language==1?_T("è¯­è¨€"):""));
+	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":(language==1?_T("é€€å‡º"):""));
+	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":(language==1?_T("å…³äº"):""));
+	menuitemsettings = gtk_menu_item_new_with_label(language==0?"Settings":(language==1?_T("è®¾ç½®"):""));
 	
-	menuitemrule1 = gtk_radio_menu_item_new_with_label(NULL, language==0?"Freestyle gomoku":(language==1?_T("ÎŞ½ûÊÖ"):""));
-	menuitemrule2 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Standrad gomoku":(language==1?_T("ÎŞ½ûÊÖ(Áù²»Ó®)"):""));
-	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Free renju":(language==1?_T("ÓĞ½ûÊÖ"):""));
-	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"RIF opening rule":(language==1?_T("RIF¹æÔò"):""));
-	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Swap after 1st move":(language==1?_T("Ò»ÊÖ½»»»"):""));
+	menuitemrule1 = gtk_radio_menu_item_new_with_label(NULL, language==0?"Freestyle gomoku":(language==1?_T("æ— ç¦æ‰‹"):""));
+	menuitemrule2 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Standrad gomoku":(language==1?_T("æ— ç¦æ‰‹(å…­ä¸èµ¢)"):""));
+	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Free renju":(language==1?_T("æœ‰ç¦æ‰‹"):""));
+	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"RIF opening rule":(language==1?_T("RIFè§„åˆ™"):""));
+	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Swap after 1st move":(language==1?_T("ä¸€æ‰‹äº¤æ¢"):""));
 	
 	menuitemenglish = gtk_radio_menu_item_new_with_label(NULL, "English");
-	menuitemchinese = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemenglish)), _T("¼òÌåÖĞÎÄ"));
+	menuitemchinese = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemenglish)), _T("ç®€ä½“ä¸­æ–‡"));
 	
 	switch(inforule)
 	{
@@ -3038,8 +3038,8 @@ void create_windowmain()
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemanalysis), TRUE);
 	}
-	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer plays black":(language==1?_T("¼ÆËã»úÖ´ºÚ"):""));
-	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer plays white":(language==1?_T("¼ÆËã»úÖ´°×"):""));
+	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer plays black":(language==1?_T("è®¡ç®—æœºæ‰§é»‘"):""));
+	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer plays white":(language==1?_T("è®¡ç®—æœºæ‰§ç™½"):""));
 	if(computerside&1)
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemcomputerplaysblack), TRUE);
 	else
@@ -3116,17 +3116,17 @@ void create_windowmain()
 		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH);
 	gtk_toolbar_set_orientation((GtkToolbar*)toolbar, GTK_ORIENTATION_VERTICAL);
 	toolgofirst = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_FIRST);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgofirst), language==0 ? "Undo All": _T("Ê×²½"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgofirst), language==0 ? "Undo All": _T("é¦–æ­¥"));
 	toolgoback = gtk_tool_button_new_from_stock(GTK_STOCK_GO_BACK);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoback), language==0 ? "Undo": _T("Ç°Ò»²½"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoback), language==0 ? "Undo": _T("å‰ä¸€æ­¥"));
 	toolgoforward = gtk_tool_button_new_from_stock(GTK_STOCK_GO_FORWARD);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoforward), language==0 ? "Redo": _T("ºóÒ»²½"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoforward), language==0 ? "Redo": _T("åä¸€æ­¥"));
 	toolgolast = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_LAST);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgolast), language==0 ? "Redo All": _T("Ä©²½"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgolast), language==0 ? "Redo All": _T("æœ«æ­¥"));
 	toolstop = gtk_tool_button_new_from_stock(GTK_STOCK_STOP);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolstop), language==0 ? "Stop": _T("Á¢¼´³öÕĞ"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolstop), language==0 ? "Stop": _T("ç«‹å³å‡ºæ‹›"));
 	toolplay = gtk_tool_button_new_from_stock(GTK_STOCK_EXECUTE);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolplay), language==0 ? "Play": _T("¼ÆËã"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolplay), language==0 ? "Play": _T("è®¡ç®—"));
 
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgofirst, -1);
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgoback, -1);
@@ -3329,7 +3329,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			timeused += (clock() - timestart) / (CLOCKS_PER_SEC / 1000);
 			if(language == 1)
 			{
-				printf_log("Ê£ÓàÊ±¼ä: %dºÁÃë\n\n", timeoutmatch-timeused);
+				printf_log("å‰©ä½™æ—¶é—´: %dæ¯«ç§’\n\n", timeoutmatch-timeused);
 			}
 			else
 			{
