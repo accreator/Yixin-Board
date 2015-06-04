@@ -15,5 +15,5 @@ gtkrc*
 *.modules
 *.loaders
 *~
-!/release/*.exe
+!/release/win32/*.exe
 !/skin/*.bmp
