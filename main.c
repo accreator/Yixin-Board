@@ -546,6 +546,7 @@ int search_openbook(I64 zobkey)
 {
 	int l, r, m;
 	static int flag = -1;
+	if (boardsizeh > 20 || boardsizew > 20) return 0; //TODO: support board of size > 20
 	if(flag != inforule+(specialrule<<2))
 	{
 		char name[80];
@@ -563,6 +564,7 @@ int search_openbook(I64 zobkey)
 		{
 			sprintf(name, "book%d_%d_%d.dat", inforule, boardsizeh, boardsizew);
 		}
+		//printf_log("Loading openbook \"%s\"...", name);
 		if((in = fopen(name, "rb")) != NULL)
 		{
 			while(!feof(in))
@@ -573,6 +575,11 @@ int search_openbook(I64 zobkey)
 				openbooknum ++;
 			}
 			fclose(in);
+			//printf_log("Done (%d entries)\n", openbooknum);
+		}
+		else
+		{
+			//printf_log("Error\n");
 		}
 		flag = inforule+(specialrule<<2);
 	}
@@ -609,9 +616,10 @@ int move_openbook(int *besty, int *bestx)
 		FILE *in;
 		if((in = fopen("base.dat", "r")) != NULL)
 		{
-			for(i=0; i<MAX_SIZE; i++)
+			//TODO: support board of size > 20
+			for(i=0; i<20; i++)
 			{
-				for(j=0; j<MAX_SIZE; j++)
+				for(j=0; j<20; j++)
 				{
 					for(k=0; k<3; k++)
 					{
@@ -622,7 +630,11 @@ int move_openbook(int *besty, int *bestx)
 			fclose(in);
 			zobristflag = 0;
 		}
-		else return 0;
+		else
+		{
+			//printf_log("base.dat is lost\n");
+			return 0;
+		}
 	}
 	if(bestx==NULL && besty==NULL) return 0; //just for init zobrist
 
@@ -843,7 +855,7 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 		movepath[piecenum-1] = y * boardsizew + x;
 		if(i < n)
 		{
-			printf_log("ERROR opening book error");
+			printf_log("ERROR opening book error\n");
 			for(; i<n; i++)
 			{
 				besty[i] = bestx[i] = 0;
@@ -2651,6 +2663,7 @@ void save_setting()
 
 void yixin_quit()
 {
+	if (openbook != NULL) free(openbook);
 	save_setting();
 	gtk_main_quit();
 }
