@@ -50,6 +50,7 @@ int boardbest[MAX_SIZE][MAX_SIZE];
 int boardlose[MAX_SIZE][MAX_SIZE];
 int boardpos[MAX_SIZE][MAX_SIZE];
 int blockautoreset = 0;
+int blockpathautoreset = 0;
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
 char bestline[MAX_SIZE*MAX_SIZE*5+1] = "";
@@ -2147,11 +2148,11 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 	{
 		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextcommand), &start, &end);
 		command = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(buffertextcommand), &start, &end, FALSE);
-		if (strncmp(command, "command on", 10) == 0)
+		if (_strnicmp(command, "command on", 10) == 0)
 		{
 			commandmodel = 1;
 		}
-		else if (strncmp(command, "command off", 11) == 0)
+		else if (_strnicmp(command, "command off", 11) == 0)
 		{
 			commandmodel = 0;
 		}
@@ -2160,7 +2161,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(command);
 			send_command(command);
 		}
-		else if(strncmp(command, "help key", 8) == 0)
+		else if(_strnicmp(command, "help key", 8) == 0)
 		{
 			printf_log(" F11\n  %s\n", language==1?"计算":"Start thinking");
 			printf_log(" Esc\n  %s\n", language==1?"停止计算":"Stop thinking");
@@ -2170,7 +2171,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" Ctrl+Down\n  %s\n", language==1?"末步":"Redo all");
 			printf_log("\n");
 		}
-		else if(strncmp(command, "help", 4) == 0)
+		else if(_strnicmp(command, "help", 4) == 0)
 		{
 			if(language == 1)
 			{
@@ -2195,6 +2196,12 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" block compare\n");
 			printf_log("   %s: block compare h8i8j7\n", language == 1 ? "例" : "Example");
 			printf_log(" block autoreset [on,off]\n");
+			printf_log(" block\n");
+			printf_log("   %s: block h8h7\n", language == 1 ? "例" : "Example");
+			printf_log(" blockpath reset\n");
+			printf_log(" blockpath except\n");
+			printf_log("   %s: blockpath except h8i8j7\n", language == 1 ? "例" : "Example");
+			printf_log(" blockpath autoreset [on,off]\n");
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
 			printf_log(" boardsize\n");
@@ -2211,13 +2218,13 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			//printf_log(" command [on,off]\n");
 			printf_log("\n");
 		}
-		else if(strncmp(command, "clear", 5) == 0)
+		else if(_strnicmp(command, "clear", 5) == 0)
 		{
 			GtkTextIter _start, _end;
 			gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &_start, &_end);
 			gtk_text_buffer_delete(buffertextlog, &_start, &_end);
 		}
-		else if(strncmp(command, "rotate", 6) == 0)
+		else if(_strnicmp(command, "rotate", 6) == 0)
 		{
 			int p = piecenum;
 			int j, k = 1;
@@ -2251,7 +2258,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				show_forbid();
 			}
 		}
-		else if(strncmp(command, "flip", 4) == 0)
+		else if(_strnicmp(command, "flip", 4) == 0)
 		{
 			int p = piecenum;
 			int k = 0;
@@ -2300,7 +2307,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				show_forbid();
 			}
 		}
-		else if(strncmp(command, "move", 4) == 0)
+		else if(_strnicmp(command, "move", 4) == 0)
 		{
 			int p = piecenum;
 			int k = 0;
@@ -2372,7 +2379,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
 			show_forbid();
 		}
-		else if (strncmp(command, "putpos", 6) == 0)
+		else if (_strnicmp(command, "putpos", 6) == 0)
 		{
 			new_game(NULL, NULL);
 			i = 6;
@@ -2397,7 +2404,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			show_forbid();
 		}
-		else if (strncmp(command, "getpos", 6) == 0)
+		else if (_strnicmp(command, "getpos", 6) == 0)
 		{
 			for (i = 0; i < piecenum; i++)
 			{
@@ -2405,13 +2412,133 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			printf_log("\n");
 		}
-		else if (strncmp(command, "block reset", 11) == 0)
+		else if (_strnicmp(command, "blockpath reset", 15) == 0)
+		{
+			send_command("yxblockpathreset\n");
+		}
+		else if (_strnicmp(command, "blockpath autoreset", 19) == 0)
+		{
+			if (strlen(command) >= 22)
+			{
+				if (command[21] == 'n' || command[21] == 'N')
+				{
+					blockpathautoreset = 1;
+				}
+				else
+				{
+					blockpathautoreset = 0;
+				}
+			}
+		}
+		else if (_strnicmp(command, "blockpath except", 16) == 0)
+		{
+			gchar _command[80];
+			int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
+			int len = 0;
+
+			i = 16;
+			while (command[i] == '\t' || command[i] == ' ') i++;
+			for (; command[i];)
+			{
+				int x, y;
+				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+				if (command[i] < 'A' || command[i] > 'Z') break;
+				x = command[i] - 'A';
+				i++;
+				y = command[i] - '0';
+				i++;
+				if (command[i] >= '0' && command[i] <= '9')
+				{
+					y = y * 10 + command[i] - '0';
+					i++;
+				}
+				y = y - 1;
+				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+				xl[len] = boardsizeh - 1 - y;
+				yl[len] = x;
+				len++;
+			}
+			if (len > 0)
+			{
+				int j, k;
+				for (j = 0; j < MAX_SIZE; j++)
+				{
+					for (k = 0; k < MAX_SIZE; k++)
+					{
+						if (xl[len - 1] == j && yl[len - 1] == k) continue;
+						send_command("yxblockpath\n");
+						for (i = 0; i < piecenum; i++)
+						{
+							sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
+							send_command(_command);
+						}
+						for (i = 0; i < len-1; i++)
+						{
+							sprintf(_command, "%d,%d\n", xl[i], yl[i]);
+							send_command(_command);
+						}
+						sprintf(_command, "%d,%d\n", j, k);
+						send_command(_command);
+						send_command("done\n");
+					}
+				}
+			}
+		}
+		else if (_strnicmp(command, "blockpath list", 14) == 0)
+		{
+			; //TODO
+		}
+		else if (_strnicmp(command, "blockpath", 9) == 0)
+		{
+			gchar _command[80];
+			int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
+			int len = 0;
+			
+			i = 9;
+			while (command[i] == '\t' || command[i] == ' ') i++;
+			for (; command[i];)
+			{
+				int x, y;
+				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+				if (command[i] < 'A' || command[i] > 'Z') break;
+				x = command[i] - 'A';
+				i++;
+				y = command[i] - '0';
+				i++;
+				if (command[i] >= '0' && command[i] <= '9')
+				{
+					y = y * 10 + command[i] - '0';
+					i++;
+				}
+				y = y - 1;
+				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+				xl[len] = boardsizeh - 1 - y;
+				yl[len] = x;
+				len++;
+			}
+			if (len > 0)
+			{
+				send_command("yxblockpath\n");
+				for (i = 0; i < piecenum; i++)
+				{
+					sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
+					send_command(_command);
+				}
+				for (i = 0; i < len; i++)
+				{
+					sprintf(_command, "%d,%d\n", xl[i], yl[i]);
+					send_command(_command);
+				}
+				send_command("done\n");
+			}
+		}
+		else if (_strnicmp(command, "block reset", 11) == 0)
 		{
 			send_command("yxblockreset\n");
 			memset(boardblock, 0, sizeof(boardblock));
 			refresh_board();
 		}
-		else if (strncmp(command, "block autoreset", 15) == 0)
+		else if (_strnicmp(command, "block autoreset", 15) == 0)
 		{
 			if (strlen(command) >= 18)
 			{
@@ -2425,7 +2552,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				}
 			}
 		}
-		else if (strncmp(command, "block compare", 13) == 0)
+		else if (_strnicmp(command, "block compare", 13) == 0)
 		{
 			gchar _command[80];
 			int j;
@@ -2476,7 +2603,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			refresh_board();
 		}
-		else if(strncmp(command, "block", 5) == 0)
+		else if(_strnicmp(command, "block", 5) == 0)
 		{
 			gchar _command[80];
 			do
@@ -2501,16 +2628,16 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				refresh_board();
 			} while(0);
 		}
-		else if(strncmp(command, "hash clear", 10) == 0)
+		else if(_strnicmp(command, "hash clear", 10) == 0)
 		{
 			send_command("yxhashclear\n");
 		}
-		else if(strncmp(command, "bestline", 8) == 0)
+		else if(_strnicmp(command, "bestline", 8) == 0)
 		{
 			printf_log("BESTLINE: %s ", bestline);
 			printf_log("VAL: %d\n", bestval);
 		}
-		else if(strncmp(command, "boardsize", 9) == 0)
+		else if(_strnicmp(command, "boardsize", 9) == 0)
 		{
 			int s1, s2;
 			s1 = (command[10] - '0')*10 + (command[11] - '0');
@@ -2539,7 +2666,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				*/
 			}
 		}
-		else if(strncmp(command, "language", 8) == 0)
+		else if(_strnicmp(command, "language", 8) == 0)
 		{
 			if(command[9] == 'c' || command[9] == 'C')
 			{
@@ -2568,7 +2695,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				printf_log(language==0?"Sorry, language should be Chinese[cn] or English[en].\n":"抱歉，语言应为中文[cn]或英文[en]。\n");
 			}
 		}
-		else if (strncmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
+		else if (_strnicmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
 		{
 			gchar _command[80];
 			int s;
@@ -2590,7 +2717,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			sprintf(_command, "yxbalance%s %d\n", t==1?"one":"two", s);
 			send_command(_command);
 		}
-		else if (strncmp(command, "nbest", 5) == 0)
+		else if (_strnicmp(command, "nbest", 5) == 0)
 		{
 			gchar _command[80];
 			int s;
@@ -2610,7 +2737,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			sprintf(_command, "yxnbest %d\n", s);
 			send_command(_command);
 		}
-		else if(strncmp(command, "makebook", 8) == 0)
+		else if(_strnicmp(command, "makebook", 8) == 0)
 		{
 			; //TODO
 		}
@@ -2657,12 +2784,15 @@ void save_setting()
 		fprintf(out, "%d\t;number of threads\n", threadnum);
 		fprintf(out, "%d\t;hash size\n", hashsize);
 		fprintf(out, "%d\t;split depth\n", threadsplitdepth);
+		fprintf(out, "%d\t;blockpath autoreset (0: no, 1: yes)\n", blockpathautoreset);
 		fclose(out);
 	}
 }
 
 void yixin_quit()
 {
+	//stop_thinking(NULL, NULL);
+	send_command("end\n");
 	if (openbook != NULL) free(openbook);
 	save_setting();
 	gtk_main_quit();
@@ -3354,6 +3484,10 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				memset(boardblock, 0, sizeof(boardblock));
 				refresh_board();
 			}
+			if (blockpathautoreset)
+			{
+				send_command("yxblockpathreset\n");
+			}
 			if(is_legal_move(y, x))
 			{
 				make_move(y, x);
@@ -3515,6 +3649,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if(hashsize < 0 || hashsize > MAX_HASH_SIZE) hashsize = 19;
 		threadsplitdepth = read_int_from_file(in);
 		if(threadsplitdepth < MIN_SPLIT_DEPTH || threadsplitdepth > MAX_SPLIT_DEPTH) threadsplitdepth = 7;
+		blockpathautoreset = read_int_from_file(in);
+		if (blockpathautoreset < 0 || blockpathautoreset > 1) blockpathautoreset = 0;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", max(boardsizeh, boardsizew));
