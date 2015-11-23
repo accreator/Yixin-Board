@@ -11,7 +11,7 @@
 typedef long long I64;
 #define MAX_SIZE 24
 #define CAUTION_NUM 3  //0..CAUTION_NUM
-#define MAX_THREAD_NUM 1 //1..MAX_THREAD_NUM
+#define MAX_THREAD_NUM 8 //1..MAX_THREAD_NUM
 #define MAX_HASH_SIZE 21
 #define MIN_SPLIT_DEPTH 5
 #define MAX_SPLIT_DEPTH 20
@@ -2192,12 +2192,16 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1?"例":"Example");
 			printf_log(" block\n");
 			printf_log("   %s: block h8\n", language==1?"例":"Example");
+			printf_log(" block undo\n");
+			printf_log("   %s: block undo h8\n", language == 1 ? "例" : "Example");
 			printf_log(" block reset\n");
 			printf_log(" block compare\n");
 			printf_log("   %s: block compare h8i8j7\n", language == 1 ? "例" : "Example");
 			printf_log(" block autoreset [on,off]\n");
-			printf_log(" block\n");
-			printf_log("   %s: block h8h7\n", language == 1 ? "例" : "Example");
+			printf_log(" blockpath\n");
+			printf_log("   %s: blockpath h8h7\n", language == 1 ? "例" : "Example");
+			printf_log(" blockpath undo\n");
+			printf_log("   %s: blockpath undo h8h7\n", language == 1 ? "例" : "Example");
 			printf_log(" blockpath reset\n");
 			printf_log(" blockpath except\n");
 			printf_log("   %s: blockpath except h8i8j7\n", language == 1 ? "例" : "Example");
@@ -2430,6 +2434,50 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				}
 			}
 		}
+		else if (_strnicmp(command, "blockpath undo", 14) == 0)
+		{
+			gchar _command[80];
+			int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
+			int len = 0;
+
+			i = 14;
+			while (command[i] == '\t' || command[i] == ' ') i++;
+			for (; command[i];)
+			{
+				int x, y;
+				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+				if (command[i] < 'A' || command[i] > 'Z') break;
+				x = command[i] - 'A';
+				i++;
+				y = command[i] - '0';
+				i++;
+				if (command[i] >= '0' && command[i] <= '9')
+				{
+					y = y * 10 + command[i] - '0';
+					i++;
+				}
+				y = y - 1;
+				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+				xl[len] = boardsizeh - 1 - y;
+				yl[len] = x;
+				len++;
+			}
+			if (len > 0)
+			{
+				send_command("yxblockpathundo\n");
+				for (i = 0; i < piecenum; i++)
+				{
+					sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
+					send_command(_command);
+				}
+				for (i = 0; i < len; i++)
+				{
+					sprintf(_command, "%d,%d\n", xl[i], yl[i]);
+					send_command(_command);
+				}
+				send_command("done\n");
+			}
+		}
 		else if (_strnicmp(command, "blockpath except", 16) == 0)
 		{
 			gchar _command[80];
@@ -2551,6 +2599,31 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					blockautoreset = 0;
 				}
 			}
+		}
+		else if (_strnicmp(command, "block undo", 10) == 0)
+		{
+			gchar _command[80];
+			do
+			{
+				int x, y;
+				if (command[11] >= 'a' && command[11] <= 'z') command[11] = command[11] - 'a' + 'A';
+				if (command[11] < 'A' || command[11] > 'Z') break;
+				x = command[11] - 'A';
+				y = command[12] - '0';
+				if (command[13] >= '0' && command[13] <= '9')
+				{
+					y = y * 10 + command[13] - '0';
+				}
+				y--;
+				if (x<0 || x >= boardsizew || y<0 || y >= boardsizeh) break;
+				send_command("yxblockundo\n");
+				sprintf(_command, "%d,%d\n", boardsizeh - 1 - y, x);
+				send_command(_command);
+				send_command("done\n");
+
+				boardblock[boardsizeh - 1 - y][x] = 0;
+				refresh_board();
+			} while (0);
 		}
 		else if (_strnicmp(command, "block compare", 13) == 0)
 		{
@@ -2765,7 +2838,7 @@ void save_setting()
 	{
 		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
 		fprintf(out, "%d\t;language (0: English, 1: Chinese)\n", rlanguage);
-		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3:s wap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
+		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside&1);
 		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside>>1);
@@ -3648,7 +3721,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		hashsize = read_int_from_file(in);
 		if(hashsize < 0 || hashsize > MAX_HASH_SIZE) hashsize = 19;
 		threadsplitdepth = read_int_from_file(in);
-		if(threadsplitdepth < MIN_SPLIT_DEPTH || threadsplitdepth > MAX_SPLIT_DEPTH) threadsplitdepth = 7;
+		if(threadsplitdepth < MIN_SPLIT_DEPTH || threadsplitdepth > MAX_SPLIT_DEPTH) threadsplitdepth = 8;
 		blockpathautoreset = read_int_from_file(in);
 		if (blockpathautoreset < 0 || blockpathautoreset > 1) blockpathautoreset = 0;
 		fclose(in);
