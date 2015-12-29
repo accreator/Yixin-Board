@@ -28,4 +28,4 @@ void init_engine();
 void yixin_quit();
 #define max(x, y) ((x)>(y)?(x):(y))
 #define min(x, y) ((x)<(y)?(x):(y))
-#define VERSION "1.6"
+#define VERSION "1.7"

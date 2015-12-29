@@ -11,8 +11,6 @@
 typedef long long I64;
 #define MAX_SIZE 24
 #define CAUTION_NUM 3  //0..CAUTION_NUM
-#define MAX_THREAD_NUM 8 //1..MAX_THREAD_NUM
-#define MAX_HASH_SIZE 21
 #define MIN_SPLIT_DEPTH 5
 #define MAX_SPLIT_DEPTH 20
 
@@ -36,6 +34,8 @@ int timestart = 0;
 int timeoutmatch = 2000000;
 int maxdepth = 100;
 int maxnode = 1000000000;
+int maxthreadnum = 64; //1..maxthreadnum
+int maxhashsize = 30;
 int computerside = 0; /* 0 none 1 black 2 while 3 black&white */
 int cautionfactor = 1;
 int threadnum = 1;
@@ -318,7 +318,8 @@ void show_thanklist()
 	printf_log("  元\n");
 	printf_log("  TZ\n");
 	printf_log("  濤声依旧\n");
-	printf_log("  张锡森");
+	printf_log("  张锡森\n");
+	printf_log("  ax_pokl");
 	printf_log("\n");
 }
 
@@ -750,7 +751,7 @@ int move_openbook(int *besty, int *bestx)
 	return 1; //in fact this statement will never be reached
 }
 
-//this function can generated the best n moves from the openbook
+//this function can generate the best n moves from the openbook
 //and store the results to besty and bestx
 int move_openbook_n(int n, int *besty, int *bestx, int force)
 {
@@ -1401,7 +1402,7 @@ void set_threadnum(int x)
 {
 	gchar command[80];
 	if(x < 1) x = 1;
-	if(x > MAX_THREAD_NUM) x = MAX_THREAD_NUM;
+	if(x > maxthreadnum) x = maxthreadnum;
 	threadnum = x;
 	sprintf(command, "INFO thread_num %d\n", threadnum);
 	send_command(command);
@@ -1421,7 +1422,7 @@ void set_hashsize(int x)
 {
 	gchar command[80];
 	if(x < 0) x = 0;
-	if(x > MAX_HASH_SIZE) x = MAX_HASH_SIZE;
+	if(x > maxhashsize) x = maxhashsize;
 	hashsize = x;
 	sprintf(command, "INFO hash_size %d\n", hashsize==0 ? 0 : (1<<hashsize));
 	send_command(command);
@@ -1595,7 +1596,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_range_set_value(GTK_RANGE(scalecaution), cautionfactor);
 	gtk_widget_set_size_request(scalecaution, 100, -1);
 
-	scalethreads = gtk_hscale_new_with_range(1, MAX_THREAD_NUM, 1);
+	scalethreads = gtk_hscale_new_with_range(1, maxthreadnum, 1);
 	gtk_range_set_value(GTK_RANGE(scalethreads), threadnum);
 	gtk_widget_set_size_request(scalethreads, 100, -1);
 
@@ -1603,7 +1604,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_range_set_value(GTK_RANGE(scalesplitdepth), threadsplitdepth);
 	gtk_widget_set_size_request(scalesplitdepth, 100, -1);
 
-	scalehash = gtk_hscale_new_with_range(0, MAX_HASH_SIZE, 1);
+	scalehash = gtk_hscale_new_with_range(0, maxhashsize, 1);
 	gtk_range_set_value(GTK_RANGE(scalehash), hashsize);
 	gtk_widget_set_size_request(scalehash, 100, -1);
 
@@ -1614,14 +1615,16 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[1], FALSE, FALSE, 3);
 
-#if MAX_THREAD_NUM > 1
-	hbox[2] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language==0?"Number of Threads":(language==1?_T("线程数"):"")), FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[2]), scalethreads, FALSE, FALSE, 3);
-	hbox[4] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[4]), gtk_label_new(language==0?"Split Depth":(language==1?_T("分裂深度"):"")), FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[4]), scalesplitdepth, FALSE, FALSE, 3);
-#endif
+	if (maxthreadnum > 1)
+	{
+		hbox[2] = gtk_hbox_new(FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language == 0 ? "Number of Threads" : (language == 1 ? _T("线程数") : "")), FALSE, FALSE, 3);
+		gtk_box_pack_start(GTK_BOX(hbox[2]), scalethreads, FALSE, FALSE, 3);
+		hbox[4] = gtk_hbox_new(FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox[4]), gtk_label_new(language == 0 ? "Split Depth" : (language == 1 ? _T("分裂深度") : "")), FALSE, FALSE, 3);
+		gtk_box_pack_start(GTK_BOX(hbox[4]), scalesplitdepth, FALSE, FALSE, 3);
+	}
+
 	hbox[3] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size":(language==1?_T("哈希表大小"):"")), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), scalehash, FALSE, FALSE, 3);
@@ -1892,7 +1895,7 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
 	
-	label[0] = gtk_label_new(language==0?"Board Height (10 ~ 24):":(language==1?_T("棋盘长度 (10 ~ 24):"):""));
+	label[0] = gtk_label_new(language == 0 ? "Board Height (10 ~ 24):" : (language == 1 ? _T("棋盘长度 (10 ~ 24):") : ""));
 	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 24):" : (language == 1 ? _T("棋盘宽度 (10 ~ 24):") : ""));
 	
 	entry[0] = gtk_entry_new();
@@ -1963,7 +1966,7 @@ void show_dialog_about(GtkWidget *widget, gpointer data)
 	name = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(name), "<big><b>Yixin Board</b></big>");
 	version = gtk_label_new("Version "VERSION);
-	author = gtk_label_new("(C)2009-2015 Kai Sun");
+	author = gtk_label_new("(C)2009-2016 Kai Sun");
 	www = gtk_label_new("www.aiexp.info");
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), icon, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), name, FALSE, FALSE, 3);
@@ -2220,6 +2223,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: balance2 100\n", language == 1 ? "例4" : "Example 4");
 			printf_log(" nbest [2,3,...]\n");
 			//printf_log(" command [on,off]\n");
+			//printf_log(" hash usage\n");
 			printf_log("\n");
 		}
 		else if(_strnicmp(command, "clear", 5) == 0)
@@ -2704,6 +2708,10 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		else if(_strnicmp(command, "hash clear", 10) == 0)
 		{
 			send_command("yxhashclear\n");
+		}
+		else if (_strnicmp(command, "hash usage", 10) == 0)
+		{
+			send_command("yxshowhashusage\n");
 		}
 		else if(_strnicmp(command, "bestline", 8) == 0)
 		{
@@ -3489,6 +3497,22 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			g_free(string);
 			continue;
 		}
+		if (strncmp(string, "MESSAGE INFO", 12) == 0)
+		{
+			char *p = string + 12 + 1;
+			if (strncmp(p, "MAX_THREAD_NUM", 14) == 0) //MAX_THREAD_NUM
+			{
+				p += 15;
+				sscanf(p, "%d", &maxthreadnum);
+			}
+			else if (strncmp(p, "MAX_HASH_SIZE", 13) == 0) //MAX_HASH_SIZE
+			{
+				p += 14;
+				sscanf(p, "%d", &maxhashsize);
+			}
+			g_free(string);
+			continue;
+		}
 		if(strncmp(string, "MESSAGE", 7) == 0)
 		{
 			printf_log("%s", string);
@@ -3717,9 +3741,9 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		blockautoreset = read_int_from_file(in);
 		if(blockautoreset < 0 || blockautoreset > 1) blockautoreset = 0;
 		threadnum = read_int_from_file(in);
-		if(threadnum < 1 || threadnum > MAX_THREAD_NUM) threadnum = 1;
+		if(threadnum < 1 || threadnum > maxthreadnum) threadnum = 1;
 		hashsize = read_int_from_file(in);
-		if(hashsize < 0 || hashsize > MAX_HASH_SIZE) hashsize = 19;
+		if(hashsize < 0 || hashsize > maxhashsize) hashsize = 19;
 		threadsplitdepth = read_int_from_file(in);
 		if(threadsplitdepth < MIN_SPLIT_DEPTH || threadsplitdepth > MAX_SPLIT_DEPTH) threadsplitdepth = 8;
 		blockpathautoreset = read_int_from_file(in);
@@ -3777,6 +3801,7 @@ void init_engine()
 {
 	char command[80];
 	send_command("info show_detail 1\n");
+	send_command("yxshowinfo\n");
 	sprintf(command, "START %d %d\n", boardsizew, boardsizeh);
 	send_command(command);
 	set_level(levelchoice);
