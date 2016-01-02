@@ -319,7 +319,8 @@ void show_thanklist()
 	printf_log("  TZ\n");
 	printf_log("  濤声依旧\n");
 	printf_log("  张锡森\n");
-	printf_log("  ax_pokl");
+	printf_log("  ax_pokl\n");
+	printf_log("  Ola Ström");
 	printf_log("\n");
 }
 
@@ -3213,11 +3214,11 @@ void create_windowmain()
 	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":(language==1?_T("关于"):""));
 	menuitemsettings = gtk_menu_item_new_with_label(language==0?"Settings":(language==1?_T("设置"):""));
 	
-	menuitemrule1 = gtk_radio_menu_item_new_with_label(NULL, language==0?"Freestyle gomoku":(language==1?_T("无禁手"):""));
-	menuitemrule2 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Standrad gomoku":(language==1?_T("无禁手(六不赢)"):""));
-	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Free renju":(language==1?_T("有禁手"):""));
-	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"RIF opening rule":(language==1?_T("RIF规则"):""));
-	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Swap after 1st move":(language==1?_T("一手交换"):""));
+	menuitemrule1 = gtk_radio_menu_item_new_with_label(NULL, language==0?"Freestyle Gomoku":(language==1?_T("无禁手"):""));
+	menuitemrule2 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Standard Gomoku":(language==1?_T("无禁手(六不赢)"):""));
+	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Free Renju":(language==1?_T("有禁手"):""));
+	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"RIF Opening Rule":(language==1?_T("RIF规则"):""));
+	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Swap After First Move":(language==1?_T("一手交换"):""));
 	
 	menuitemenglish = gtk_radio_menu_item_new_with_label(NULL, "English");
 	menuitemchinese = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemenglish)), _T("简体中文"));
@@ -3262,8 +3263,8 @@ void create_windowmain()
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemanalysis), TRUE);
 	}
-	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer plays black":(language==1?_T("计算机执黑"):""));
-	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer plays white":(language==1?_T("计算机执白"):""));
+	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer Plays Black":(language==1?_T("计算机执黑"):""));
+	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer Plays White":(language==1?_T("计算机执白"):""));
 	if(computerside&1)
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemcomputerplaysblack), TRUE);
 	else
