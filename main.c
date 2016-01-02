@@ -64,8 +64,9 @@ int showanalysis = 1;
 int showtoolbarboth = 1;
 int showsmallfont = 0;
 int showwarning = 1;
-int language = 0; /* 0: English 1: Chinese */
+int language = 0; /* 0: English 1: Other languages */
 int rlanguage = 0;
+char **clanguage = NULL; /* Custom language */
 int movx[8] = {  0,  0,  1, -1,  1,  1, -1, -1}; /* note that the order is related to winning checking function(s)*/
 int movy[8] = {  1, -1,  0,  0,  1, -1,  1, -1};
 /* engine */
@@ -172,11 +173,12 @@ int printf_log(char *fmt, ...)
 		{
 			if(strncmp(buffer+i, "BESTLINE", 8) == 0)
 			{
-				strcpy(p, "最优路线");
+				strcpy(p, clanguage[0]);
 				p += 8;
 				i += 8;
 				continue;
 			}
+			/* removed from new engine
 			if(strncmp(buffer+i, "COMPLEXITY", 10) == 0)
 			{
 				strcpy(p, "局势复杂度");
@@ -184,65 +186,66 @@ int printf_log(char *fmt, ...)
 				i += 10;
 				continue;
 			}
+			*/
 			if(strncmp(buffer+i, "EVALUATION", 10) == 0)
 			{
-				strcpy(p, "局面评价");
+				strcpy(p, clanguage[1]);
 				p += 8;
 				i += 10;
 				continue;
 			}
 			if(strncmp(buffer+i, "SPEED", 5) == 0)
 			{
-				strcpy(p, "速度");
+				strcpy(p, clanguage[2]);
 				p += 4;
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "TIME", 4) == 0)
 			{
-				strcpy(p, "用时");
+				strcpy(p, clanguage[3]);
 				p += 4;
 				i += 4;
 				continue;
 			}
 			if(strncmp(buffer+i, "DEPTH", 5) == 0)
 			{
-				strcpy(p, "深度");
+				strcpy(p, clanguage[4]);
 				p += 4;
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "BLOCK", 5) == 0)
 			{
-				strcpy(p, "排除");
+				strcpy(p, clanguage[5]);
 				p += 4;
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "NODE", 4) == 0)
 			{
-				strcpy(p, "结点数");
+				strcpy(p, clanguage[6]);
 				p += 6;
 				i += 4;
 				continue;
 			}
 			if(strncmp(buffer+i, "VAL", 3) == 0)
 			{
-				strcpy(p, "评价");
+				strcpy(p, clanguage[7]);
 				p += 4;
 				i += 3;
 				continue;
 			}
 			if(strncmp(buffer+i, "MS", 2) == 0)
 			{
-				strcpy(p, "毫秒");
+				strcpy(p, clanguage[8]);
 				p += 4;
 				i += 2;
 				continue;
 			}
 			if(strncmp(buffer+i, "RULE", 4) == 0)
 			{
-				strcpy(p, "规则");
+				strcpy(p, clanguage[9]);
 				p += 4;
 				i += 4;
 				continue;
@@ -294,7 +297,7 @@ void show_welcome()
 	printf_log("Yixin Board "VERSION"\n");
 	if(language == 1)
 	{
-		printf_command("在此输入help并回车以获取帮助");
+		printf_command(clanguage[10]);
 	}
 	else
 	{
@@ -304,8 +307,9 @@ void show_welcome()
 
 void show_thanklist()
 {
-	printf_log(language==0?"I would like to thank my contributors, whose support makes Yixin what it is.\n":
-			(language==1?"感谢那些对弈心的设计与编写提供支持帮助的朋友！他们是：\n":""));
+	printf_log(language==0?"I would like to thank my contributors, whose support makes Yixin what it is.":
+			clanguage[11]);
+	printf_log("\n");
 	printf_log("  彼方\n");
 	printf_log("  XR\n");
 	printf_log("  舒自均\n");
@@ -316,11 +320,12 @@ void show_thanklist()
 	printf_log("  肥国乃乃\n");
 	printf_log("  Saturn|Titan\n");
 	printf_log("  元\n");
+	printf_log("  Alexander Bogatirev\n");
 	printf_log("  TZ\n");
 	printf_log("  濤声依旧\n");
 	printf_log("  张锡森\n");
 	printf_log("  ax_pokl\n");
-	printf_log("  Ola Ström");
+	printf_log("  Ola Strom");
 	printf_log("\n");
 }
 
@@ -858,7 +863,7 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 		movepath[piecenum-1] = y * boardsizew + x;
 		if(i < n)
 		{
-			printf_log("ERROR opening book error\n");
+			printf_log("ERROR Opening book error\n");
 			for(; i<n; i++)
 			{
 				besty[i] = bestx[i] = 0;
@@ -913,7 +918,7 @@ void show_dialog_undo_warning_query(GtkWidget *window)
 	GtkWidget *dialog;
 	gint result;
 	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"The operation will stop the calculation. Do you want to continue?":(language==1?_T("此操作将终止当前的计算，确定要继续吗?"):""));
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"The operation will stop the calculation. Do you want to continue?":_T(clanguage[12]));
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch(result)
@@ -932,7 +937,7 @@ void show_dialog_swap_query(GtkWidget *window)
 	GtkWidget *dialog;
 	gint result;
 	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"Swap?":(language==1?_T("交换?"):""));
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, language==0?"Swap?":_T(clanguage[13]));
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch(result)
@@ -969,7 +974,8 @@ void show_dialog_swap_query(GtkWidget *window)
 					change_side_menu(2, NULL);
 				}
 			}
-			if(language == 1) printf_log("交换\n"); else printf_log("swap\n");
+			if(language == 1) printf_log(clanguage[14]); else printf_log("Swap");
+			printf_log("\n");
 			break;
 		case GTK_RESPONSE_NO:
 			printf_log("\n");
@@ -983,7 +989,7 @@ void show_dialog_swap_info(GtkWidget *window)
 	GtkWidget *dialog;
 	gint result;
 	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language==0?"Swap":(language==1?_T("交换"):""));
+		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language==0?"Swap":_T(clanguage[15]));
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	isneedrestart = 1;
@@ -1005,7 +1011,7 @@ void show_dialog_illegal_opening(GtkWidget *window)
 	GtkWidget *dialog;
 	gint result;
 	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
-		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language==0?"Illegal Opening":(language==1?_T("开局不合法"):""));
+		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language==0?"Illegal Opening": _T(clanguage[16]));
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	isneedrestart = 1;
@@ -1079,12 +1085,13 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						isneedrestart = 1;
 						if(language == 1)
 						{
-							printf_log("采用开局库着法\n");
+							printf_log(clanguage[17]);
 						}
 						else
 						{
-							printf_log("use openbook\n");
+							printf_log("Use openbook");
 						}
+						printf_log("\n");
 						make_move(y, x);
 						if(inforule == 2 && (computerside&1)==0)
 						{
@@ -1254,7 +1261,8 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							if(useopenbook && move_openbook(&y, &x) && is_legal_move(y, x))
 							{
 								isneedrestart = 1;
-								if(language) printf_log("采用开局库着法\n"); else printf_log("use openbook\n");
+								if (language) printf_log(clanguage[17]); else printf_log("Use openbook");
+								printf_log("\n");
 								make_move(y, x);
 								if(inforule == 2 && (computerside&1)==0)
 								{
@@ -1481,11 +1489,11 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	notebook = gtk_notebook_new();
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), notebook, FALSE, FALSE, 3);
 	notebookvbox[0] = gtk_vbox_new(FALSE, 0);
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[0], gtk_label_new(language==0?"Level":(language==1?_T("棋力"):"")));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[0], gtk_label_new(language==0?"Level":_T(clanguage[18])));
 	notebookvbox[1] = gtk_vbox_new(FALSE, 0);
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[1], gtk_label_new(language==0?"Style":(language==1?_T("棋风"):"")));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[1], gtk_label_new(language==0?"Style":_T(clanguage[19])));
 	notebookvbox[2] = gtk_vbox_new(FALSE, 0);
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[2], gtk_label_new(language==0?"Resource":(language==1?_T("资源"):"")));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[2], gtk_label_new(language==0?"Resource":_T(clanguage[20])));
 
 	for(i=0; i<6; i++)
 	{
@@ -1493,39 +1501,39 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 		gtk_label_set_width_chars(GTK_LABEL(labelblank[i]), 6);
 	}
 
-	labeltimeturn[0] = gtk_label_new(language==0?"Turn time:":(language==1?_T("步时:"):""));
+	labeltimeturn[0] = gtk_label_new(language==0?"Turn time:":_T(clanguage[21]));
 	entrytimeturn = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrytimeturn), 6);
 	sprintf(text, "%d", timeoutturn/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrytimeturn), text);
-	labeltimeturn[1] = gtk_label_new(language==0?"s":(language==1?_T("秒"):""));
+	labeltimeturn[1] = gtk_label_new(language==0?"s":_T(clanguage[22]));
 	gtk_misc_set_alignment(GTK_MISC(labeltimeturn[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labeltimeturn[1]), 0, 0.5);
 
-	labeltimematch[0] = gtk_label_new(language==0?"Match time:":(language==1?_T("局时:"):""));
+	labeltimematch[0] = gtk_label_new(language==0?"Match time:":_T(clanguage[23]));
 	entrytimematch = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrytimematch), 6);
 	sprintf(text, "%d", timeoutmatch/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrytimematch), text);
-	labeltimematch[1] = gtk_label_new(language==0?"s":(language==1?_T("秒"):""));
+	labeltimematch[1] = gtk_label_new(language==0?"s":_T(clanguage[22]));
 	gtk_misc_set_alignment(GTK_MISC(labeltimematch[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labeltimematch[1]), 0, 0.5);
 
-	labelmaxdepth[0] = gtk_label_new(language==0?"Max depth:":(language==1?_T("最大深度:"):""));
+	labelmaxdepth[0] = gtk_label_new(language==0?"Max depth:":_T(clanguage[24]));
 	entrymaxdepth = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrymaxdepth), 3);
 	sprintf(text, "%d", maxdepth);
 	gtk_entry_set_text(GTK_ENTRY(entrymaxdepth), text);
-	labelmaxdepth[1] = gtk_label_new(language==0?"ply":(language==1?_T("层"):""));
+	labelmaxdepth[1] = gtk_label_new(language==0?"ply":_T(clanguage[25]));
 	gtk_misc_set_alignment(GTK_MISC(labelmaxdepth[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labelmaxdepth[1]), 0, 0.5);
 
-	labelmaxnode[0] = gtk_label_new(language==0?"Max node number:":(language==1?_T("最大结点数:"):""));
+	labelmaxnode[0] = gtk_label_new(language==0?"Max node number:":_T(clanguage[26]));
 	entrymaxnode = gtk_entry_new();
 	gtk_entry_set_width_chars(GTK_ENTRY(entrymaxnode), 6);
 	sprintf(text, "%d", maxnode/1000);
 	gtk_entry_set_text(GTK_ENTRY(entrymaxnode), text);
-	labelmaxnode[1] = gtk_label_new(language==0?"M":(language==1?_T("百万"):""));
+	labelmaxnode[1] = gtk_label_new(language==0?"M":_T(clanguage[27]));
 	gtk_misc_set_alignment(GTK_MISC(labelmaxnode[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labelmaxnode[1]), 0, 0.5);
 
@@ -1534,15 +1542,15 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxdepth);
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxnode);
 
-	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language==0?"4 dan":(language==1?_T("职业四段"):""));
-	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language==0?"3 dan":(language==1?_T("职业三段"):""));
-	radiolevel[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[1])), language==0?"2 dan":(language==1?_T("职业二段"):""));
-	radiolevel[3] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[2])), language==0?"1 dan":(language==1?_T("职业一段"):""));
-	radiolevel[4] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[3])), language==0?"Custom Level":(language==1?_T("自定义"):""));
-	radiolevel[5] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[4])), language==0?"6 dan (Slow)":(language==1?_T("职业六段(慢)"):""));
-	radiolevel[6] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[5])), language==0?"9 dan (Very Slow)":(language==1?_T("职业九段(很慢)"):""));
-	radiolevel[7] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[6])), language==0?"Meijin (Extremely Slow)":(language==1?_T("名人(极慢)"):""));
-	radiolevel[8] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[7])), language==0?"Unlimited Time":(language==1?_T("不限时"):""));
+	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language==0?"4 dan":_T(clanguage[28]));
+	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language==0?"3 dan":_T(clanguage[29]));
+	radiolevel[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[1])), language==0?"2 dan":_T(clanguage[30]));
+	radiolevel[3] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[2])), language==0?"1 dan":_T(clanguage[31]));
+	radiolevel[4] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[3])), language==0?"Custom Level":_T(clanguage[32]));
+	radiolevel[5] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[4])), language==0?"6 dan (Slow)":_T(clanguage[33]));
+	radiolevel[6] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[5])), language==0?"9 dan (Very Slow)":_T(clanguage[34]));
+	radiolevel[7] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[6])), language==0?"Meijin (Extremely Slow)":_T(clanguage[35]));
+	radiolevel[8] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[7])), language==0?"Unlimited Time":_T(clanguage[36]));
 
 	g_signal_connect(G_OBJECT(radiolevel[0]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
 	g_signal_connect(G_OBJECT(radiolevel[1]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
@@ -1610,24 +1618,24 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_widget_set_size_request(scalehash, 100, -1);
 
 	hbox[1] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Rash":(language==1?_T("冒进"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Rash":_T(clanguage[37])), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), scalecaution, FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":(language==1?_T("谨慎"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":_T(clanguage[38])), FALSE, FALSE, 3);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[1], FALSE, FALSE, 3);
 
 	if (maxthreadnum > 1)
 	{
 		hbox[2] = gtk_hbox_new(FALSE, 0);
-		gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language == 0 ? "Number of Threads" : (language == 1 ? _T("线程数") : "")), FALSE, FALSE, 3);
+		gtk_box_pack_start(GTK_BOX(hbox[2]), gtk_label_new(language == 0 ? "Number of Threads" : _T(clanguage[39])), FALSE, FALSE, 3);
 		gtk_box_pack_start(GTK_BOX(hbox[2]), scalethreads, FALSE, FALSE, 3);
 		hbox[4] = gtk_hbox_new(FALSE, 0);
-		gtk_box_pack_start(GTK_BOX(hbox[4]), gtk_label_new(language == 0 ? "Split Depth" : (language == 1 ? _T("分裂深度") : "")), FALSE, FALSE, 3);
+		gtk_box_pack_start(GTK_BOX(hbox[4]), gtk_label_new(language == 0 ? "Split Depth" : _T(clanguage[40])), FALSE, FALSE, 3);
 		gtk_box_pack_start(GTK_BOX(hbox[4]), scalesplitdepth, FALSE, FALSE, 3);
 	}
 
 	hbox[3] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size":(language==1?_T("哈希表大小"):"")), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size": _T(clanguage[41])), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), scalehash, FALSE, FALSE, 3);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[2], FALSE, FALSE, 3);
@@ -1896,8 +1904,8 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
 	
-	label[0] = gtk_label_new(language == 0 ? "Board Height (10 ~ 24):" : (language == 1 ? _T("棋盘长度 (10 ~ 24):") : ""));
-	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 24):" : (language == 1 ? _T("棋盘宽度 (10 ~ 24):") : ""));
+	label[0] = gtk_label_new(language == 0 ? "Board Height (10 ~ 24):" : _T(clanguage[42]));
+	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 24):" : _T(clanguage[43]));
 	
 	entry[0] = gtk_entry_new();
 	sprintf(text, "%d", boardsizeh);
@@ -2167,24 +2175,25 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		}
 		else if(_strnicmp(command, "help key", 8) == 0)
 		{
-			printf_log(" F11\n  %s\n", language==1?"计算":"Start thinking");
-			printf_log(" Esc\n  %s\n", language==1?"停止计算":"Stop thinking");
-			printf_log(" Ctrl+Left\n  %s\n", language==1?"前一步":"Undo");
-			printf_log(" Ctrl+Right\n  %s\n", language==1?"后一步":"Redo");
-			printf_log(" Ctrl+Up\n  %s\n", language==1?"首步":"Undo all");
-			printf_log(" Ctrl+Down\n  %s\n", language==1?"末步":"Redo all");
+			printf_log(" F11\n  %s\n", language==1? clanguage[44]:"Start thinking");
+			printf_log(" Esc\n  %s\n", language==1? clanguage[45]:"Stop thinking");
+			printf_log(" Ctrl+Left\n  %s\n", language==1? clanguage[46]:"Undo");
+			printf_log(" Ctrl+Right\n  %s\n", language==1? clanguage[47]:"Redo");
+			printf_log(" Ctrl+Up\n  %s\n", language==1? clanguage[48]:"Undo all");
+			printf_log(" Ctrl+Down\n  %s\n", language==1? clanguage[49]:"Redo all");
 			printf_log("\n");
 		}
 		else if(_strnicmp(command, "help", 4) == 0)
 		{
 			if(language == 1)
 			{
-				printf_log("命令列表:\n");
+				printf_log(clanguage[50]);
 			}
 			else
 			{
-				printf_log("Command Lists:\n");
+				printf_log("Command Lists:");
 			}
+			printf_log("\n");
 			printf_log(" help\n");
 			printf_log(" help key\n");
 			printf_log(" clear\n");
@@ -2193,35 +2202,35 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" move [^,v,<,>]\n");
 			printf_log(" getpos\n");
 			printf_log(" putpos\n");
-			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1?"例":"Example");
+			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1? clanguage[51] :"Example");
 			printf_log(" block\n");
-			printf_log("   %s: block h8\n", language==1?"例":"Example");
+			printf_log("   %s: block h8\n", language==1? clanguage[51] :"Example");
 			printf_log(" block undo\n");
-			printf_log("   %s: block undo h8\n", language == 1 ? "例" : "Example");
+			printf_log("   %s: block undo h8\n", language == 1 ? clanguage[51] : "Example");
 			printf_log(" block reset\n");
 			printf_log(" block compare\n");
-			printf_log("   %s: block compare h8i8j7\n", language == 1 ? "例" : "Example");
+			printf_log("   %s: block compare h8i8j7\n", language == 1 ? clanguage[51] : "Example");
 			printf_log(" block autoreset [on,off]\n");
 			printf_log(" blockpath\n");
-			printf_log("   %s: blockpath h8h7\n", language == 1 ? "例" : "Example");
+			printf_log("   %s: blockpath h8h7\n", language == 1 ? clanguage[51] : "Example");
 			printf_log(" blockpath undo\n");
-			printf_log("   %s: blockpath undo h8h7\n", language == 1 ? "例" : "Example");
+			printf_log("   %s: blockpath undo h8h7\n", language == 1 ? clanguage[51] : "Example");
 			printf_log(" blockpath reset\n");
 			printf_log(" blockpath except\n");
-			printf_log("   %s: blockpath except h8i8j7\n", language == 1 ? "例" : "Example");
+			printf_log("   %s: blockpath except h8i8j7\n", language == 1 ? clanguage[51] : "Example");
 			printf_log(" blockpath autoreset [on,off]\n");
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
-			printf_log(" boardsize\n");
-			printf_log("   %s: boardsize 15\n", language==1?"例1":"Example 1");
-			printf_log("   %s: boardsize 12 16\n", language == 1 ? "例2" : "Example 2");
-			printf_log(" language [en,cn]\n");
-			printf_log("   %s: language en\n", language==1?"例":"Example");
+			//printf_log(" boardsize\n");
+			//printf_log("   %s: boardsize 15\n", language==1? clanguage[52] :"Example 1");
+			//printf_log("   %s: boardsize 12 16\n", language == 1 ? clanguage[53] : "Example 2");
+			//printf_log(" language [en,cn]\n");
+			//printf_log("   %s: language en\n", language==1? clanguage[51] :"Example");
 			printf_log(" balance<1,2>\n");
-			printf_log("   %s: balance1\n", language == 1 ? "例1" : "Example 1");
-			printf_log("   %s: balance1 100\n", language == 1 ? "例2" : "Example 2");
-			printf_log("   %s: balance2\n", language == 1 ? "例3" : "Example 3");
-			printf_log("   %s: balance2 100\n", language == 1 ? "例4" : "Example 4");
+			printf_log("   %s: balance1\n", language == 1 ? clanguage[52] : "Example 1");
+			printf_log("   %s: balance1 100\n", language == 1 ? clanguage[53] : "Example 2");
+			printf_log("   %s: balance2\n", language == 1 ? clanguage[54] : "Example 3");
+			printf_log("   %s: balance2 100\n", language == 1 ? clanguage[55] : "Example 4");
 			printf_log(" nbest [2,3,...]\n");
 			//printf_log(" command [on,off]\n");
 			//printf_log(" hash usage\n");
@@ -2239,7 +2248,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			int j, k = 1;
 			if (boardsizew != boardsizeh)
 			{
-				printf_log(language == 0 ? "Sorry, board cannot be rotated when height<>width.\n" : "抱歉，无法旋转长方形棋盘。\n");
+				printf_log(language == 0 ? "Sorry, board cannot be rotated when height<>width." : clanguage[56]);
+				printf_log("\n");
 			}
 			else
 			{
@@ -2280,7 +2290,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			}
 			if ((k == 2 || k == 3) && (boardsizew != boardsizeh))
 			{
-				printf_log(language == 0 ? "Sorry, board cannot be flipped with / or \\ when height<>width.\n" : "抱歉，棋盘为长方形时无法使用/或\\翻转。\n");
+				printf_log(language == 0 ? "Sorry, board cannot be flipped with / or \\ when height<>width." : clanguage[57]);
+				printf_log("\n");
 			}
 			else
 			{
@@ -2719,6 +2730,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("BESTLINE: %s ", bestline);
 			printf_log("VAL: %d\n", bestval);
 		}
+		/*
 		else if(_strnicmp(command, "boardsize", 9) == 0)
 		{
 			int s1, s2;
@@ -2741,11 +2753,9 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				rboardsizew = s2;
 				printf_log(language==0?"Board size will be %dx%d after you restart Yixin.\n":"在重启Yixin后棋盘大小将变为%dx%d。\n", s1, s2);
 
-				/*
-				save_setting();
-				g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
-				yixin_quit();
-				*/
+				//save_setting();
+				//g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+				//yixin_quit();
 			}
 		}
 		else if(_strnicmp(command, "language", 8) == 0)
@@ -2755,28 +2765,25 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				rlanguage = 1;
 				printf_log(language==0?"Language will be Chinese after you restart Yixin.\n":"在重启Yixin后语言将设定为中文。\n");
 
-				/*
-				save_setting();
-				g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
-				yixin_quit();
-				*/
+				//save_setting();
+				//g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+				//yixin_quit();
 			}
 			else if(command[9] == 'e' || command[9] == 'E')
 			{
 				rlanguage = 0;
 				printf_log(language==0?"Language will be English after you restart Yixin.\n":"在重启Yixin后语言将设定为英文。\n");
 				
-				/*
-				save_setting();
-				g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
-				yixin_quit();
-				*/
+				//save_setting();
+				//g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+				//yixin_quit();
 			}
 			else
 			{
 				printf_log(language==0?"Sorry, language should be Chinese[cn] or English[en].\n":"抱歉，语言应为中文[cn]或英文[en]。\n");
 			}
 		}
+		*/
 		else if (_strnicmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
 		{
 			gchar _command[80];
@@ -2827,12 +2834,13 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			if(language == 1)
 			{
-				printf_log("输入help并回车以获取帮助\n");
+				printf_log(clanguage[58]);
 			}
 			else
 			{
-				printf_log("To get help, type help and press Enter\n");
+				printf_log("To get help, type help and press Enter");
 			}
+			printf_log("\n");
 		}
 		gtk_text_buffer_delete(buffertextcommand, &start, &end);
 		g_free(command);
@@ -2846,7 +2854,7 @@ void save_setting()
 	if((out = fopen("settings.txt", "w")) != NULL)
 	{
 		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
-		fprintf(out, "%d\t;language (0: English, 1: Chinese)\n", rlanguage);
+		fprintf(out, "%d\t;language (0: English, 1,2,...: custom)\n", rlanguage);
 		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside&1);
@@ -2877,6 +2885,15 @@ void yixin_quit()
 	send_command("end\n");
 	if (openbook != NULL) free(openbook);
 	save_setting();
+	if (clanguage != NULL)
+	{
+		int i;
+		for (i = 0; i < 1024; i++)
+		{
+			if (clanguage[i] != NULL) free(clanguage[i]);
+		}
+		free(clanguage);
+	}
 	gtk_main_quit();
 }
 
@@ -2925,7 +2942,7 @@ void create_windowmain()
 		*menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5;
 	//GtkWidget *menuitemnewrule[10]; //TODO
 	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemsettings;
-	GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemchinese;
+	GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemcustomlng[16] = { 0 }; //At most (16-1) different custom languages
 	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis;
 	GtkWidget *menuitemabout;
 
@@ -2944,6 +2961,8 @@ void create_windowmain()
 	gboolean alpha;
 	GdkColorspace colorspace;
 	GdkPixbuf *background;
+
+	char lnglis[16][64];
 
 	int i, j, k, l;
 
@@ -3196,32 +3215,61 @@ void create_windowmain()
 	menurule = gtk_menu_new();
 	menulanguage = gtk_menu_new();
 
-	menuitemgame = gtk_menu_item_new_with_label(language==0?"Game":(language==1?_T("游戏"):""));
-	menuitemplayers = gtk_menu_item_new_with_label(language==0?"Players":(language==1?_T("设置"):""));
-	menuitemview = gtk_menu_item_new_with_label(language==0?"View":(language==1?_T("显示"):""));
-	menuitemhelp = gtk_menu_item_new_with_label(language==0?"Help":(language==1?_T("帮助"):""));
-	menuitemnewgame = gtk_menu_item_new_with_label(language==0?"New":(language==1?_T("新建"):""));
-	menuitemload = gtk_menu_item_new_with_label(language==0?"Load":(language==1?_T("载入"):""));
-	menuitemsave = gtk_menu_item_new_with_label(language==0?"Save":(language==1?_T("保存"):""));
-	menuitemrule = gtk_menu_item_new_with_label(language==0?"Rule":(language==1?_T("规则"):""));
-	menuitemsize = gtk_menu_item_new_with_label(language==0?"Board Size":(language==1?_T("棋盘大小"):""));
-	menuitemopenbook = gtk_check_menu_item_new_with_label(language==0?"Use Openbook":(language==1?_T("使用开局库"):""));
-	menuitemnumeration = gtk_check_menu_item_new_with_label(language==0?"Numeration":(language==1?_T("显示数字"):""));
-	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":(language==1?_T("显示日志"):""));
-	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":(language==1?_T("显示分析"):""));
-	menuitemlanguage = gtk_menu_item_new_with_label(language==0?"Language":(language==1?_T("语言"):""));
-	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":(language==1?_T("退出"):""));
-	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":(language==1?_T("关于"):""));
-	menuitemsettings = gtk_menu_item_new_with_label(language==0?"Settings":(language==1?_T("设置"):""));
+	menuitemgame = gtk_menu_item_new_with_label(language==0?"Game":_T(clanguage[59]));
+	menuitemplayers = gtk_menu_item_new_with_label(language==0?"Players":_T(clanguage[60]));
+	menuitemview = gtk_menu_item_new_with_label(language==0?"View":_T(clanguage[61]));
+	menuitemhelp = gtk_menu_item_new_with_label(language==0?"Help":_T(clanguage[62]));
+	menuitemnewgame = gtk_menu_item_new_with_label(language==0?"New":_T(clanguage[63]));
+	menuitemload = gtk_menu_item_new_with_label(language==0?"Load":_T(clanguage[64]));
+	menuitemsave = gtk_menu_item_new_with_label(language==0?"Save":_T(clanguage[65]));
+	menuitemrule = gtk_menu_item_new_with_label(language==0?"Rule":_T(clanguage[66]));
+	menuitemsize = gtk_menu_item_new_with_label(language==0?"Board Size":_T(clanguage[67]));
+	menuitemopenbook = gtk_check_menu_item_new_with_label(language==0?"Use Openbook":_T(clanguage[68]));
+	menuitemnumeration = gtk_check_menu_item_new_with_label(language==0?"Numeration":_T(clanguage[69]));
+	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":_T(clanguage[70]));
+	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":_T(clanguage[71]));
+	menuitemlanguage = gtk_menu_item_new_with_label(language==0?"Language":_T(clanguage[72]));
+	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":_T(clanguage[73]));
+	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":_T(clanguage[74]));
+	menuitemsettings = gtk_menu_item_new_with_label(language==0?"Settings":_T(clanguage[75]));
 	
-	menuitemrule1 = gtk_radio_menu_item_new_with_label(NULL, language==0?"Freestyle Gomoku":(language==1?_T("无禁手"):""));
-	menuitemrule2 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Standard Gomoku":(language==1?_T("无禁手(六不赢)"):""));
-	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Free Renju":(language==1?_T("有禁手"):""));
-	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"RIF Opening Rule":(language==1?_T("RIF规则"):""));
-	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Swap After First Move":(language==1?_T("一手交换"):""));
+	menuitemrule1 = gtk_radio_menu_item_new_with_label(NULL, language==0?"Freestyle Gomoku":_T(clanguage[76]));
+	menuitemrule2 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Standard Gomoku":_T(clanguage[77]));
+	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Free Renju":_T(clanguage[78]));
+	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"RIF Opening Rule":_T(clanguage[79]));
+	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language==0?"Swap After First Move":_T(clanguage[80]));
 	
 	menuitemenglish = gtk_radio_menu_item_new_with_label(NULL, "English");
-	menuitemchinese = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemenglish)), _T("简体中文"));
+	for (i = 1; i < 16; i++)
+	{
+		FILE *in;
+		char s[80];
+		sprintf(s, "language\\%d.lng", i);
+		if ((in = fopen(s, "r")) != NULL)
+		{
+			while (fgets(s, sizeof(s), in))
+			{
+				int l = strlen(s);
+				int p;
+				while (l > 0 && (s[l - 1] == '\n' || s[l - 1] == '\r'))
+				{
+					s[l - 1] = 0;
+					l--;
+				}
+				if (l == 0) break;
+				if (s[0] == ';') break;
+				sscanf(s, "%d", &p);
+				if (p == 84)
+				{
+					for (j = 0; j < l && s[j] != '='; j++);
+					strcpy(lnglis[i], s + j + 1);
+					break;
+				}
+			}
+			fclose(in);
+			menuitemcustomlng[i] = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemenglish)), _T(lnglis[i]));
+		}
+	}
 	
 	switch(inforule)
 	{
@@ -3241,11 +3289,10 @@ void create_windowmain()
 	}
 	set_rule();
 
-	switch(language)
-	{
-		case 1: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemchinese), TRUE); break;
-		default: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemenglish), TRUE); break;
-	}
+	if(language == 0)
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemenglish), TRUE);
+	else
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemcustomlng[language]), TRUE);
 
 	if(useopenbook)
 	{
@@ -3263,8 +3310,8 @@ void create_windowmain()
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemanalysis), TRUE);
 	}
-	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer Plays Black":(language==1?_T("计算机执黑"):""));
-	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer Plays White":(language==1?_T("计算机执白"):""));
+	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer Plays Black":_T(clanguage[81]));
+	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer Plays White":_T(clanguage[82]));
 	if(computerside&1)
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemcomputerplaysblack), TRUE);
 	else
@@ -3290,7 +3337,11 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule5);
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(menulanguage), menuitemenglish);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menulanguage), menuitemchinese);
+	for (i = 1; i < 16; i++)
+	{
+		if(menuitemcustomlng[i] != NULL)
+			gtk_menu_shell_append(GTK_MENU_SHELL(menulanguage), menuitemcustomlng[i]);
+	}
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemnewgame);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemload);
@@ -3332,7 +3383,11 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemcomputerplaysblack), "activate", G_CALLBACK(change_side), (gpointer)1);
 	g_signal_connect(G_OBJECT(menuitemcomputerplayswhite), "activate", G_CALLBACK(change_side), (gpointer)2);
 	g_signal_connect(G_OBJECT(menuitemenglish), "activate", G_CALLBACK(change_language), (gpointer)0);
-	g_signal_connect(G_OBJECT(menuitemchinese), "activate", G_CALLBACK(change_language), (gpointer)1);
+	for (i = 1; i < 16; i++)
+	{
+		if(menuitemcustomlng[i] != NULL)
+			g_signal_connect(G_OBJECT(menuitemcustomlng[i]), "activate", G_CALLBACK(change_language), (gpointer)i);
+	}
 
 	toolbar = gtk_toolbar_new();
 	if(!showtoolbarboth)
@@ -3341,17 +3396,17 @@ void create_windowmain()
 		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH);
 	gtk_toolbar_set_orientation((GtkToolbar*)toolbar, GTK_ORIENTATION_VERTICAL);
 	toolgofirst = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_FIRST);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgofirst), language==0 ? "Undo All": _T("首步"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgofirst), language==0 ? "Undo All": _T(clanguage[48]));
 	toolgoback = gtk_tool_button_new_from_stock(GTK_STOCK_GO_BACK);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoback), language==0 ? "Undo": _T("前一步"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoback), language==0 ? "Undo": _T(clanguage[46]));
 	toolgoforward = gtk_tool_button_new_from_stock(GTK_STOCK_GO_FORWARD);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoforward), language==0 ? "Redo": _T("后一步"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoforward), language==0 ? "Redo": _T(clanguage[47]));
 	toolgolast = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_LAST);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgolast), language==0 ? "Redo All": _T("末步"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgolast), language==0 ? "Redo All": _T(clanguage[49]));
 	toolstop = gtk_tool_button_new_from_stock(GTK_STOCK_STOP);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolstop), language==0 ? "Stop": _T("立即出招"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolstop), language==0 ? "Stop": _T(clanguage[45]));
 	toolplay = gtk_tool_button_new_from_stock(GTK_STOCK_EXECUTE);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolplay), language==0 ? "Play": _T("计算"));
+	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolplay), language==0 ? "Play": _T(clanguage[44]));
 
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgofirst, -1);
 	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgoback, -1);
@@ -3570,12 +3625,13 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			timeused += (clock() - timestart) / (CLOCKS_PER_SEC / 1000);
 			if(language == 1)
 			{
-				printf_log("剩余时间: %d毫秒\n\n", timeoutmatch-timeused);
+				printf_log(clanguage[83], timeoutmatch-timeused);
 			}
 			else
 			{
-				printf_log("Time Left: %dms\n\n", timeoutmatch-timeused);
+				printf_log("Time Left: %dms", timeoutmatch-timeused);
 			}
+			printf_log("\n\n");
 			if(blockautoreset)
 			{
 				send_command("yxblockreset\n");
@@ -3675,7 +3731,7 @@ int read_int_from_file(FILE *in)
 void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int def_toolbar)
 {
 	FILE *in;
-	char s[80];
+	char s[1024];
 	int t;
 	if((in = fopen("settings.txt", "r")) != NULL)
 	{
@@ -3696,7 +3752,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		rboardsizew = boardsizew;
 		rlanguage = language;
 		if(def_language >= 0 && def_language <= 1) language = def_language;
-		if(language < 0 || language > 1) language = 0;
+		if(language < 0) language = 0;
 		inforule = read_int_from_file(in);
 		if(inforule < 0 || inforule > 4) inforule = 0;
 		if(inforule == 3)
@@ -3759,6 +3815,38 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 	}
 	piecenum = 0;
 	memset(movepath, -1, sizeof(movepath));
+
+	if (language != 0)
+	{
+		int i;
+		clanguage = (char *)malloc(1024 * sizeof(char*));
+		for (i = 0; i < 1024; i++) clanguage[i] = NULL;
+
+		sprintf(s, "language\\%d.lng", language);
+		if ((in = fopen(s, "r")) != NULL)
+		{
+			while (fgets(s, sizeof(s), in))
+			{
+				int l = strlen(s);
+				int p;
+				while (l > 0 && (s[l - 1] == '\n' || s[l - 1] == '\r'))
+				{
+					s[l - 1] = 0;
+					l--;
+				}
+				if (l == 0) continue;
+				if (s[0] == ';') continue;
+				sscanf(s, "%d", &p);
+				for (i = 0; i < l && s[i] != '='; i++);
+				clanguage[p] = strdup(s + i + 1);
+			}
+			fclose(in);
+		}
+		else
+		{
+			language = 0;
+		}
+	}
 }
 void load_engine()
 {
