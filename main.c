@@ -34,8 +34,8 @@ int timestart = 0;
 int timeoutmatch = 2000000;
 int maxdepth = 100;
 int maxnode = 1000000000;
-int maxthreadnum = 64; //1..maxthreadnum
-int maxhashsize = 30;
+int maxthreadnum = 1; //1..maxthreadnum
+int maxhashsize = 21;
 int computerside = 0; /* 0 none 1 black 2 while 3 black&white */
 int cautionfactor = 1;
 int threadnum = 1;
@@ -1411,7 +1411,7 @@ void set_threadnum(int x)
 {
 	gchar command[80];
 	if(x < 1) x = 1;
-	if(x > maxthreadnum) x = maxthreadnum;
+	//if(x > maxthreadnum) x = maxthreadnum;
 	threadnum = x;
 	sprintf(command, "INFO thread_num %d\n", threadnum);
 	send_command(command);
@@ -2221,11 +2221,6 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" blockpath autoreset [on,off]\n");
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
-			//printf_log(" boardsize\n");
-			//printf_log("   %s: boardsize 15\n", language==1? clanguage[52] :"Example 1");
-			//printf_log("   %s: boardsize 12 16\n", language == 1 ? clanguage[53] : "Example 2");
-			//printf_log(" language [en,cn]\n");
-			//printf_log("   %s: language en\n", language==1? clanguage[51] :"Example");
 			printf_log(" balance<1,2>\n");
 			printf_log("   %s: balance1\n", language == 1 ? clanguage[52] : "Example 1");
 			printf_log("   %s: balance1 100\n", language == 1 ? clanguage[53] : "Example 2");
@@ -2730,60 +2725,6 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("BESTLINE: %s ", bestline);
 			printf_log("VAL: %d\n", bestval);
 		}
-		/*
-		else if(_strnicmp(command, "boardsize", 9) == 0)
-		{
-			int s1, s2;
-			s1 = (command[10] - '0')*10 + (command[11] - '0');
-			if (command[12] == ' ' && (command[13] - '0') >= 0 && (command[13] - '0') < 10 && (command[14] - '0') >= 0 && (command[14] - '0') < 10)
-			{
-				s2 = (command[13] - '0') * 10 + (command[14] - '0');
-			}
-			else
-			{
-				s2 = s1;
-			}
-			if (s1 < 10 || s1 > MAX_SIZE || s2 < 10 || s2 > MAX_SIZE)
-			{
-				printf_log(language == 0 ? "Sorry, board size should be 10~%d.\n" : "抱歉，棋盘大小范围应在10~%d。\n", MAX_SIZE);
-			}
-			else
-			{
-				rboardsizeh = s1;
-				rboardsizew = s2;
-				printf_log(language==0?"Board size will be %dx%d after you restart Yixin.\n":"在重启Yixin后棋盘大小将变为%dx%d。\n", s1, s2);
-
-				//save_setting();
-				//g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
-				//yixin_quit();
-			}
-		}
-		else if(_strnicmp(command, "language", 8) == 0)
-		{
-			if(command[9] == 'c' || command[9] == 'C')
-			{
-				rlanguage = 1;
-				printf_log(language==0?"Language will be Chinese after you restart Yixin.\n":"在重启Yixin后语言将设定为中文。\n");
-
-				//save_setting();
-				//g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
-				//yixin_quit();
-			}
-			else if(command[9] == 'e' || command[9] == 'E')
-			{
-				rlanguage = 0;
-				printf_log(language==0?"Language will be English after you restart Yixin.\n":"在重启Yixin后语言将设定为英文。\n");
-				
-				//save_setting();
-				//g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
-				//yixin_quit();
-			}
-			else
-			{
-				printf_log(language==0?"Sorry, language should be Chinese[cn] or English[en].\n":"抱歉，语言应为中文[cn]或英文[en]。\n");
-			}
-		}
-		*/
 		else if (_strnicmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
 		{
 			gchar _command[80];
@@ -3798,9 +3739,9 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		blockautoreset = read_int_from_file(in);
 		if(blockautoreset < 0 || blockautoreset > 1) blockautoreset = 0;
 		threadnum = read_int_from_file(in);
-		if(threadnum < 1 || threadnum > maxthreadnum) threadnum = 1;
+		if(threadnum < 1 /*|| threadnum > maxthreadnum*/) threadnum = 1;
 		hashsize = read_int_from_file(in);
-		if(hashsize < 0 || hashsize > maxhashsize) hashsize = 19;
+		if(hashsize < 0 /*|| hashsize > maxhashsize*/) hashsize = 19;
 		threadsplitdepth = read_int_from_file(in);
 		if(threadsplitdepth < MIN_SPLIT_DEPTH || threadsplitdepth > MAX_SPLIT_DEPTH) threadsplitdepth = 8;
 		blockpathautoreset = read_int_from_file(in);
