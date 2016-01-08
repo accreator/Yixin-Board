@@ -174,7 +174,7 @@ int printf_log(char *fmt, ...)
 			if(strncmp(buffer+i, "BESTLINE", 8) == 0)
 			{
 				strcpy(p, clanguage[0]);
-				p += 8;
+				p += strlen(clanguage[0]);
 				i += 8;
 				continue;
 			}
@@ -190,63 +190,63 @@ int printf_log(char *fmt, ...)
 			if(strncmp(buffer+i, "EVALUATION", 10) == 0)
 			{
 				strcpy(p, clanguage[1]);
-				p += 8;
+				p += strlen(clanguage[1]);
 				i += 10;
 				continue;
 			}
 			if(strncmp(buffer+i, "SPEED", 5) == 0)
 			{
 				strcpy(p, clanguage[2]);
-				p += 4;
+				p += strlen(clanguage[2]);
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "TIME", 4) == 0)
 			{
 				strcpy(p, clanguage[3]);
-				p += 4;
+				p += strlen(clanguage[3]);
 				i += 4;
 				continue;
 			}
 			if(strncmp(buffer+i, "DEPTH", 5) == 0)
 			{
 				strcpy(p, clanguage[4]);
-				p += 4;
+				p += strlen(clanguage[4]);
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "BLOCK", 5) == 0)
 			{
 				strcpy(p, clanguage[5]);
-				p += 4;
+				p += strlen(clanguage[5]);
 				i += 5;
 				continue;
 			}
 			if(strncmp(buffer+i, "NODE", 4) == 0)
 			{
 				strcpy(p, clanguage[6]);
-				p += 6;
+				p += strlen(clanguage[6]);
 				i += 4;
 				continue;
 			}
 			if(strncmp(buffer+i, "VAL", 3) == 0)
 			{
 				strcpy(p, clanguage[7]);
-				p += 4;
+				p += strlen(clanguage[7]);
 				i += 3;
 				continue;
 			}
 			if(strncmp(buffer+i, "MS", 2) == 0)
 			{
 				strcpy(p, clanguage[8]);
-				p += 4;
+				p += strlen(clanguage[8]);
 				i += 2;
 				continue;
 			}
 			if(strncmp(buffer+i, "RULE", 4) == 0)
 			{
 				strcpy(p, clanguage[9]);
-				p += 4;
+				p += strlen(clanguage[9]);
 				i += 4;
 				continue;
 			}
