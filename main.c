@@ -167,7 +167,7 @@ int printf_log(char *fmt, ...)
 	va_start(va,fmt);
 	cnt = vsprintf(buffer, fmt, va);
 
-	if(language == 1)
+	if(language)
 	{
 		for(i=0; buffer[i]; )
 		{
@@ -295,7 +295,7 @@ int printf_command(char *fmt, ...)
 void show_welcome()
 {
 	printf_log("Yixin Board "VERSION"\n");
-	if(language == 1)
+	if(language)
 	{
 		printf_command(clanguage[10]);
 	}
@@ -974,7 +974,7 @@ void show_dialog_swap_query(GtkWidget *window)
 					change_side_menu(2, NULL);
 				}
 			}
-			if(language == 1) printf_log(clanguage[14]); else printf_log("Swap");
+			if(language) printf_log(clanguage[14]); else printf_log("Swap");
 			printf_log("\n");
 			break;
 		case GTK_RESPONSE_NO:
@@ -1083,13 +1083,13 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 					else if(useopenbook && move_openbook(&y, &x) && is_legal_move(y, x))
 					{
 						isneedrestart = 1;
-						if(language == 1)
+						if(language == 0)
 						{
-							printf_log(clanguage[17]);
+							printf_log("Use openbook");
 						}
 						else
 						{
-							printf_log("Use openbook");
+							printf_log(clanguage[17]);
 						}
 						printf_log("\n");
 						make_move(y, x);
@@ -2175,17 +2175,17 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		}
 		else if(_strnicmp(command, "help key", 8) == 0)
 		{
-			printf_log(" F11\n  %s\n", language==1? clanguage[44]:"Start thinking");
-			printf_log(" Esc\n  %s\n", language==1? clanguage[45]:"Stop thinking");
-			printf_log(" Ctrl+Left\n  %s\n", language==1? clanguage[46]:"Undo");
-			printf_log(" Ctrl+Right\n  %s\n", language==1? clanguage[47]:"Redo");
-			printf_log(" Ctrl+Up\n  %s\n", language==1? clanguage[48]:"Undo all");
-			printf_log(" Ctrl+Down\n  %s\n", language==1? clanguage[49]:"Redo all");
+			printf_log(" F11\n  %s\n", language ? clanguage[44]:"Start thinking");
+			printf_log(" Esc\n  %s\n", language ? clanguage[45]:"Stop thinking");
+			printf_log(" Ctrl+Left\n  %s\n", language ? clanguage[46]:"Undo");
+			printf_log(" Ctrl+Right\n  %s\n", language ? clanguage[47]:"Redo");
+			printf_log(" Ctrl+Up\n  %s\n", language ? clanguage[48]:"Undo all");
+			printf_log(" Ctrl+Down\n  %s\n", language ? clanguage[49]:"Redo all");
 			printf_log("\n");
 		}
 		else if(_strnicmp(command, "help", 4) == 0)
 		{
-			if(language == 1)
+			if(language)
 			{
 				printf_log(clanguage[50]);
 			}
@@ -2202,30 +2202,30 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log(" move [^,v,<,>]\n");
 			printf_log(" getpos\n");
 			printf_log(" putpos\n");
-			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language==1? clanguage[51] :"Example");
+			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language ? clanguage[51] :"Example");
 			printf_log(" block\n");
-			printf_log("   %s: block h8\n", language==1? clanguage[51] :"Example");
+			printf_log("   %s: block h8\n", language ? clanguage[51] :"Example");
 			printf_log(" block undo\n");
-			printf_log("   %s: block undo h8\n", language == 1 ? clanguage[51] : "Example");
+			printf_log("   %s: block undo h8\n", language ? clanguage[51] : "Example");
 			printf_log(" block reset\n");
 			printf_log(" block compare\n");
-			printf_log("   %s: block compare h8i8j7\n", language == 1 ? clanguage[51] : "Example");
+			printf_log("   %s: block compare h8i8j7\n", language ? clanguage[51] : "Example");
 			printf_log(" block autoreset [on,off]\n");
 			printf_log(" blockpath\n");
-			printf_log("   %s: blockpath h8h7\n", language == 1 ? clanguage[51] : "Example");
+			printf_log("   %s: blockpath h8h7\n", language ? clanguage[51] : "Example");
 			printf_log(" blockpath undo\n");
-			printf_log("   %s: blockpath undo h8h7\n", language == 1 ? clanguage[51] : "Example");
+			printf_log("   %s: blockpath undo h8h7\n", language ? clanguage[51] : "Example");
 			printf_log(" blockpath reset\n");
 			printf_log(" blockpath except\n");
-			printf_log("   %s: blockpath except h8i8j7\n", language == 1 ? clanguage[51] : "Example");
+			printf_log("   %s: blockpath except h8i8j7\n", language ? clanguage[51] : "Example");
 			printf_log(" blockpath autoreset [on,off]\n");
 			printf_log(" hash clear\n");
 			printf_log(" bestline\n");
 			printf_log(" balance<1,2>\n");
-			printf_log("   %s: balance1\n", language == 1 ? clanguage[52] : "Example 1");
-			printf_log("   %s: balance1 100\n", language == 1 ? clanguage[53] : "Example 2");
-			printf_log("   %s: balance2\n", language == 1 ? clanguage[54] : "Example 3");
-			printf_log("   %s: balance2 100\n", language == 1 ? clanguage[55] : "Example 4");
+			printf_log("   %s: balance1\n", language ? clanguage[52] : "Example 1");
+			printf_log("   %s: balance1 100\n", language ? clanguage[53] : "Example 2");
+			printf_log("   %s: balance2\n", language ? clanguage[54] : "Example 3");
+			printf_log("   %s: balance2 100\n", language ? clanguage[55] : "Example 4");
 			printf_log(" nbest [2,3,...]\n");
 			//printf_log(" command [on,off]\n");
 			//printf_log(" hash usage\n");
@@ -2773,7 +2773,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		}
 		else
 		{
-			if(language == 1)
+			if(language)
 			{
 				printf_log(clanguage[58]);
 			}
@@ -3564,7 +3564,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 		{
 			isthinking = 0;
 			timeused += (clock() - timestart) / (CLOCKS_PER_SEC / 1000);
-			if(language == 1)
+			if(language)
 			{
 				printf_log(clanguage[83], timeoutmatch-timeused);
 			}
