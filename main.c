@@ -28,6 +28,7 @@ int boardsizeh = 15, boardsizew = 15;
 int rboardsizeh = 15, rboardsizew = 15;
 int inforule = 0;
 int specialrule = 0;
+int infopondering = 0;
 int timeoutturn = 10000;
 int timeused = 0;
 int timestart = 0;
@@ -1420,8 +1421,8 @@ void set_threadnum(int x)
 void set_threadsplitdepth(int x)
 {
 	gchar command[80];
-	if(x < MIN_SPLIT_DEPTH) x = 5;
-	if(x > MAX_SPLIT_DEPTH) x = 20;
+	if(x < MIN_SPLIT_DEPTH) x = MIN_SPLIT_DEPTH;
+	if(x > MAX_SPLIT_DEPTH) x = MAX_SPLIT_DEPTH;
 	threadsplitdepth = x;
 	sprintf(command, "INFO thread_split_depth %d\n", threadsplitdepth);
 	send_command(command);
@@ -1437,6 +1438,15 @@ void set_hashsize(int x)
 	send_command(command);
 }
 
+void set_pondering(int x)
+{
+	gchar command[80];
+	if (x < 0) x = 0;
+	if (x > 1) x = 1;
+	infopondering = x;
+	sprintf(command, "INFO pondering %d\n", infopondering);
+	send_command(command);
+}
 
 void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 {
@@ -1472,7 +1482,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *dialog;
 	GtkWidget *notebook;
 	GtkWidget *notebookvbox[3];
-	GtkWidget *hbox[5];
+	GtkWidget *hbox[7];
 	GtkWidget *radiolevel[9];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelblank[6];
 	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode;
@@ -1638,6 +1648,13 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(hbox[3]), gtk_label_new(language==0?"Hash Size": _T(clanguage[41])), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[3]), scalehash, FALSE, FALSE, 3);
 
+	hbox[5] = gtk_check_button_new_with_label(language == 0 ? "Pondering" : _T(clanguage[85]));
+	gtk_toggle_button_set_active(hbox[5], infopondering ? TRUE : FALSE);
+
+	hbox[6] = gtk_hseparator_new();
+
+	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[5], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[6], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[2], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[4], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[3], FALSE, FALSE, 3);
@@ -1731,6 +1748,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 
 			set_hashsize((int)(gtk_range_get_value(GTK_RANGE(scalehash))+1e-8));
 
+			set_pondering(gtk_toggle_button_get_active(hbox[5]) == TRUE ? 1 : 0);
 			break;
 		case 2:
 			break;
@@ -2220,6 +2238,8 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: blockpath except h8i8j7\n", language ? clanguage[51] : "Example");
 			printf_log(" blockpath autoreset [on,off]\n");
 			printf_log(" hash clear\n");
+			printf_log(" hash dump [filename]\n");
+			printf_log(" hash load [filename]\n");
 			printf_log(" bestline\n");
 			printf_log(" balance<1,2>\n");
 			printf_log("   %s: balance1\n", language ? clanguage[52] : "Example 1");
@@ -2227,6 +2247,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: balance2\n", language ? clanguage[54] : "Example 3");
 			printf_log("   %s: balance2 100\n", language ? clanguage[55] : "Example 4");
 			printf_log(" nbest [2,3,...]\n");
+			printf_log(" search from [depth]\n");
 			//printf_log(" command [on,off]\n");
 			//printf_log(" hash usage\n");
 			printf_log("\n");
@@ -2716,9 +2737,57 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		{
 			send_command("yxhashclear\n");
 		}
+		else if (_strnicmp(command, "hash dump", 9) == 0)
+		{
+			send_command("yxhashdump\n");
+			gchar _command[80];
+			sprintf(_command, "%s", command + 9 + 1);
+			i = strlen(_command);
+			while (i > 0)
+			{
+				if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
+				{
+					_command[i - 1] = 0;
+					i--;
+				}
+				else
+					break;
+			}
+			_command[i] = '\n';
+			_command[i + 1] = 0;
+			send_command(_command);
+		}
+		else if (_strnicmp(command, "hash load", 9) == 0)
+		{
+			gchar _command[80];
+			send_command("yxhashload\n");
+			sprintf(_command, "%s", command + 9 + 1);
+			i = strlen(_command);
+			while (i > 0)
+			{
+				if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
+				{
+					_command[i - 1] = 0;
+					i--;
+				}
+				else
+					break;
+			}
+			_command[i] = '\n';
+			_command[i + 1] = 0;
+			send_command(_command);
+		}
 		else if (_strnicmp(command, "hash usage", 10) == 0)
 		{
 			send_command("yxshowhashusage\n");
+		}
+		else if (_strnicmp(command, "search from", 11) == 0)
+		{
+			gchar _command[80];
+			int depth = 1;
+			sscanf(command + 11 + 1, "%d", &depth);
+			sprintf(_command, "info start_depth %d\n", depth);
+			send_command(_command);
 		}
 		else if(_strnicmp(command, "bestline", 8) == 0)
 		{
@@ -2816,6 +2885,7 @@ void save_setting()
 		fprintf(out, "%d\t;hash size\n", hashsize);
 		fprintf(out, "%d\t;split depth\n", threadsplitdepth);
 		fprintf(out, "%d\t;blockpath autoreset (0: no, 1: yes)\n", blockpathautoreset);
+		fprintf(out, "%d\t;pondering (0: off, 1: on)\n", infopondering);
 		fclose(out);
 	}
 }
@@ -3746,6 +3816,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if(threadsplitdepth < MIN_SPLIT_DEPTH || threadsplitdepth > MAX_SPLIT_DEPTH) threadsplitdepth = 8;
 		blockpathautoreset = read_int_from_file(in);
 		if (blockpathautoreset < 0 || blockpathautoreset > 1) blockpathautoreset = 0;
+		infopondering = read_int_from_file(in);
+		if (infopondering < 0 || infopondering > 1) infopondering = 0;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", max(boardsizeh, boardsizew));
@@ -3838,6 +3910,7 @@ void init_engine()
 	set_cautionfactor(cautionfactor);
 	set_threadnum(threadnum);
 	set_hashsize(hashsize);
+	set_pondering(infopondering);
 }
 int main(int argc, char** argv)
 {
