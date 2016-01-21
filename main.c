@@ -1672,8 +1672,9 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				{
 					sscanf(ptext, "%d", &timeoutturn);
 					if (timeoutturn > 2000) timeoutturn = 2000;
-					if (timeoutturn < 1) timeoutturn = 1;
+					if (timeoutturn < 0) timeoutturn = 0;
 					timeoutturn *= 1000;
+					if (timeoutturn == 0) timeoutturn = 100;
 				}
 				ptext = gtk_entry_get_text(GTK_ENTRY(entrytimematch));
 				if(is_integer(ptext))
@@ -3786,7 +3787,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		levelchoice = read_int_from_file(in);
 		if(levelchoice < 0 || levelchoice > 8) levelchoice = 4;
 		timeoutturn = read_int_from_file(in) * 1000;
-		if(timeoutturn <= 0 || timeoutturn > 2000000) timeoutturn = 10000;
+		if (timeoutturn == 0) timeoutturn = 100;
+		if(timeoutturn < 0 || timeoutturn > 2000000) timeoutturn = 10000;
 		timeoutmatch = read_int_from_file(in) * 1000;
 		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 2000000;
 		maxdepth = read_int_from_file(in);
