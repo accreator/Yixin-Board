@@ -29,6 +29,7 @@ int rboardsizeh = 15, rboardsizew = 15;
 int inforule = 0;
 int specialrule = 0;
 int infopondering = 0;
+int infocheckmate = 0;
 int timeoutturn = 10000;
 int timeused = 0;
 int timestart = 0;
@@ -1448,6 +1449,16 @@ void set_pondering(int x)
 	send_command(command);
 }
 
+void set_checkmate(int x)
+{
+	gchar command[80];
+	if (x < 0) x = 0;
+	if (x > 1) x = 1;
+	infocheckmate = x;
+	sprintf(command, "INFO checkmate %d\n", infocheckmate);
+	send_command(command);
+}
+
 void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 {
 	static GtkWidget *editable[4];
@@ -1482,7 +1493,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *dialog;
 	GtkWidget *notebook;
 	GtkWidget *notebookvbox[3];
-	GtkWidget *hbox[7];
+	GtkWidget *hbox[9];
 	GtkWidget *radiolevel[9];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelblank[6];
 	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode;
@@ -1627,11 +1638,18 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_range_set_value(GTK_RANGE(scalehash), hashsize);
 	gtk_widget_set_size_request(scalehash, 100, -1);
 
+	hbox[8] = gtk_check_button_new_with_label(language == 0 ? "VCT Search Only" : _T(clanguage[86]));
+	gtk_toggle_button_set_active(hbox[8], infocheckmate ? TRUE : FALSE);
+
+	hbox[7] = gtk_hseparator_new();
+
 	hbox[1] = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Rash":_T(clanguage[37])), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), scalecaution, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":_T(clanguage[38])), FALSE, FALSE, 3);
 
+	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[8], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[7], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[1], FALSE, FALSE, 3);
 
 	if (maxthreadnum > 1)
@@ -1750,6 +1768,8 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 			set_hashsize((int)(gtk_range_get_value(GTK_RANGE(scalehash))+1e-8));
 
 			set_pondering(gtk_toggle_button_get_active(hbox[5]) == TRUE ? 1 : 0);
+
+			set_checkmate(gtk_toggle_button_get_active(hbox[8]) == TRUE ? 1 : 0);
 			break;
 		case 2:
 			break;
@@ -2887,6 +2907,7 @@ void save_setting()
 		fprintf(out, "%d\t;split depth\n", threadsplitdepth);
 		fprintf(out, "%d\t;blockpath autoreset (0: no, 1: yes)\n", blockpathautoreset);
 		fprintf(out, "%d\t;pondering (0: off, 1: on)\n", infopondering);
+		fprintf(out, "%d\t;chekmate (0: normal, 1: vct search only)\n", infocheckmate);
 		fclose(out);
 	}
 }
@@ -3820,6 +3841,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (blockpathautoreset < 0 || blockpathautoreset > 1) blockpathautoreset = 0;
 		infopondering = read_int_from_file(in);
 		if (infopondering < 0 || infopondering > 1) infopondering = 0;
+		infocheckmate = read_int_from_file(in);
+		if (infocheckmate < 0 || infocheckmate > 1) infocheckmate = 0;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", max(boardsizeh, boardsizew));
@@ -3913,6 +3936,7 @@ void init_engine()
 	set_threadnum(threadnum);
 	set_hashsize(hashsize);
 	set_pondering(infopondering);
+	set_checkmate(infocheckmate);
 }
 int main(int argc, char** argv)
 {
