@@ -1453,7 +1453,7 @@ void set_checkmate(int x)
 {
 	gchar command[80];
 	if (x < 0) x = 0;
-	if (x > 1) x = 1;
+	if (x > 2) x = 2;
 	infocheckmate = x;
 	sprintf(command, "INFO checkmate %d\n", infocheckmate);
 	send_command(command);
@@ -1493,8 +1493,9 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *dialog;
 	GtkWidget *notebook;
 	GtkWidget *notebookvbox[3];
-	GtkWidget *hbox[9];
+	GtkWidget *hbox[11];
 	GtkWidget *radiolevel[9];
+	GtkWidget *radiocheckmate[3];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelblank[6];
 	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode;
 	GtkWidget *scalecaution, *scalethreads, *scalesplitdepth, *scalehash;
@@ -1638,8 +1639,15 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_range_set_value(GTK_RANGE(scalehash), hashsize);
 	gtk_widget_set_size_request(scalehash, 100, -1);
 
-	hbox[8] = gtk_check_button_new_with_label(language == 0 ? "VCT Search Only" : _T(clanguage[86]));
-	gtk_toggle_button_set_active(hbox[8], infocheckmate ? TRUE : FALSE);
+	radiocheckmate[0] = gtk_radio_button_new_with_label(NULL, language == 0 ? "Global Search" : _T(clanguage[87]));
+	radiocheckmate[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiocheckmate[0])), language == 0 ? "VCT Search Only" : _T(clanguage[86]));
+	radiocheckmate[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiocheckmate[1])), language == 0 ? "VC2 Search Only" : _T(clanguage[88]));
+
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiocheckmate[infocheckmate]), TRUE);
+
+	hbox[8] = radiocheckmate[0];
+	hbox[9] = radiocheckmate[1];
+	hbox[10] = radiocheckmate[2];
 
 	hbox[7] = gtk_hseparator_new();
 
@@ -1649,6 +1657,8 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":_T(clanguage[38])), FALSE, FALSE, 3);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[8], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[9], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[10], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[7], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[1], FALSE, FALSE, 3);
 
@@ -1769,7 +1779,12 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 
 			set_pondering(gtk_toggle_button_get_active(hbox[5]) == TRUE ? 1 : 0);
 
-			set_checkmate(gtk_toggle_button_get_active(hbox[8]) == TRUE ? 1 : 0);
+			if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiocheckmate[0])))
+				set_checkmate(0);
+			else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiocheckmate[1])))
+				set_checkmate(1);
+			else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiocheckmate[2])))
+				set_checkmate(2);
 			break;
 		case 2:
 			break;
@@ -2907,7 +2922,7 @@ void save_setting()
 		fprintf(out, "%d\t;split depth\n", threadsplitdepth);
 		fprintf(out, "%d\t;blockpath autoreset (0: no, 1: yes)\n", blockpathautoreset);
 		fprintf(out, "%d\t;pondering (0: off, 1: on)\n", infopondering);
-		fprintf(out, "%d\t;chekmate (0: normal, 1: vct search only)\n", infocheckmate);
+		fprintf(out, "%d\t;chekmate (0: normal, 1: vct search only, 2: vc2 search only)\n", infocheckmate);
 		fclose(out);
 	}
 }
@@ -3842,7 +3857,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		infopondering = read_int_from_file(in);
 		if (infopondering < 0 || infopondering > 1) infopondering = 0;
 		infocheckmate = read_int_from_file(in);
-		if (infocheckmate < 0 || infocheckmate > 1) infocheckmate = 0;
+		if (infocheckmate < 0 || infocheckmate > 2) infocheckmate = 0;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", max(boardsizeh, boardsizew));
