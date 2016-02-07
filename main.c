@@ -53,6 +53,7 @@ int boardlose[MAX_SIZE][MAX_SIZE];
 int boardpos[MAX_SIZE][MAX_SIZE];
 int blockautoreset = 0;
 int blockpathautoreset = 0;
+int hashautoclear = 0;
 int piecenum = 0;
 char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
 char bestline[MAX_SIZE*MAX_SIZE*5+1] = "";
@@ -1108,6 +1109,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						timestart = clock();
 						sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 						send_command(command);
+						if (hashautoclear) send_command("yxhashclear\n");
 						sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
 						send_command(command);
 						sprintf(command, "board\n");
@@ -1282,6 +1284,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 									timestart = clock();
 									sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 									send_command(command);
+									if (hashautoclear) send_command("yxhashclear\n");
 									sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
 									send_command(command);
 									sprintf(command, "board\n");
@@ -1299,6 +1302,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								{
 									sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 									send_command(command);
+									if (hashautoclear) send_command("yxhashclear\n");
 									sprintf(command, "turn %d,%d\n", y, x);
 									send_command(command);
 									isthinking = 1;
@@ -2274,6 +2278,7 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 			printf_log("   %s: blockpath except h8i8j7\n", language ? clanguage[51] : "Example");
 			printf_log(" blockpath autoreset [on,off]\n");
 			printf_log(" hash clear\n");
+			printf_log(" hash autoclear [on,off]\n");
 			printf_log(" hash dump [filename]\n");
 			printf_log(" hash load [filename]\n");
 			printf_log(" bestline\n");
@@ -2769,6 +2774,20 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 				refresh_board();
 			} while(0);
 		}
+		else if (_strnicmp(command, "hash autoclear", 14) == 0)
+		{
+			if (strlen(command) >= 17)
+			{
+				if (command[16] == 'n' || command[16] == 'N')
+				{
+					hashautoclear = 1;
+				}
+				else
+				{
+					hashautoclear = 0;
+				}
+			}
+		}
 		else if(_strnicmp(command, "hash clear", 10) == 0)
 		{
 			send_command("yxhashclear\n");
@@ -2923,6 +2942,7 @@ void save_setting()
 		fprintf(out, "%d\t;blockpath autoreset (0: no, 1: yes)\n", blockpathautoreset);
 		fprintf(out, "%d\t;pondering (0: off, 1: on)\n", infopondering);
 		fprintf(out, "%d\t;chekmate (0: normal, 1: vct search only, 2: vc2 search only)\n", infocheckmate);
+		fprintf(out, "%d\t;hash autoclear (0: no, 1: yes)\n", hashautoclear);
 		fclose(out);
 	}
 }
@@ -3711,6 +3731,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				timestart = clock();
 				sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
 				send_command(command);
+				if(hashautoclear) send_command("yxhashclear\n");
 				sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
 				send_command(command);
 				sprintf(command, "board\n");
@@ -3858,6 +3879,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (infopondering < 0 || infopondering > 1) infopondering = 0;
 		infocheckmate = read_int_from_file(in);
 		if (infocheckmate < 0 || infocheckmate > 2) infocheckmate = 0;
+		hashautoclear = read_int_from_file(in);
+		if (hashautoclear < 0 || hashautoclear > 1) hashautoclear = 0;
 		fclose(in);
 	}
 	sprintf(s, "piece_%d.bmp", max(boardsizeh, boardsizew));
