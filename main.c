@@ -2479,10 +2479,10 @@ void toolbar_function(GtkWidget *widget, gpointer data)
 		r = l + 1;
 		while (command[r] && command[r] != '\n') r++;
 		
-		t = command[r];
-		command[r] = 0;
+		t = command[r+1];
+		command[r+1] = 0;
 		execute_command(command + l);
-		command[r] = t;
+		command[r+1] = t;
 		l = r;
 	}
 }
