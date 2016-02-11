@@ -10,9 +10,11 @@
 
 typedef long long I64;
 #define MAX_SIZE 24
-#define CAUTION_NUM 3  //0..CAUTION_NUM
+#define CAUTION_NUM 4  //0..CAUTION_NUM
 #define MIN_SPLIT_DEPTH 5
 #define MAX_SPLIT_DEPTH 20
+#define MAX_TOOLBAR_ITEM 32
+#define MAX_TOOLBAR_COMMAND_LEN 2048
 
 typedef struct
 {
@@ -67,6 +69,7 @@ int showanalysis = 1;
 int showtoolbarboth = 1;
 int showsmallfont = 0;
 int showwarning = 1;
+int toolbarpos = 1;
 int language = 0; /* 0: English 1: Other languages */
 int rlanguage = 0;
 char **clanguage = NULL; /* Custom language */
@@ -88,6 +91,35 @@ char piecepicname[80] = "piece.bmp";
 GtkWidget *textlog;
 GtkTextBuffer *buffertextlog, *buffertextcommand;
 GtkWidget *scrolledtextlog, *scrolledtextcommand;
+GtkWidget *toolbar;
+int toolbarnum = 6;
+int toolbarlng[MAX_TOOLBAR_ITEM] =
+{
+	48,
+	46,
+	47,
+	49,
+	45,
+	44
+};
+char *toolbaricon[MAX_TOOLBAR_ITEM] =
+{
+	GTK_STOCK_GOTO_FIRST,
+	GTK_STOCK_GO_BACK,
+	GTK_STOCK_GO_FORWARD,
+	GTK_STOCK_GOTO_LAST,
+	GTK_STOCK_STOP,
+	GTK_STOCK_EXECUTE
+};
+char toolbarcommand[MAX_TOOLBAR_ITEM][MAX_TOOLBAR_COMMAND_LEN] =
+{
+	"undo all\n",
+	"undo one\n",
+	"redo one\n",
+	"redo all\n",
+	"thinking stop\n",
+	"thinking start\n"
+};
 
 char * _T(char *s)
 {
@@ -2009,6 +2041,225 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	gtk_widget_destroy(dialog);
 }
 
+void show_dialog_custom_toolbar(GtkWidget *widget, gpointer data)
+{
+	GtkWidget *dialog;
+	GSList *ids;
+	GtkListStore *store;
+	GtkTreeModel *model;
+	GtkWidget *combo;
+	GtkWidget *cellview;
+	GtkCellRenderer *renderer;
+	GtkWidget *entry;
+	GtkWidget *label[3];
+	GtkWidget *table;
+	GtkTextBuffer *buffercommand;
+	GtkWidget *scrolledcommand;
+	GtkWidget *textcommand;
+	gchar text[80];
+	GSList *p;
+	gint result;
+	const gchar *ptext;
+
+	int cnt;
+	int i;
+	int pi;
+
+	dialog = gtk_dialog_new_with_buttons("Custom Toolbar", windowmain, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "OK", 1, "Cancel", 2, NULL);
+	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
+	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);	
+
+	store = gtk_list_store_new(2, GDK_TYPE_PIXBUF, G_TYPE_STRING);
+	cellview = gtk_cell_view_new();
+
+	cnt = pi = 0;
+	ids = gtk_stock_list_ids();
+	ids = g_slist_sort(ids, (GCompareFunc)strcmp);
+	p = ids;
+	while (p != NULL)
+	{
+		gchar *id;
+		GtkIconSet *icon;
+
+		id = p->data;
+		icon = gtk_icon_factory_lookup_default(id);
+		if (icon)
+		{
+			gint n_sizes = 0;
+			GtkIconSize *sizes = NULL;
+			GtkIconSize size;
+			int ok[3] = { 0 };
+
+			gtk_icon_set_get_sizes(icon, &sizes, &n_sizes);
+
+			size = sizes[0];
+			i = 0;
+			while (i < n_sizes)
+			{
+				if (sizes[i] == GTK_ICON_SIZE_SMALL_TOOLBAR) ok[0] = 1;
+				if (sizes[i] == GTK_ICON_SIZE_LARGE_TOOLBAR) ok[1] = 1;
+				if (sizes[i] == GTK_ICON_SIZE_BUTTON) ok[2] = 1;
+				i++;
+			}
+			if (ok[0] && ok[1] && ok[2])
+			{
+				GdkPixbuf *pixbuf;
+				char l[10];
+				GtkTreeIter iter;
+				cnt++;
+
+				pixbuf = gtk_widget_render_icon(cellview, id,
+					GTK_ICON_SIZE_BUTTON, NULL);
+
+				sprintf(l, "Icon %d", cnt);
+				gtk_list_store_append(store, &iter);
+				gtk_list_store_set(store, &iter, 0, pixbuf, 1, l, -1);
+				g_object_unref(pixbuf);
+
+				if (strcmp(id, toolbaricon[(int)data]) == 0)
+				{
+					pi = cnt - 1;
+				}
+			}
+		}
+
+		p = g_slist_next(p);
+	}
+
+	gtk_widget_destroy(cellview);
+
+	model = GTK_TREE_MODEL(store);
+	combo = gtk_combo_box_new_with_model(model);
+	g_object_unref(model);
+
+	renderer = gtk_cell_renderer_pixbuf_new();
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(combo), renderer, FALSE);
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(combo), renderer, "pixbuf", 0, NULL);
+
+	renderer = gtk_cell_renderer_text_new();
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(combo), renderer, TRUE);
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(combo), renderer, "text", 1, NULL);
+
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), pi);
+
+	entry = gtk_entry_new();
+	sprintf(text, "%d", toolbarlng[(int)data]);
+	gtk_entry_set_text(GTK_ENTRY(entry), text);
+
+	label[0] = gtk_label_new(language == 0 ? "Icon:" : _T(clanguage[89]));
+	label[1] = gtk_label_new(language == 0 ? "Text:" : _T(clanguage[90]));
+	label[2] = gtk_label_new(language == 0 ? "Command:" : _T(clanguage[91]));
+
+	textcommand = gtk_text_view_new();
+	buffercommand = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textcommand));
+	scrolledcommand = gtk_scrolled_window_new(NULL, NULL);
+	gtk_container_add(GTK_CONTAINER(scrolledcommand), textcommand);
+	gtk_widget_set_size_request(scrolledcommand, 200, 200);
+
+	table = gtk_table_new(4, 2, FALSE);
+	gtk_table_set_row_spacings(GTK_TABLE(table), 0); /* set the row distance between elements to be 0 */
+	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
+
+	gtk_table_attach_defaults(GTK_TABLE(table), label[0], 0, 1, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(table), combo, 1, 2, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(table), label[1], 0, 1, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(table), entry, 1, 2, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(table), label[2], 0, 2, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(table), scrolledcommand, 0, 2, 3, 4);
+
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
+	gtk_widget_show_all(dialog);
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+
+	switch (result)
+	{
+	case 1:
+	{
+		GtkTextIter start, end;
+		gchar *command;
+#ifdef G_OS_WIN32
+		gchar *argv[] = { "Yixin.exe", NULL };
+#else
+		gchar *argv[] = { "./Yixin", NULL };
+#endif
+
+		ptext = gtk_entry_get_text(GTK_ENTRY(entry));
+		if (is_integer(ptext))
+		{
+			sscanf(ptext, "%d", &toolbarlng[(int)data]);
+		}
+		pi = gtk_combo_box_get_active(combo);
+		cnt = 0;
+		p = ids;
+		while (p != NULL)
+		{
+			gchar *id;
+			GtkIconSet *icon;
+
+			id = p->data;
+			icon = gtk_icon_factory_lookup_default(id);
+			if (icon)
+			{
+				gint n_sizes = 0;
+				GtkIconSize *sizes = NULL;
+				GtkIconSize size;
+				int ok[3] = { 0 };
+
+				gtk_icon_set_get_sizes(icon, &sizes, &n_sizes);
+
+				size = sizes[0];
+				i = 0;
+				while (i < n_sizes)
+				{
+					if (sizes[i] == GTK_ICON_SIZE_SMALL_TOOLBAR) ok[0] = 1;
+					if (sizes[i] == GTK_ICON_SIZE_LARGE_TOOLBAR) ok[1] = 1;
+					if (sizes[i] == GTK_ICON_SIZE_BUTTON) ok[2] = 1;
+					i++;
+				}
+				if (ok[0] && ok[1] && ok[2])
+				{
+					GdkPixbuf *pixbuf;
+					char l[10];
+					GtkTreeIter iter;
+					cnt++;
+
+					pixbuf = gtk_widget_render_icon(cellview, id,
+						GTK_ICON_SIZE_BUTTON, NULL);
+
+					sprintf(l, "Icon %d", cnt);
+					gtk_list_store_append(store, &iter);
+					gtk_list_store_set(store, &iter, 0, pixbuf, 1, l, -1);
+					g_object_unref(pixbuf);
+
+					if (cnt - 1 == pi)
+					{
+						toolbaricon[(int)data] = strdup(id);
+						break;
+					}
+				}
+			}
+
+			p = g_slist_next(p);
+		}
+		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffercommand), &start, &end);
+		command = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(buffercommand), &start, &end, FALSE);
+		strcpy(toolbarcommand[(int)data], command);
+
+		save_setting();
+		g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+		yixin_quit();
+	}
+	case 2:
+		break;
+	}
+
+	g_slist_foreach(ids, (GFunc)g_free, NULL);
+	g_slist_free(ids);
+
+	gtk_widget_destroy(dialog);
+}
+
 void show_dialog_about(GtkWidget *widget, gpointer data)
 {
 	GtkWidget *dialog;
@@ -2137,11 +2388,13 @@ void view_log(GtkWidget *widget, gpointer data)
 	{
 		gtk_widget_show(scrolledtextlog);
 		gtk_widget_show(scrolledtextcommand);
+		gtk_widget_show(toolbar);
 	}
 	else
 	{
 		gtk_widget_hide(scrolledtextlog);
 		gtk_widget_hide(scrolledtextcommand);
+		gtk_widget_hide(toolbar);
 	}
 }
 void change_language(GtkWidget *widget, gpointer data)
@@ -2208,201 +2461,254 @@ void start_thinking(GtkWidget *widget, gpointer data)
 		change_side_menu(-2, NULL);
 }
 
-gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
+void toolbar_function(GtkWidget *widget, gpointer data)
 {
-	GtkTextIter start, end;
-	gchar *command;
-	int i;
-
-	if(event->keyval == 0xff0d) // warning: 0xff0d == GDK_KEY_Return
+	int l = 0, r;
+	char *command = toolbarcommand[(int)data];
+	while (command[l])
 	{
-		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextcommand), &start, &end);
-		command = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(buffertextcommand), &start, &end, FALSE);
-		if (_strnicmp(command, "command on", 10) == 0)
+		char t;
+		if (command[l] == '\n' || command[l] == '\r')
 		{
-			commandmodel = 1;
+			l++;
+			continue;
 		}
-		else if (_strnicmp(command, "command off", 11) == 0)
+		r = l + 1;
+		while (command[r] && command[r] != '\n') r++;
+		
+		t = command[r];
+		command[r] = 0;
+		execute_command(command + l);
+		command[r] = t;
+		l = r;
+	}
+}
+
+void execute_command(gchar *command)
+{
+	int i;
+	if (_strnicmp(command, "command on", 10) == 0)
+	{
+		commandmodel = 1;
+	}
+	else if (_strnicmp(command, "command off", 11) == 0)
+	{
+		commandmodel = 0;
+	}
+	else if (commandmodel == 1)
+	{
+		printf_log(command);
+		send_command(command);
+	}
+	else if (_strnicmp(command, "help key", 8) == 0)
+	{
+		printf_log(" F11\n  %s\n", language ? clanguage[44] : "Start thinking");
+		printf_log(" Esc\n  %s\n", language ? clanguage[45] : "Stop thinking");
+		printf_log(" Ctrl+Left\n  %s\n", language ? clanguage[46] : "Undo");
+		printf_log(" Ctrl+Right\n  %s\n", language ? clanguage[47] : "Redo");
+		printf_log(" Ctrl+Up\n  %s\n", language ? clanguage[48] : "Undo all");
+		printf_log(" Ctrl+Down\n  %s\n", language ? clanguage[49] : "Redo all");
+		printf_log("\n");
+	}
+	else if (_strnicmp(command, "help", 4) == 0)
+	{
+		if (language)
 		{
-			commandmodel = 0;
+			printf_log(clanguage[50]);
 		}
-		else if (commandmodel == 1)
+		else
 		{
-			printf_log(command);
-			send_command(command);
+			printf_log("Command Lists:");
 		}
-		else if(_strnicmp(command, "help key", 8) == 0)
+		printf_log("\n");
+		printf_log(" help\n");
+		printf_log(" help key\n");
+		printf_log(" clear\n");
+		printf_log(" rotate [90,180,270]\n");
+		printf_log(" flip [/,\\,-,|]\n");
+		printf_log(" move [^,v,<,>]\n");
+		printf_log(" getpos\n");
+		printf_log(" putpos\n");
+		printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language ? clanguage[51] : "Example");
+		printf_log(" block\n");
+		printf_log("   %s: block h8\n", language ? clanguage[51] : "Example");
+		printf_log(" block undo\n");
+		printf_log("   %s: block undo h8\n", language ? clanguage[51] : "Example");
+		printf_log(" block reset\n");
+		printf_log(" block compare\n");
+		printf_log("   %s: block compare h8i8j7\n", language ? clanguage[51] : "Example");
+		printf_log(" block autoreset [on,off]\n");
+		printf_log(" blockpath\n");
+		printf_log("   %s: blockpath h8h7\n", language ? clanguage[51] : "Example");
+		printf_log(" blockpath undo\n");
+		printf_log("   %s: blockpath undo h8h7\n", language ? clanguage[51] : "Example");
+		printf_log(" blockpath reset\n");
+		printf_log(" blockpath except\n");
+		printf_log("   %s: blockpath except h8i8j7\n", language ? clanguage[51] : "Example");
+		printf_log(" blockpath autoreset [on,off]\n");
+		printf_log(" hash clear\n");
+		printf_log(" hash autoclear [on,off]\n");
+		printf_log(" hash dump [filename]\n");
+		printf_log(" hash load [filename]\n");
+		printf_log(" bestline\n");
+		printf_log(" balance<1,2>\n");
+		printf_log("   %s: balance1\n", language ? clanguage[52] : "Example 1");
+		printf_log("   %s: balance1 100\n", language ? clanguage[53] : "Example 2");
+		printf_log("   %s: balance2\n", language ? clanguage[54] : "Example 3");
+		printf_log("   %s: balance2 100\n", language ? clanguage[55] : "Example 4");
+		printf_log(" nbest [2,3,...]\n");
+		printf_log(" search from [depth]\n");
+		printf_log(" toolbar edit [1,2,...]\n");
+		printf_log(" toolbar add\n");
+		printf_log(" toolbar remove\n");
+		printf_log(" thinking start\n");
+		printf_log(" thinking stop\n");
+		printf_log(" undo one\n");
+		printf_log(" undo all\n");
+		printf_log(" redo one\n");
+		printf_log(" redo all\n");
+		printf_log(" command [on,off]\n");
+		printf_log(" hash usage\n");
+		printf_log("\n");
+	}
+	else if (_strnicmp(command, "clear", 5) == 0)
+	{
+		GtkTextIter _start, _end;
+		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &_start, &_end);
+		gtk_text_buffer_delete(buffertextlog, &_start, &_end);
+	}
+	else if (_strnicmp(command, "rotate", 6) == 0)
+	{
+		int p = piecenum;
+		int j, k = 1;
+		if (boardsizew != boardsizeh)
 		{
-			printf_log(" F11\n  %s\n", language ? clanguage[44]:"Start thinking");
-			printf_log(" Esc\n  %s\n", language ? clanguage[45]:"Stop thinking");
-			printf_log(" Ctrl+Left\n  %s\n", language ? clanguage[46]:"Undo");
-			printf_log(" Ctrl+Right\n  %s\n", language ? clanguage[47]:"Redo");
-			printf_log(" Ctrl+Up\n  %s\n", language ? clanguage[48]:"Undo all");
-			printf_log(" Ctrl+Down\n  %s\n", language ? clanguage[49]:"Redo all");
+			printf_log(language == 0 ? "Sorry, board cannot be rotated when height<>width." : clanguage[56]);
 			printf_log("\n");
 		}
-		else if(_strnicmp(command, "help", 4) == 0)
+		else
 		{
-			if(language)
+			if (strlen(command) >= 8)
 			{
-				printf_log(clanguage[50]);
+				if (command[7] == '9') k = 1;
+				else if (command[7] == '1') k = 2;
+				else if (command[7] == '2') k = 3;
 			}
-			else
+			refreshboardflag = 0;
+			for (j = 0; j < k; j++)
 			{
-				printf_log("Command Lists:");
-			}
-			printf_log("\n");
-			printf_log(" help\n");
-			printf_log(" help key\n");
-			printf_log(" clear\n");
-			printf_log(" rotate [90,180,270]\n");
-			printf_log(" flip [/,\\,-,|]\n");
-			printf_log(" move [^,v,<,>]\n");
-			printf_log(" getpos\n");
-			printf_log(" putpos\n");
-			printf_log("   %s: putpos f11h7g10h6i10h5j11h8h9h4\n", language ? clanguage[51] :"Example");
-			printf_log(" block\n");
-			printf_log("   %s: block h8\n", language ? clanguage[51] :"Example");
-			printf_log(" block undo\n");
-			printf_log("   %s: block undo h8\n", language ? clanguage[51] : "Example");
-			printf_log(" block reset\n");
-			printf_log(" block compare\n");
-			printf_log("   %s: block compare h8i8j7\n", language ? clanguage[51] : "Example");
-			printf_log(" block autoreset [on,off]\n");
-			printf_log(" blockpath\n");
-			printf_log("   %s: blockpath h8h7\n", language ? clanguage[51] : "Example");
-			printf_log(" blockpath undo\n");
-			printf_log("   %s: blockpath undo h8h7\n", language ? clanguage[51] : "Example");
-			printf_log(" blockpath reset\n");
-			printf_log(" blockpath except\n");
-			printf_log("   %s: blockpath except h8i8j7\n", language ? clanguage[51] : "Example");
-			printf_log(" blockpath autoreset [on,off]\n");
-			printf_log(" hash clear\n");
-			printf_log(" hash autoclear [on,off]\n");
-			printf_log(" hash dump [filename]\n");
-			printf_log(" hash load [filename]\n");
-			printf_log(" bestline\n");
-			printf_log(" balance<1,2>\n");
-			printf_log("   %s: balance1\n", language ? clanguage[52] : "Example 1");
-			printf_log("   %s: balance1 100\n", language ? clanguage[53] : "Example 2");
-			printf_log("   %s: balance2\n", language ? clanguage[54] : "Example 3");
-			printf_log("   %s: balance2 100\n", language ? clanguage[55] : "Example 4");
-			printf_log(" nbest [2,3,...]\n");
-			printf_log(" search from [depth]\n");
-			//printf_log(" command [on,off]\n");
-			//printf_log(" hash usage\n");
-			printf_log("\n");
-		}
-		else if(_strnicmp(command, "clear", 5) == 0)
-		{
-			GtkTextIter _start, _end;
-			gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &_start, &_end);
-			gtk_text_buffer_delete(buffertextlog, &_start, &_end);
-		}
-		else if(_strnicmp(command, "rotate", 6) == 0)
-		{
-			int p = piecenum;
-			int j, k = 1;
-			if (boardsizew != boardsizeh)
-			{
-				printf_log(language == 0 ? "Sorry, board cannot be rotated when height<>width." : clanguage[56]);
-				printf_log("\n");
-			}
-			else
-			{
-				if (strlen(command) >= 8)
-				{
-					if (command[7] == '9') k = 1;
-					else if (command[7] == '1') k = 2;
-					else if (command[7] == '2') k = 3;
-				}
-				refreshboardflag = 0;
-				for (j = 0; j < k; j++)
-				{
-					for (i = 0; i < p; i++)
-					{
-						int _x, _y, x, y;
-						_y = movepath[i] / boardsizew;
-						_x = movepath[i] % boardsizew;
-						y = _x;
-						x = boardsizeh - 1 - _y;
-						movepath[i] = y*boardsizew + x;
-					}
-				}
-				new_game(NULL, NULL);
-				for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
-				show_forbid();
-			}
-		}
-		else if(_strnicmp(command, "flip", 4) == 0)
-		{
-			int p = piecenum;
-			int k = 0;
-			if(strlen(command) >= 6)
-			{
-				if(command[5] == '-') k = 0;
-				else if(command[5] == '|') k = 1;
-				else if(command[5] == '/') k = 2;
-				else if(command[5] == '\\') k = 3;
-			}
-			if ((k == 2 || k == 3) && (boardsizew != boardsizeh))
-			{
-				printf_log(language == 0 ? "Sorry, board cannot be flipped with / or \\ when height<>width." : clanguage[57]);
-				printf_log("\n");
-			}
-			else
-			{
-				refreshboardflag = 0;
 				for (i = 0; i < p; i++)
 				{
 					int _x, _y, x, y;
 					_y = movepath[i] / boardsizew;
 					_x = movepath[i] % boardsizew;
-					switch (k)
-					{
-					case 0:
-						y = boardsizeh - 1 - _y;
-						x = _x;
-						break;
-					case 1:
-						y = _y;
-						x = boardsizew - 1 - _x;
-						break;
-					case 2:
-						y = boardsizeh - 1 - _y;
-						x = boardsizew - 1 - _x;
-						break;
-					case 3:
-						y = _x;
-						x = _y;
-						break;
-					}
+					y = _x;
+					x = boardsizeh - 1 - _y;
 					movepath[i] = y*boardsizew + x;
 				}
-				new_game(NULL, NULL);
-				for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
-				show_forbid();
 			}
+			new_game(NULL, NULL);
+			for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
+			show_forbid();
 		}
-		else if(_strnicmp(command, "move", 4) == 0)
+	}
+	else if (_strnicmp(command, "flip", 4) == 0)
+	{
+		int p = piecenum;
+		int k = 0;
+		if (strlen(command) >= 6)
 		{
-			int p = piecenum;
-			int k = 0;
-			int f = 1;
-			if(strlen(command) >= 6)
-			{
-				if(command[5] == '^') k = 0;
-				else if(command[5] == 'v') k = 1;
-				else if(command[5] == '<') k = 2;
-				else if(command[5] == '>') k = 3;
-			}
+			if (command[5] == '-') k = 0;
+			else if (command[5] == '|') k = 1;
+			else if (command[5] == '/') k = 2;
+			else if (command[5] == '\\') k = 3;
+		}
+		if ((k == 2 || k == 3) && (boardsizew != boardsizeh))
+		{
+			printf_log(language == 0 ? "Sorry, board cannot be flipped with / or \\ when height<>width." : clanguage[57]);
+			printf_log("\n");
+		}
+		else
+		{
 			refreshboardflag = 0;
-			for(i=0; i<p; i++)
+			for (i = 0; i < p; i++)
 			{
 				int _x, _y, x, y;
 				_y = movepath[i] / boardsizew;
 				_x = movepath[i] % boardsizew;
-				switch(k)
+				switch (k)
+				{
+				case 0:
+					y = boardsizeh - 1 - _y;
+					x = _x;
+					break;
+				case 1:
+					y = _y;
+					x = boardsizew - 1 - _x;
+					break;
+				case 2:
+					y = boardsizeh - 1 - _y;
+					x = boardsizew - 1 - _x;
+					break;
+				case 3:
+					y = _x;
+					x = _y;
+					break;
+				}
+				movepath[i] = y*boardsizew + x;
+			}
+			new_game(NULL, NULL);
+			for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
+			show_forbid();
+		}
+	}
+	else if (_strnicmp(command, "move", 4) == 0)
+	{
+		int p = piecenum;
+		int k = 0;
+		int f = 1;
+		if (strlen(command) >= 6)
+		{
+			if (command[5] == '^') k = 0;
+			else if (command[5] == 'v') k = 1;
+			else if (command[5] == '<') k = 2;
+			else if (command[5] == '>') k = 3;
+		}
+		refreshboardflag = 0;
+		for (i = 0; i<p; i++)
+		{
+			int _x, _y, x, y;
+			_y = movepath[i] / boardsizew;
+			_x = movepath[i] % boardsizew;
+			switch (k)
+			{
+			case 0:
+				y = _y - 1;
+				x = _x;
+				break;
+			case 1:
+				y = _y + 1;
+				x = _x;
+				break;
+			case 2:
+				y = _y;
+				x = _x - 1;
+				break;
+			case 3:
+				y = _y;
+				x = _x + 1;
+				break;
+			}
+			if (x < 0 || x > boardsizew - 1 || y < 0 || y > boardsizeh - 1) f = 0;
+		}
+		if (f)
+		{
+			for (i = 0; i < p; i++)
+			{
+				int _x, _y, x, y;
+				_y = movepath[i] / boardsizew;
+				_x = movepath[i] % boardsizew;
+				switch (k)
 				{
 				case 0:
 					y = _y - 1;
@@ -2421,492 +2727,540 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 					x = _x + 1;
 					break;
 				}
-				if (x < 0 || x > boardsizew - 1 || y < 0 || y > boardsizeh - 1) f = 0;
+				movepath[i] = y*boardsizew + x;
 			}
-			if (f)
-			{
-				for (i = 0; i < p; i++)
-				{
-					int _x, _y, x, y;
-					_y = movepath[i] / boardsizew;
-					_x = movepath[i] % boardsizew;
-					switch (k)
-					{
-					case 0:
-						y = _y - 1;
-						x = _x;
-						break;
-					case 1:
-						y = _y + 1;
-						x = _x;
-						break;
-					case 2:
-						y = _y;
-						x = _x - 1;
-						break;
-					case 3:
-						y = _y;
-						x = _x + 1;
-						break;
-					}
-					movepath[i] = y*boardsizew + x;
-				}
-			}
-			new_game(NULL, NULL);
-			for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
-			show_forbid();
 		}
-		else if (_strnicmp(command, "putpos", 6) == 0)
+		new_game(NULL, NULL);
+		for (i = 0; i < p; i++) make_move(movepath[i] / boardsizew, movepath[i] % boardsizew);
+		show_forbid();
+	}
+	else if (_strnicmp(command, "putpos", 6) == 0)
+	{
+		new_game(NULL, NULL);
+		i = 6;
+		while (command[i] == '\t' || command[i] == ' ') i++;
+		for (; command[i];)
 		{
-			new_game(NULL, NULL);
-			i = 6;
-			while (command[i] == '\t' || command[i] == ' ') i++;
-			for (; command[i];)
+			int x, y;
+			if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+			if (command[i] < 'A' || command[i] > 'Z') break;
+			x = command[i] - 'A';
+			i++;
+			y = command[i] - '0';
+			i++;
+			if (command[i] >= '0' && command[i] <= '9')
 			{
-				int x, y;
-				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
-				if (command[i] < 'A' || command[i] > 'Z') break;
-				x = command[i] - 'A';
+				y = y * 10 + command[i] - '0';
 				i++;
-				y = command[i] - '0';
-				i++;
-				if (command[i] >= '0' && command[i] <= '9')
-				{
-					y = y * 10 + command[i] - '0';
-					i++;
-				}
-				y = y - 1;
-				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
-				make_move(boardsizeh - 1 - y, x);
 			}
-			show_forbid();
+			y = y - 1;
+			if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+			make_move(boardsizeh - 1 - y, x);
 		}
-		else if (_strnicmp(command, "getpos", 6) == 0)
+		show_forbid();
+	}
+	else if (_strnicmp(command, "getpos", 6) == 0)
+	{
+		for (i = 0; i < piecenum; i++)
 		{
-			for (i = 0; i < piecenum; i++)
+			printf_log("%c%d", movepath[i] % boardsizew + 'a', boardsizeh - 1 - movepath[i] / boardsizew + 1);
+		}
+		printf_log("\n");
+	}
+	else if (_strnicmp(command, "blockpath reset", 15) == 0)
+	{
+		send_command("yxblockpathreset\n");
+	}
+	else if (_strnicmp(command, "blockpath autoreset", 19) == 0)
+	{
+		if (strlen(command) >= 22)
+		{
+			if (command[21] == 'n' || command[21] == 'N')
 			{
-				printf_log("%c%d", movepath[i] % boardsizew + 'a', boardsizeh - 1 - movepath[i] / boardsizew + 1);
-			}
-			printf_log("\n");
-		}
-		else if (_strnicmp(command, "blockpath reset", 15) == 0)
-		{
-			send_command("yxblockpathreset\n");
-		}
-		else if (_strnicmp(command, "blockpath autoreset", 19) == 0)
-		{
-			if (strlen(command) >= 22)
-			{
-				if (command[21] == 'n' || command[21] == 'N')
-				{
-					blockpathautoreset = 1;
-				}
-				else
-				{
-					blockpathautoreset = 0;
-				}
-			}
-		}
-		else if (_strnicmp(command, "blockpath undo", 14) == 0)
-		{
-			gchar _command[80];
-			int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
-			int len = 0;
-
-			i = 14;
-			while (command[i] == '\t' || command[i] == ' ') i++;
-			for (; command[i];)
-			{
-				int x, y;
-				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
-				if (command[i] < 'A' || command[i] > 'Z') break;
-				x = command[i] - 'A';
-				i++;
-				y = command[i] - '0';
-				i++;
-				if (command[i] >= '0' && command[i] <= '9')
-				{
-					y = y * 10 + command[i] - '0';
-					i++;
-				}
-				y = y - 1;
-				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
-				xl[len] = boardsizeh - 1 - y;
-				yl[len] = x;
-				len++;
-			}
-			if (len > 0)
-			{
-				send_command("yxblockpathundo\n");
-				for (i = 0; i < piecenum; i++)
-				{
-					sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
-					send_command(_command);
-				}
-				for (i = 0; i < len; i++)
-				{
-					sprintf(_command, "%d,%d\n", xl[i], yl[i]);
-					send_command(_command);
-				}
-				send_command("done\n");
-			}
-		}
-		else if (_strnicmp(command, "blockpath except", 16) == 0)
-		{
-			gchar _command[80];
-			int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
-			int len = 0;
-
-			i = 16;
-			while (command[i] == '\t' || command[i] == ' ') i++;
-			for (; command[i];)
-			{
-				int x, y;
-				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
-				if (command[i] < 'A' || command[i] > 'Z') break;
-				x = command[i] - 'A';
-				i++;
-				y = command[i] - '0';
-				i++;
-				if (command[i] >= '0' && command[i] <= '9')
-				{
-					y = y * 10 + command[i] - '0';
-					i++;
-				}
-				y = y - 1;
-				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
-				xl[len] = boardsizeh - 1 - y;
-				yl[len] = x;
-				len++;
-			}
-			if (len > 0)
-			{
-				int j, k;
-				for (j = 0; j < MAX_SIZE; j++)
-				{
-					for (k = 0; k < MAX_SIZE; k++)
-					{
-						if (xl[len - 1] == j && yl[len - 1] == k) continue;
-						send_command("yxblockpath\n");
-						for (i = 0; i < piecenum; i++)
-						{
-							sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
-							send_command(_command);
-						}
-						for (i = 0; i < len-1; i++)
-						{
-							sprintf(_command, "%d,%d\n", xl[i], yl[i]);
-							send_command(_command);
-						}
-						sprintf(_command, "%d,%d\n", j, k);
-						send_command(_command);
-						send_command("done\n");
-					}
-				}
-			}
-		}
-		else if (_strnicmp(command, "blockpath list", 14) == 0)
-		{
-			; //TODO
-		}
-		else if (_strnicmp(command, "blockpath", 9) == 0)
-		{
-			gchar _command[80];
-			int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
-			int len = 0;
-			
-			i = 9;
-			while (command[i] == '\t' || command[i] == ' ') i++;
-			for (; command[i];)
-			{
-				int x, y;
-				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
-				if (command[i] < 'A' || command[i] > 'Z') break;
-				x = command[i] - 'A';
-				i++;
-				y = command[i] - '0';
-				i++;
-				if (command[i] >= '0' && command[i] <= '9')
-				{
-					y = y * 10 + command[i] - '0';
-					i++;
-				}
-				y = y - 1;
-				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
-				xl[len] = boardsizeh - 1 - y;
-				yl[len] = x;
-				len++;
-			}
-			if (len > 0)
-			{
-				send_command("yxblockpath\n");
-				for (i = 0; i < piecenum; i++)
-				{
-					sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
-					send_command(_command);
-				}
-				for (i = 0; i < len; i++)
-				{
-					sprintf(_command, "%d,%d\n", xl[i], yl[i]);
-					send_command(_command);
-				}
-				send_command("done\n");
-			}
-		}
-		else if (_strnicmp(command, "block reset", 11) == 0)
-		{
-			send_command("yxblockreset\n");
-			memset(boardblock, 0, sizeof(boardblock));
-			refresh_board();
-		}
-		else if (_strnicmp(command, "block autoreset", 15) == 0)
-		{
-			if (strlen(command) >= 18)
-			{
-				if (command[17] == 'n' || command[17] == 'N')
-				{
-					blockautoreset = 1;
-				}
-				else
-				{
-					blockautoreset = 0;
-				}
-			}
-		}
-		else if (_strnicmp(command, "block undo", 10) == 0)
-		{
-			gchar _command[80];
-			do
-			{
-				int x, y;
-				if (command[11] >= 'a' && command[11] <= 'z') command[11] = command[11] - 'a' + 'A';
-				if (command[11] < 'A' || command[11] > 'Z') break;
-				x = command[11] - 'A';
-				y = command[12] - '0';
-				if (command[13] >= '0' && command[13] <= '9')
-				{
-					y = y * 10 + command[13] - '0';
-				}
-				y--;
-				if (x<0 || x >= boardsizew || y<0 || y >= boardsizeh) break;
-				send_command("yxblockundo\n");
-				sprintf(_command, "%d,%d\n", boardsizeh - 1 - y, x);
-				send_command(_command);
-				send_command("done\n");
-
-				boardblock[boardsizeh - 1 - y][x] = 0;
-				refresh_board();
-			} while (0);
-		}
-		else if (_strnicmp(command, "block compare", 13) == 0)
-		{
-			gchar _command[80];
-			int j;
-			send_command("yxblockreset\n");
-			memset(boardblock, 0, sizeof(boardblock));
-			for (i = 0; i < boardsizeh; i++)
-			{
-				for (j = 0; j < boardsizew; j++)
-				{
-					if (board[i][j] == 0)
-					{
-						boardblock[i][j] = 1;
-					}
-				}
-			}
-			i = 13;
-			while (command[i] == '\t' || command[i] == ' ') i++;
-			for (; command[i];)
-			{
-				int x, y;
-				if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
-				if (command[i] < 'A' || command[i] > 'Z') break;
-				x = command[i] - 'A';
-				i++;
-				y = command[i] - '0';
-				i++;
-				if (command[i] >= '0' && command[i] <= '9')
-				{
-					y = y * 10 + command[i] - '0';
-					i++;
-				}
-				y = y - 1;
-				if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
-				boardblock[boardsizeh - 1 - y][x] = 0;
-			}
-			for (i = 0; i < boardsizeh; i++)
-			{
-				for (j = 0; j < boardsizew; j++)
-				{
-					if (boardblock[i][j] == 1)
-					{
-						send_command("yxblock\n");
-						sprintf(_command, "%d,%d\n", i, j);
-						send_command(_command);
-						send_command("done\n");
-					}
-				}
-			}
-			refresh_board();
-		}
-		else if(_strnicmp(command, "block", 5) == 0)
-		{
-			gchar _command[80];
-			do
-			{
-				int x, y;
-				if(command[6] >= 'a' && command[6] <= 'z') command[6] = command[6] - 'a' + 'A';
-				if(command[6] < 'A' || command[6] > 'Z') break;
-				x = command[6] - 'A';
-				y = command[7] - '0';
-				if(command[8] >= '0' && command[8] <= '9')
-				{
-					y = y*10 + command[8] - '0';
-				}
-				y --;
-				if(x<0 || x>=boardsizew || y<0 || y>=boardsizeh) break;
-				send_command("yxblock\n");
-				sprintf(_command, "%d,%d\n", boardsizeh-1-y, x);
-				send_command(_command);
-				send_command("done\n");
-
-				boardblock[boardsizeh-1-y][x] = 1;
-				refresh_board();
-			} while(0);
-		}
-		else if (_strnicmp(command, "hash autoclear", 14) == 0)
-		{
-			if (strlen(command) >= 17)
-			{
-				if (command[16] == 'n' || command[16] == 'N')
-				{
-					hashautoclear = 1;
-				}
-				else
-				{
-					hashautoclear = 0;
-				}
-			}
-		}
-		else if(_strnicmp(command, "hash clear", 10) == 0)
-		{
-			send_command("yxhashclear\n");
-		}
-		else if (_strnicmp(command, "hash dump", 9) == 0)
-		{
-			send_command("yxhashdump\n");
-			gchar _command[80];
-			sprintf(_command, "%s", command + 9 + 1);
-			i = strlen(_command);
-			while (i > 0)
-			{
-				if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
-				{
-					_command[i - 1] = 0;
-					i--;
-				}
-				else
-					break;
-			}
-			_command[i] = '\n';
-			_command[i + 1] = 0;
-			send_command(_command);
-		}
-		else if (_strnicmp(command, "hash load", 9) == 0)
-		{
-			gchar _command[80];
-			send_command("yxhashload\n");
-			sprintf(_command, "%s", command + 9 + 1);
-			i = strlen(_command);
-			while (i > 0)
-			{
-				if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
-				{
-					_command[i - 1] = 0;
-					i--;
-				}
-				else
-					break;
-			}
-			_command[i] = '\n';
-			_command[i + 1] = 0;
-			send_command(_command);
-		}
-		else if (_strnicmp(command, "hash usage", 10) == 0)
-		{
-			send_command("yxshowhashusage\n");
-		}
-		else if (_strnicmp(command, "search from", 11) == 0)
-		{
-			gchar _command[80];
-			int depth = 1;
-			sscanf(command + 11 + 1, "%d", &depth);
-			sprintf(_command, "info start_depth %d\n", depth);
-			send_command(_command);
-		}
-		else if(_strnicmp(command, "bestline", 8) == 0)
-		{
-			printf_log("BESTLINE: %s ", bestline);
-			printf_log("VAL: %d\n", bestval);
-		}
-		else if (_strnicmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
-		{
-			gchar _command[80];
-			int s;
-			int t;
-			t = command[7] - '0';
-			if (sscanf(command + 8, "%d", &s) != 1) s = 0;
-			sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
-			send_command(_command);
-			sprintf(_command, "yxboard\n");
-			send_command(_command);
-			for (i = 0; i<piecenum; i++)
-			{
-				sprintf(_command, "%d,%d,%d\n", movepath[i] / boardsizew,
-					movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
-				send_command(_command);
-			}
-			sprintf(_command, "done\n");
-			send_command(_command);
-			sprintf(_command, "yxbalance%s %d\n", t==1?"one":"two", s);
-			send_command(_command);
-		}
-		else if (_strnicmp(command, "nbest", 5) == 0)
-		{
-			gchar _command[80];
-			int s;
-			if (sscanf(command + 5, "%d", &s) != 1) s = 2;
-			sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
-			send_command(_command);
-			sprintf(_command, "yxboard\n");
-			send_command(_command);
-			for (i = 0; i<piecenum; i++)
-			{
-				sprintf(_command, "%d,%d,%d\n", movepath[i] / boardsizew,
-					movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
-				send_command(_command);
-			}
-			sprintf(_command, "done\n");
-			send_command(_command);
-			sprintf(_command, "yxnbest %d\n", s);
-			send_command(_command);
-		}
-		else if(_strnicmp(command, "makebook", 8) == 0)
-		{
-			; //TODO
-		}
-		else
-		{
-			if(language)
-			{
-				printf_log(clanguage[58]);
+				blockpathautoreset = 1;
 			}
 			else
 			{
-				printf_log("To get help, type help and press Enter");
+				blockpathautoreset = 0;
 			}
-			printf_log("\n");
 		}
+	}
+	else if (_strnicmp(command, "blockpath undo", 14) == 0)
+	{
+		gchar _command[80];
+		int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
+		int len = 0;
+
+		i = 14;
+		while (command[i] == '\t' || command[i] == ' ') i++;
+		for (; command[i];)
+		{
+			int x, y;
+			if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+			if (command[i] < 'A' || command[i] > 'Z') break;
+			x = command[i] - 'A';
+			i++;
+			y = command[i] - '0';
+			i++;
+			if (command[i] >= '0' && command[i] <= '9')
+			{
+				y = y * 10 + command[i] - '0';
+				i++;
+			}
+			y = y - 1;
+			if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+			xl[len] = boardsizeh - 1 - y;
+			yl[len] = x;
+			len++;
+		}
+		if (len > 0)
+		{
+			send_command("yxblockpathundo\n");
+			for (i = 0; i < piecenum; i++)
+			{
+				sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
+				send_command(_command);
+			}
+			for (i = 0; i < len; i++)
+			{
+				sprintf(_command, "%d,%d\n", xl[i], yl[i]);
+				send_command(_command);
+			}
+			send_command("done\n");
+		}
+	}
+	else if (_strnicmp(command, "blockpath except", 16) == 0)
+	{
+		gchar _command[80];
+		int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
+		int len = 0;
+
+		i = 16;
+		while (command[i] == '\t' || command[i] == ' ') i++;
+		for (; command[i];)
+		{
+			int x, y;
+			if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+			if (command[i] < 'A' || command[i] > 'Z') break;
+			x = command[i] - 'A';
+			i++;
+			y = command[i] - '0';
+			i++;
+			if (command[i] >= '0' && command[i] <= '9')
+			{
+				y = y * 10 + command[i] - '0';
+				i++;
+			}
+			y = y - 1;
+			if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+			xl[len] = boardsizeh - 1 - y;
+			yl[len] = x;
+			len++;
+		}
+		if (len > 0)
+		{
+			int j, k;
+			for (j = 0; j < MAX_SIZE; j++)
+			{
+				for (k = 0; k < MAX_SIZE; k++)
+				{
+					if (xl[len - 1] == j && yl[len - 1] == k) continue;
+					send_command("yxblockpath\n");
+					for (i = 0; i < piecenum; i++)
+					{
+						sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
+						send_command(_command);
+					}
+					for (i = 0; i < len - 1; i++)
+					{
+						sprintf(_command, "%d,%d\n", xl[i], yl[i]);
+						send_command(_command);
+					}
+					sprintf(_command, "%d,%d\n", j, k);
+					send_command(_command);
+					send_command("done\n");
+				}
+			}
+		}
+	}
+	else if (_strnicmp(command, "blockpath list", 14) == 0)
+	{
+		; //TODO
+	}
+	else if (_strnicmp(command, "blockpath", 9) == 0)
+	{
+		gchar _command[80];
+		int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
+		int len = 0;
+
+		i = 9;
+		while (command[i] == '\t' || command[i] == ' ') i++;
+		for (; command[i];)
+		{
+			int x, y;
+			if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+			if (command[i] < 'A' || command[i] > 'Z') break;
+			x = command[i] - 'A';
+			i++;
+			y = command[i] - '0';
+			i++;
+			if (command[i] >= '0' && command[i] <= '9')
+			{
+				y = y * 10 + command[i] - '0';
+				i++;
+			}
+			y = y - 1;
+			if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+			xl[len] = boardsizeh - 1 - y;
+			yl[len] = x;
+			len++;
+		}
+		if (len > 0)
+		{
+			send_command("yxblockpath\n");
+			for (i = 0; i < piecenum; i++)
+			{
+				sprintf(_command, "%d,%d\n", movepath[i] / boardsizew, movepath[i] % boardsizew);
+				send_command(_command);
+			}
+			for (i = 0; i < len; i++)
+			{
+				sprintf(_command, "%d,%d\n", xl[i], yl[i]);
+				send_command(_command);
+			}
+			send_command("done\n");
+		}
+	}
+	else if (_strnicmp(command, "block reset", 11) == 0)
+	{
+		send_command("yxblockreset\n");
+		memset(boardblock, 0, sizeof(boardblock));
+		refresh_board();
+	}
+	else if (_strnicmp(command, "block autoreset", 15) == 0)
+	{
+		if (strlen(command) >= 18)
+		{
+			if (command[17] == 'n' || command[17] == 'N')
+			{
+				blockautoreset = 1;
+			}
+			else
+			{
+				blockautoreset = 0;
+			}
+		}
+	}
+	else if (_strnicmp(command, "block undo", 10) == 0)
+	{
+		gchar _command[80];
+		do
+		{
+			int x, y;
+			if (command[11] >= 'a' && command[11] <= 'z') command[11] = command[11] - 'a' + 'A';
+			if (command[11] < 'A' || command[11] > 'Z') break;
+			x = command[11] - 'A';
+			y = command[12] - '0';
+			if (command[13] >= '0' && command[13] <= '9')
+			{
+				y = y * 10 + command[13] - '0';
+			}
+			y--;
+			if (x<0 || x >= boardsizew || y<0 || y >= boardsizeh) break;
+			send_command("yxblockundo\n");
+			sprintf(_command, "%d,%d\n", boardsizeh - 1 - y, x);
+			send_command(_command);
+			send_command("done\n");
+
+			boardblock[boardsizeh - 1 - y][x] = 0;
+			refresh_board();
+		} while (0);
+	}
+	else if (_strnicmp(command, "block compare", 13) == 0)
+	{
+		gchar _command[80];
+		int j;
+		send_command("yxblockreset\n");
+		memset(boardblock, 0, sizeof(boardblock));
+		for (i = 0; i < boardsizeh; i++)
+		{
+			for (j = 0; j < boardsizew; j++)
+			{
+				if (board[i][j] == 0)
+				{
+					boardblock[i][j] = 1;
+				}
+			}
+		}
+		i = 13;
+		while (command[i] == '\t' || command[i] == ' ') i++;
+		for (; command[i];)
+		{
+			int x, y;
+			if (command[i] >= 'a' && command[i] <= 'z') command[i] = command[i] - 'a' + 'A';
+			if (command[i] < 'A' || command[i] > 'Z') break;
+			x = command[i] - 'A';
+			i++;
+			y = command[i] - '0';
+			i++;
+			if (command[i] >= '0' && command[i] <= '9')
+			{
+				y = y * 10 + command[i] - '0';
+				i++;
+			}
+			y = y - 1;
+			if (x < 0 || x >= boardsizew || y < 0 || y >= boardsizeh) break;
+			boardblock[boardsizeh - 1 - y][x] = 0;
+		}
+		for (i = 0; i < boardsizeh; i++)
+		{
+			for (j = 0; j < boardsizew; j++)
+			{
+				if (boardblock[i][j] == 1)
+				{
+					send_command("yxblock\n");
+					sprintf(_command, "%d,%d\n", i, j);
+					send_command(_command);
+					send_command("done\n");
+				}
+			}
+		}
+		refresh_board();
+	}
+	else if (_strnicmp(command, "block", 5) == 0)
+	{
+		gchar _command[80];
+		i = 0;
+		do
+		{
+			int x, y;
+			if (command[6 + i] >= 'a' && command[6 + i] <= 'z') command[6 + i] = command[6 + i] - 'a' + 'A';
+			if (command[6 + i] < 'A' || command[6 + i] > 'Z') break;
+			x = command[6 + i] - 'A';
+			y = command[7 + i] - '0';
+			if (command[8 + i] >= '0' && command[8 + i] <= '9')
+			{
+				y = y * 10 + command[8 + i] - '0';
+				i++;
+			}
+			i += 2;
+
+			y--;
+			if (x<0 || x >= boardsizew || y<0 || y >= boardsizeh) break;
+			send_command("yxblock\n");
+			sprintf(_command, "%d,%d\n", boardsizeh - 1 - y, x);
+			send_command(_command);
+			send_command("done\n");
+
+			boardblock[boardsizeh - 1 - y][x] = 1;
+		} while (isalpha(command[6 + i]));
+		refresh_board();
+	}
+	else if (_strnicmp(command, "hash autoclear", 14) == 0)
+	{
+		if (strlen(command) >= 17)
+		{
+			if (command[16] == 'n' || command[16] == 'N')
+			{
+				hashautoclear = 1;
+			}
+			else
+			{
+				hashautoclear = 0;
+			}
+		}
+	}
+	else if (_strnicmp(command, "hash clear", 10) == 0)
+	{
+		send_command("yxhashclear\n");
+	}
+	else if (_strnicmp(command, "hash dump", 9) == 0)
+	{
+		send_command("yxhashdump\n");
+		gchar _command[80];
+		sprintf(_command, "%s", command + 9 + 1);
+		i = strlen(_command);
+		while (i > 0)
+		{
+			if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
+			{
+				_command[i - 1] = 0;
+				i--;
+			}
+			else
+				break;
+		}
+		_command[i] = '\n';
+		_command[i + 1] = 0;
+		send_command(_command);
+	}
+	else if (_strnicmp(command, "hash load", 9) == 0)
+	{
+		gchar _command[80];
+		send_command("yxhashload\n");
+		sprintf(_command, "%s", command + 9 + 1);
+		i = strlen(_command);
+		while (i > 0)
+		{
+			if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
+			{
+				_command[i - 1] = 0;
+				i--;
+			}
+			else
+				break;
+		}
+		_command[i] = '\n';
+		_command[i + 1] = 0;
+		send_command(_command);
+	}
+	else if (_strnicmp(command, "hash usage", 10) == 0)
+	{
+		send_command("yxshowhashusage\n");
+	}
+	else if (_strnicmp(command, "search from", 11) == 0)
+	{
+		gchar _command[80];
+		int depth = 1;
+		sscanf(command + 11 + 1, "%d", &depth);
+		sprintf(_command, "info start_depth %d\n", depth);
+		send_command(_command);
+	}
+	else if (_strnicmp(command, "toolbar edit", 12) == 0)
+	{
+		int n;
+		sscanf(command + 12 + 1, "%d", &n);
+		show_dialog_custom_toolbar(NULL, (gpointer)(n-1));
+	}
+	else if (_strnicmp(command, "toolbar add", 11) == 0)
+	{
+		int n;
+		if (toolbarnum < MAX_TOOLBAR_COMMAND_LEN)
+		{
+			toolbarnum++;
+			toolbarlng[toolbarnum - 1] = 92;
+			toolbaricon[toolbarnum - 1] = strdup("gtk-about");
+			strcpy(toolbarcommand[toolbarnum - 1], "\n");
+			show_dialog_custom_toolbar(NULL, (gpointer)(toolbarnum-1));
+		}
+	}
+	else if (_strnicmp(command, "toolbar remove", 14) == 0)
+	{
+		int n;
+#ifdef G_OS_WIN32
+		gchar *argv[] = { "Yixin.exe", NULL };
+#else
+		gchar *argv[] = { "./Yixin", NULL };
+#endif
+		if (toolbarnum > 0)
+		{
+			toolbarnum--;
+			save_setting();
+			g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+			yixin_quit();
+		}
+	}
+	else if (_strnicmp(command, "thinking start", 14) == 0)
+	{
+		start_thinking(windowmain, NULL);
+	}
+	else if (_strnicmp(command, "thinking stop", 13) == 0)
+	{
+		stop_thinking(windowmain, NULL);
+	}
+	else if (_strnicmp(command, "undo all", 8) == 0)
+	{
+		change_piece(windowmain, (gpointer)0);
+	}
+	else if (_strnicmp(command, "undo one", 8) == 0)
+	{
+		change_piece(windowmain, (gpointer)1);
+	}
+	else if (_strnicmp(command, "redo one", 8) == 0)
+	{
+		change_piece(windowmain, (gpointer)2);
+	}
+	else if (_strnicmp(command, "redo all", 8) == 0)
+	{
+		change_piece(windowmain, (gpointer)3);
+	}
+	else if (_strnicmp(command, "bestline", 8) == 0)
+	{
+		printf_log("BESTLINE: %s ", bestline);
+		printf_log("VAL: %d\n", bestval);
+	}
+	else if (_strnicmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
+	{
+		gchar _command[80];
+		int s;
+		int t;
+		t = command[7] - '0';
+		if (sscanf(command + 8, "%d", &s) != 1) s = 0;
+		sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
+		send_command(_command);
+		sprintf(_command, "yxboard\n");
+		send_command(_command);
+		for (i = 0; i<piecenum; i++)
+		{
+			sprintf(_command, "%d,%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+			send_command(_command);
+		}
+		sprintf(_command, "done\n");
+		send_command(_command);
+		sprintf(_command, "yxbalance%s %d\n", t == 1 ? "one" : "two", s);
+		send_command(_command);
+	}
+	else if (_strnicmp(command, "nbest", 5) == 0)
+	{
+		gchar _command[80];
+		int s;
+		if (sscanf(command + 5, "%d", &s) != 1) s = 2;
+		sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
+		send_command(_command);
+		sprintf(_command, "yxboard\n");
+		send_command(_command);
+		for (i = 0; i<piecenum; i++)
+		{
+			sprintf(_command, "%d,%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+			send_command(_command);
+		}
+		sprintf(_command, "done\n");
+		send_command(_command);
+		sprintf(_command, "yxnbest %d\n", s);
+		send_command(_command);
+	}
+	else if (_strnicmp(command, "makebook", 8) == 0)
+	{
+		; //TODO
+	}
+	else
+	{
+		if (language)
+		{
+			printf_log(clanguage[58]);
+		}
+		else
+		{
+			printf_log("To get help, type help and press Enter");
+		}
+		printf_log("\n");
+	}
+}
+
+gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
+{
+	GtkTextIter start, end;
+	gchar *command;
+
+	if(event->keyval == 0xff0d) // warning: 0xff0d == GDK_KEY_Return
+	{
+		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextcommand), &start, &end);
+		command = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(buffertextcommand), &start, &end, FALSE);
+		
+		execute_command(command);
+
 		gtk_text_buffer_delete(buffertextcommand, &start, &end);
 		g_free(command);
 	}
@@ -2916,6 +3270,9 @@ gboolean key_command(GtkWidget *widget, GdkEventKey *event, gpointer data)
 void save_setting()
 {
 	FILE *out;
+	int i;
+	char s[80];
+
 	if((out = fopen("settings.txt", "w")) != NULL)
 	{
 		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
@@ -2943,7 +3300,20 @@ void save_setting()
 		fprintf(out, "%d\t;pondering (0: off, 1: on)\n", infopondering);
 		fprintf(out, "%d\t;chekmate (0: normal, 1: vct search only, 2: vc2 search only)\n", infocheckmate);
 		fprintf(out, "%d\t;hash autoclear (0: no, 1: yes)\n", hashautoclear);
+		fprintf(out, "%d\t;toolbar postion (0: left, 1: right)\n", toolbarpos);
+		fprintf(out, "%d\t;toolbar item number (<=32)\n", toolbarnum);
 		fclose(out);
+	}
+	for (i = 0; i < toolbarnum; i++)
+	{
+		sprintf(s, "function/toolbar%d.txt", i+1);
+		if ((out = fopen(s, "w")) != NULL)
+		{
+			fprintf(out, "%d\n", toolbarlng[i]);
+			fprintf(out, "%s\n", toolbaricon[i]);
+			fprintf(out, "%s\n", toolbarcommand[i]);
+			fclose(out);
+		}
 	}
 }
 
@@ -3002,6 +3372,43 @@ GdkPixbuf * copy_subpixbuf(GdkPixbuf *_src, int src_x, int src_y, int width, int
 	src = NULL;
 	return dst;
 }
+
+gboolean key_press(GtkWidget *widget, GdkEventKey  *event, gpointer data)
+{
+	if (event->state & GDK_CONTROL_MASK)
+	{
+		switch (event->keyval)
+		{
+		case GDK_Up:
+			change_piece(windowmain, (gpointer)0);
+			return TRUE;
+		case GDK_Down:
+			change_piece(windowmain, (gpointer)3);
+			return TRUE;
+		case GDK_Left:
+			change_piece(windowmain, (gpointer)1);
+			return TRUE;
+		case GDK_Right:
+			change_piece(windowmain, (gpointer)2);
+			return TRUE;
+		}
+	}
+	else
+	{
+		switch (event->keyval)
+		{
+		case GDK_Escape:
+			stop_thinking(windowmain, NULL);
+			return TRUE;
+		case GDK_F11:
+			start_thinking(windowmain, NULL);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 void create_windowmain()
 {
 	GtkWidget *menubar, *menugame, *menuplayers, *menuview, *menuhelp, *menurule, *menulanguage;
@@ -3014,10 +3421,7 @@ void create_windowmain()
 	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis;
 	GtkWidget *menuitemabout;
 
-	GtkWidget *toolbar;
-	GtkToolItem *toolgofirst, *toolgoback, *toolgoforward, *toolgolast, *toolstop, *toolplay;
-
-	GtkAccelGroup *accelgroup;
+	GtkToolItem *tools[MAX_TOOLBAR_ITEM];
 
 	GtkWidget *textcommand;
 
@@ -3462,48 +3866,24 @@ void create_windowmain()
 		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_ICONS);
 	else
 		gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH);
-	gtk_toolbar_set_orientation((GtkToolbar*)toolbar, GTK_ORIENTATION_VERTICAL);
-	toolgofirst = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_FIRST);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgofirst), language==0 ? "Undo All": _T(clanguage[48]));
-	toolgoback = gtk_tool_button_new_from_stock(GTK_STOCK_GO_BACK);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoback), language==0 ? "Undo": _T(clanguage[46]));
-	toolgoforward = gtk_tool_button_new_from_stock(GTK_STOCK_GO_FORWARD);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgoforward), language==0 ? "Redo": _T(clanguage[47]));
-	toolgolast = gtk_tool_button_new_from_stock(GTK_STOCK_GOTO_LAST);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolgolast), language==0 ? "Redo All": _T(clanguage[49]));
-	toolstop = gtk_tool_button_new_from_stock(GTK_STOCK_STOP);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolstop), language==0 ? "Stop": _T(clanguage[45]));
-	toolplay = gtk_tool_button_new_from_stock(GTK_STOCK_EXECUTE);
-	gtk_tool_button_set_label(GTK_TOOL_BUTTON(toolplay), language==0 ? "Play": _T(clanguage[44]));
+	if(toolbarpos)
+		gtk_toolbar_set_orientation((GtkToolbar*)toolbar, GTK_ORIENTATION_HORIZONTAL);
+	else
+		gtk_toolbar_set_orientation((GtkToolbar*)toolbar, GTK_ORIENTATION_VERTICAL);
 
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgofirst, -1);
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgoback, -1);
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgoforward, -1);
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolgolast, -1);
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolstop, -1);
-	gtk_toolbar_insert(GTK_TOOLBAR(toolbar), toolplay, -1);
-
-	g_signal_connect(G_OBJECT(toolgofirst), "clicked", G_CALLBACK(change_piece), (gpointer)0);
-	g_signal_connect(G_OBJECT(toolgoback), "clicked", G_CALLBACK(change_piece), (gpointer)1);
-	g_signal_connect(G_OBJECT(toolgoforward), "clicked", G_CALLBACK(change_piece), (gpointer)2);
-	g_signal_connect(G_OBJECT(toolgolast), "clicked", G_CALLBACK(change_piece), (gpointer)3);
-	g_signal_connect(G_OBJECT(toolstop), "clicked", G_CALLBACK(stop_thinking), NULL);
-	g_signal_connect(G_OBJECT(toolplay), "clicked", G_CALLBACK(start_thinking), NULL);
-
-	accelgroup = gtk_accel_group_new();
-	gtk_window_add_accel_group(GTK_WINDOW(windowmain), accelgroup);
-	gtk_widget_add_accelerator(GTK_WIDGET(toolgofirst), "clicked", accelgroup, GDK_Up, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(GTK_WIDGET(toolgolast), "clicked", accelgroup, GDK_Down, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(GTK_WIDGET(toolgoback), "clicked", accelgroup, GDK_Left, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(GTK_WIDGET(toolgoforward), "clicked", accelgroup, GDK_Right, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(GTK_WIDGET(toolstop), "clicked", accelgroup, GDK_Escape, 0, GTK_ACCEL_VISIBLE);
-	gtk_widget_add_accelerator(GTK_WIDGET(toolplay), "clicked", accelgroup, GDK_F11, 0, GTK_ACCEL_VISIBLE);
+	for (i = 0; i < toolbarnum; i++)
+	{
+		tools[i] = gtk_tool_button_new_from_stock(toolbaricon[i]);
+		gtk_tool_button_set_label(GTK_TOOL_BUTTON(tools[i]), _T(clanguage[toolbarlng[i]]));
+		gtk_toolbar_insert(GTK_TOOLBAR(toolbar), tools[i], -1);
+		g_signal_connect(G_OBJECT(tools[i]), "clicked", G_CALLBACK(toolbar_function), (gpointer)i);
+	}
 
 	textlog = gtk_text_view_new();
 	buffertextlog = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textlog));
 	scrolledtextlog = gtk_scrolled_window_new(NULL, NULL);
 	gtk_container_add(GTK_CONTAINER(scrolledtextlog), textlog);
-	gtk_widget_set_size_request(scrolledtextlog, 400, max(0,size*boardsizeh-50));
+	gtk_widget_set_size_request(scrolledtextlog, 400, max(0, size*boardsizeh - 50 - (toolbarpos == 1 ? 50 : 0)));
 
 	textcommand = gtk_text_view_new();
 	buffertextcommand = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textcommand));
@@ -3514,11 +3894,14 @@ void create_windowmain()
 	g_signal_connect(textcommand, "key-release-event", G_CALLBACK(key_command), NULL);
 
 	vbox[0] = gtk_vbox_new(FALSE, 0);
+	if (toolbarpos == 1)
+		gtk_box_pack_start(GTK_BOX(vbox[0]), toolbar, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox[0]), scrolledtextlog, TRUE, TRUE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox[0]), scrolledtextcommand, FALSE, FALSE, 3);
 
 	hbox[0] = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox[0]), toolbar, FALSE, FALSE, 3);
+	if (toolbarpos == 0)
+		gtk_box_pack_start(GTK_BOX(hbox[0]), toolbar, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[0]), tableboard, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[0]), vbox[0], FALSE, FALSE, 3);
 
@@ -3529,12 +3912,18 @@ void create_windowmain()
 	//gtk_box_pack_start(GTK_BOX(vboxwindowmain), tableboard, FALSE, FALSE, 3);
 
 	gtk_container_add(GTK_CONTAINER(windowmain), vboxwindowmain);
+
+	g_signal_connect(G_OBJECT(windowmain), "key-press-event", G_CALLBACK(key_press), NULL);
+
 	gtk_widget_show_all(windowmain);
+	
+	//gtk_widget_hide(toolbar_acc);
 
 	if(!showlog)
 	{
 		gtk_widget_hide(scrolledtextlog);
 		gtk_widget_hide(scrolledtextcommand);
+		gtk_widget_hide(toolbar);
 	}
 }
 
@@ -3802,6 +4191,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 	FILE *in;
 	char s[1024];
 	int t;
+	int i;
+
 	if((in = fopen("settings.txt", "r")) != NULL)
 	{
 		boardsizeh = read_int_from_file(in);
@@ -3881,7 +4272,33 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (infocheckmate < 0 || infocheckmate > 2) infocheckmate = 0;
 		hashautoclear = read_int_from_file(in);
 		if (hashautoclear < 0 || hashautoclear > 1) hashautoclear = 0;
+		toolbarpos = read_int_from_file(in);
+		if (toolbarpos < 0 || toolbarpos > 1) toolbarpos = 1;
+		toolbarnum = read_int_from_file(in);
+		if (toolbarnum < 0 || toolbarnum > MAX_TOOLBAR_ITEM) toolbarnum = 6;
 		fclose(in);
+	}
+	for (i = 0; i < toolbarnum; i++)
+	{
+		sprintf(s, "function/toolbar%d.txt", i+1);
+		if ((in = fopen(s, "r")) != NULL)
+		{
+			int j = 0;
+			char icon[80];
+			fscanf(in, "%d", &toolbarlng[i]);
+			fscanf(in, "%s", &icon);
+			toolbaricon[i] = strdup(icon);
+
+			while (fgets(toolbarcommand[i] + j, MAX_TOOLBAR_COMMAND_LEN, in))
+			{
+				j += strlen(toolbarcommand[i] + j);
+				while (j > 0 && (toolbarcommand[i][j - 1] == '\n' || toolbarcommand[i][j - 1] == '\r')) j--;
+				toolbarcommand[i][j] = '\n';
+				j++;
+				toolbarcommand[i][j] = 0;
+			}
+			fclose(in);
+		}
 	}
 	sprintf(s, "piece_%d.bmp", max(boardsizeh, boardsizew));
 	if((in = fopen(s, "rb")) != NULL)
@@ -3892,36 +4309,32 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 	piecenum = 0;
 	memset(movepath, -1, sizeof(movepath));
 
-	if (language != 0)
-	{
-		int i;
-		clanguage = (char *)malloc(1024 * sizeof(char*));
-		for (i = 0; i < 1024; i++) clanguage[i] = NULL;
+	clanguage = (char *)malloc(1024 * sizeof(char*));
+	for (i = 0; i < 1024; i++) clanguage[i] = NULL;
 
-		sprintf(s, "language\\%d.lng", language);
-		if ((in = fopen(s, "r")) != NULL)
+	sprintf(s, "language\\%d.lng", language);
+	if ((in = fopen(s, "r")) != NULL)
+	{
+		while (fgets(s, sizeof(s), in))
 		{
-			while (fgets(s, sizeof(s), in))
+			int l = strlen(s);
+			int p;
+			while (l > 0 && (s[l - 1] == '\n' || s[l - 1] == '\r'))
 			{
-				int l = strlen(s);
-				int p;
-				while (l > 0 && (s[l - 1] == '\n' || s[l - 1] == '\r'))
-				{
-					s[l - 1] = 0;
-					l--;
-				}
-				if (l == 0) continue;
-				if (s[0] == ';') continue;
-				sscanf(s, "%d", &p);
-				for (i = 0; i < l && s[i] != '='; i++);
-				clanguage[p] = strdup(s + i + 1);
+				s[l - 1] = 0;
+				l--;
 			}
-			fclose(in);
+			if (l == 0) continue;
+			if (s[0] == ';') continue;
+			sscanf(s, "%d", &p);
+			for (i = 0; i < l && s[i] != '='; i++);
+			clanguage[p] = strdup(s + i + 1);
 		}
-		else
-		{
-			language = 0;
-		}
+		fclose(in);
+	}
+	else
+	{
+		language = 0;
 	}
 }
 void load_engine()

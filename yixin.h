@@ -14,7 +14,7 @@ void new_game(GtkWidget *widget, gpointer data);
 void change_rule(GtkWidget *widget, gpointer data);
 void change_side(GtkWidget *widget, gpointer data);
 void change_side_menu(int flag, GtkWidget *w);
-void change_size(GtkWidget *widget, gpointer data);
+void execute_command(gchar *command);
 void change_piece(GtkWidget *widget, gpointer data);
 void stop_thinking(GtkWidget *widget, gpointer data);
 GdkPixbuf * copy_subpixbuf(GdkPixbuf *_src, int src_x, int src_y, int width, int height);
@@ -28,4 +28,4 @@ void init_engine();
 void yixin_quit();
 #define max(x, y) ((x)>(y)?(x):(y))
 #define min(x, y) ((x)<(y)?(x):(y))
-#define VERSION "1.7"
+#define VERSION "1.8"
