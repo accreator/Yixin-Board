@@ -2060,6 +2060,7 @@ void show_dialog_custom_toolbar(GtkWidget *widget, gpointer data)
 	GSList *p;
 	gint result;
 	const gchar *ptext;
+	GtkTextIter start, end;
 
 	int cnt;
 	int i;
@@ -2156,6 +2157,9 @@ void show_dialog_custom_toolbar(GtkWidget *widget, gpointer data)
 	gtk_container_add(GTK_CONTAINER(scrolledcommand), textcommand);
 	gtk_widget_set_size_request(scrolledcommand, 200, 200);
 
+	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffercommand), &start, &end);
+	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buffercommand), &end, toolbarcommand[(int)data], strlen(toolbarcommand[(int)data]));
+
 	table = gtk_table_new(4, 2, FALSE);
 	gtk_table_set_row_spacings(GTK_TABLE(table), 0); /* set the row distance between elements to be 0 */
 	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
@@ -2176,7 +2180,6 @@ void show_dialog_custom_toolbar(GtkWidget *widget, gpointer data)
 	{
 	case 1:
 	{
-		GtkTextIter start, end;
 		gchar *command;
 #ifdef G_OS_WIN32
 		gchar *argv[] = { "Yixin.exe", NULL };
@@ -2569,6 +2572,8 @@ void execute_command(gchar *command)
 		printf_log(" redo all\n");
 		printf_log(" command [on,off]\n");
 		printf_log(" hash usage\n");
+		//printf_log(" sleep [second]\n");
+		//printf_log("   %s: sleep 5\n", language ? clanguage[51] : "Example");
 		printf_log("\n");
 	}
 	else if (_strnicmp(command, "clear", 5) == 0)
@@ -3184,6 +3189,14 @@ void execute_command(gchar *command)
 	{
 		change_piece(windowmain, (gpointer)3);
 	}
+	/*
+	else if (_strnicmp(command, "sleep", 5) == 0)
+	{
+		int n;
+		sscanf(command + 5 + 1, "%d", &n);
+		//TODO
+	}
+	*/
 	else if (_strnicmp(command, "bestline", 8) == 0)
 	{
 		printf_log("BESTLINE: %s ", bestline);
