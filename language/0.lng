@@ -44,8 +44,8 @@
 41=Hash Size
 42=Board Height (10 ~ 24):
 43=Board Width (10 ~ 24):
-44=Start thinking
-45=Stop thinking
+44=Play
+45=Stop
 46=Undo
 47=Redo
 48=Undo All
@@ -92,3 +92,4 @@
 90=Text:
 91=Command:
 92=New Item
+93=Hotkey:

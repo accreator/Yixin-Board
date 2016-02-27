@@ -15,6 +15,8 @@ typedef long long I64;
 #define MAX_SPLIT_DEPTH 20
 #define MAX_TOOLBAR_ITEM 32
 #define MAX_TOOLBAR_COMMAND_LEN 2048
+#define MAX_HOTKEY_ITEM 32
+#define MAX_HOTKEY_COMMAND_LEN 2048
 
 typedef struct
 {
@@ -92,7 +94,9 @@ GtkWidget *textlog;
 GtkTextBuffer *buffertextlog, *buffertextcommand;
 GtkWidget *scrolledtextlog, *scrolledtextcommand;
 GtkWidget *toolbar;
+
 int toolbarnum = 6;
+
 int toolbarlng[MAX_TOOLBAR_ITEM] =
 {
 	48,
@@ -102,6 +106,7 @@ int toolbarlng[MAX_TOOLBAR_ITEM] =
 	45,
 	44
 };
+
 char *toolbaricon[MAX_TOOLBAR_ITEM] =
 {
 	GTK_STOCK_GOTO_FIRST,
@@ -111,6 +116,7 @@ char *toolbaricon[MAX_TOOLBAR_ITEM] =
 	GTK_STOCK_STOP,
 	GTK_STOCK_EXECUTE
 };
+
 char toolbarcommand[MAX_TOOLBAR_ITEM][MAX_TOOLBAR_COMMAND_LEN] =
 {
 	"undo all\n",
@@ -119,6 +125,71 @@ char toolbarcommand[MAX_TOOLBAR_ITEM][MAX_TOOLBAR_COMMAND_LEN] =
 	"redo all\n",
 	"thinking stop\n",
 	"thinking start\n"
+};
+
+int hotkeynum = 6;
+
+int hotkeykey[MAX_HOTKEY_ITEM] =
+{
+	13,
+	14,
+	15,
+	16,
+	27,
+	11
+};
+
+char hotkeycommand[MAX_HOTKEY_ITEM][MAX_HOTKEY_COMMAND_LEN] =
+{
+	"undo all\n",
+	"redo all\n",
+	"undo one\n",
+	"redo one\n",
+	"thinking stop\n",
+	"thinking start\n"
+};
+
+char *hotkeynamelis[] = {
+	"",
+	"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+	"Ctrl + Up", "Ctrl + Down", "Ctrl + Left", "Ctrl + Right",
+	"Ctrl + 1", "Ctrl + 2", "Ctrl + 3", "Ctrl + 4", "Ctrl + 5", "Ctrl + 6", "Ctrl + 7", "Ctrl + 8", "Ctrl + 9", "Ctrl + 0",
+	"Escape", NULL
+};
+
+int hotkeykeylis[][2] =
+{
+	{ 0, 0 }, //0
+	{ 0, GDK_F1 }, //1
+	{ 0, GDK_F2 }, //2
+	{ 0, GDK_F3 }, //3
+	{ 0, GDK_F4 }, //4
+	{ 0, GDK_F5 }, //5
+	{ 0, GDK_F6 }, //6
+	{ 0, GDK_F7 }, //7
+	{ 0, GDK_F8 }, //8
+	{ 0, GDK_F9 }, //9
+	{ 0, GDK_F10 }, //10
+	{ 0, GDK_F11 }, //11
+	{ 0, GDK_F12 }, //12
+
+	{ GDK_CONTROL_MASK, GDK_Up }, //13
+	{ GDK_CONTROL_MASK, GDK_Down }, //14
+	{ GDK_CONTROL_MASK, GDK_Left }, //15
+	{ GDK_CONTROL_MASK, GDK_Right }, //16
+
+	{ GDK_CONTROL_MASK, GDK_1 }, //17
+	{ GDK_CONTROL_MASK, GDK_2 }, //18
+	{ GDK_CONTROL_MASK, GDK_3 }, //19
+	{ GDK_CONTROL_MASK, GDK_4 }, //20
+	{ GDK_CONTROL_MASK, GDK_5 }, //21
+	{ GDK_CONTROL_MASK, GDK_6 }, //22
+	{ GDK_CONTROL_MASK, GDK_7 }, //23
+	{ GDK_CONTROL_MASK, GDK_8 }, //24
+	{ GDK_CONTROL_MASK, GDK_9 }, //25
+	{ GDK_CONTROL_MASK, GDK_0 }, //26
+
+	{ 0, GDK_Escape } //27
 };
 
 char * _T(char *s)
@@ -2263,6 +2334,77 @@ void show_dialog_custom_toolbar(GtkWidget *widget, gpointer data)
 	gtk_widget_destroy(dialog);
 }
 
+void show_dialog_custom_hotkey(GtkWidget *widget, gpointer data)
+{
+	GtkWidget *dialog;
+	GtkWidget *label[2];
+	GtkWidget *table;
+	GtkWidget *combo;
+	GtkTextBuffer *buffercommand;
+	GtkWidget *scrolledcommand;
+	GtkWidget *textcommand;
+	gchar text[80];
+	gint result;
+	const gchar *ptext;
+	GtkTextIter start, end;
+	
+	int i;
+
+	dialog = gtk_dialog_new_with_buttons("Custom Hotkey", windowmain, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "OK", 1, "Cancel", 2, NULL);
+	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
+	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+
+	combo = gtk_combo_box_new_text();
+	for (i = 0; hotkeynamelis[i] != NULL; i++)
+	{
+		gtk_combo_box_append_text(GTK_COMBO_BOX(combo), hotkeynamelis[i]);
+	}
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), hotkeykey[(int)data]);
+
+	label[0] = gtk_label_new(language == 0 ? "Hotkey:" : _T(clanguage[93]));
+	label[1] = gtk_label_new(language == 0 ? "Command:" : _T(clanguage[91]));
+
+	textcommand = gtk_text_view_new();
+	buffercommand = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textcommand));
+	scrolledcommand = gtk_scrolled_window_new(NULL, NULL);
+	gtk_container_add(GTK_CONTAINER(scrolledcommand), textcommand);
+	gtk_widget_set_size_request(scrolledcommand, 200, 200);
+
+	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffercommand), &start, &end);
+	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buffercommand), &end, hotkeycommand[(int)data], strlen(hotkeycommand[(int)data]));
+
+	table = gtk_table_new(4, 2, FALSE);
+	gtk_table_set_row_spacings(GTK_TABLE(table), 0); /* set the row distance between elements to be 0 */
+	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
+
+	gtk_table_attach_defaults(GTK_TABLE(table), label[0], 0, 1, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(table), combo, 1, 2, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(table), label[1], 0, 1, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(table), scrolledcommand, 0, 2, 2, 3);
+
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
+	gtk_widget_show_all(dialog);
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+
+	switch (result)
+	{
+	case 1:
+	{
+		gchar *command;
+
+		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffercommand), &start, &end);
+		command = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(buffercommand), &start, &end, FALSE);
+		strcpy(hotkeycommand[(int)data], command);
+		hotkeykey[(int)data] = gtk_combo_box_get_active(combo);
+	}
+	case 2:
+		break;
+	}
+
+	gtk_widget_destroy(dialog);
+}
+
 void show_dialog_about(GtkWidget *widget, gpointer data)
 {
 	GtkWidget *dialog;
@@ -2464,10 +2606,9 @@ void start_thinking(GtkWidget *widget, gpointer data)
 		change_side_menu(-2, NULL);
 }
 
-void toolbar_function(GtkWidget *widget, gpointer data)
+void custom_function(char *command)
 {
 	int l = 0, r;
-	char *command = toolbarcommand[(int)data];
 	while (command[l])
 	{
 		char t;
@@ -2478,13 +2619,23 @@ void toolbar_function(GtkWidget *widget, gpointer data)
 		}
 		r = l + 1;
 		while (command[r] && command[r] != '\n') r++;
-		
-		t = command[r+1];
-		command[r+1] = 0;
+
+		t = command[r + 1];
+		command[r + 1] = 0;
 		execute_command(command + l);
-		command[r+1] = t;
+		command[r + 1] = t;
 		l = r;
 	}
+}
+
+void hotkey_function(GtkWidget *widget, gpointer data)
+{
+	custom_function(hotkeycommand[(int)data]);
+}
+
+void toolbar_function(GtkWidget *widget, gpointer data)
+{
+	custom_function(toolbarcommand[(int)data]);
 }
 
 void execute_command(gchar *command)
@@ -2503,16 +2654,6 @@ void execute_command(gchar *command)
 		printf_log(command);
 		send_command(command);
 	}
-	else if (_strnicmp(command, "help key", 8) == 0)
-	{
-		printf_log(" F11\n  %s\n", language ? clanguage[44] : "Start thinking");
-		printf_log(" Esc\n  %s\n", language ? clanguage[45] : "Stop thinking");
-		printf_log(" Ctrl+Left\n  %s\n", language ? clanguage[46] : "Undo");
-		printf_log(" Ctrl+Right\n  %s\n", language ? clanguage[47] : "Redo");
-		printf_log(" Ctrl+Up\n  %s\n", language ? clanguage[48] : "Undo all");
-		printf_log(" Ctrl+Down\n  %s\n", language ? clanguage[49] : "Redo all");
-		printf_log("\n");
-	}
 	else if (_strnicmp(command, "help", 4) == 0)
 	{
 		if (language)
@@ -2525,7 +2666,6 @@ void execute_command(gchar *command)
 		}
 		printf_log("\n");
 		printf_log(" help\n");
-		printf_log(" help key\n");
 		printf_log(" clear\n");
 		printf_log(" rotate [90,180,270]\n");
 		printf_log(" flip [/,\\,-,|]\n");
@@ -2564,6 +2704,10 @@ void execute_command(gchar *command)
 		printf_log(" toolbar edit [1,2,...]\n");
 		printf_log(" toolbar add\n");
 		printf_log(" toolbar remove\n");
+		printf_log(" key edit [1,2,...]\n");
+		printf_log(" key add\n");
+		printf_log(" key remove\n");
+		printf_log(" key list\n");
 		printf_log(" thinking start\n");
 		printf_log(" thinking stop\n");
 		printf_log(" undo one\n");
@@ -3081,7 +3225,6 @@ void execute_command(gchar *command)
 	}
 	else if (_strnicmp(command, "hash dump", 9) == 0)
 	{
-		send_command("yxhashdump\n");
 		gchar _command[80];
 		sprintf(_command, "%s", command + 9 + 1);
 		i = strlen(_command);
@@ -3097,12 +3240,15 @@ void execute_command(gchar *command)
 		}
 		_command[i] = '\n';
 		_command[i + 1] = 0;
-		send_command(_command);
+		if (i > 0)
+		{
+			send_command("yxhashdump\n");
+			send_command(_command);
+		}
 	}
 	else if (_strnicmp(command, "hash load", 9) == 0)
 	{
 		gchar _command[80];
-		send_command("yxhashload\n");
 		sprintf(_command, "%s", command + 9 + 1);
 		i = strlen(_command);
 		while (i > 0)
@@ -3117,7 +3263,11 @@ void execute_command(gchar *command)
 		}
 		_command[i] = '\n';
 		_command[i + 1] = 0;
-		send_command(_command);
+		if (i > 0)
+		{
+			send_command("yxhashload\n");
+			send_command(_command);
+		}
 	}
 	else if (_strnicmp(command, "hash usage", 10) == 0)
 	{
@@ -3131,16 +3281,52 @@ void execute_command(gchar *command)
 		sprintf(_command, "info start_depth %d\n", depth);
 		send_command(_command);
 	}
+	else if (_strnicmp(command, "key list", 8) == 0)
+	{
+		for (i = 0; i < hotkeynum; i++)
+		{
+			printf_log("%d. %s\n", i + 1, hotkeynamelis[hotkeykey[i]]);
+		}
+		printf_log("\n");
+	}
+	else if (_strnicmp(command, "key edit", 8) == 0)
+	{
+		int n;
+		if (sscanf(command + 8 + 1, "%d", &n) != EOF)
+		{
+			show_dialog_custom_hotkey(NULL, (gpointer)(n - 1));
+		}
+	}
+	else if (_strnicmp(command, "key add", 7) == 0)
+	{
+		int n;
+		if (hotkeynum < MAX_HOTKEY_ITEM)
+		{
+			hotkeynum++;
+			strcpy(hotkeycommand[hotkeynum - 1], "\n");
+			hotkeykey[hotkeynum - 1] = 0;
+			show_dialog_custom_hotkey(NULL, (gpointer)(hotkeynum - 1));
+		}
+	}
+	else if (_strnicmp(command, "key remove", 10) == 0)
+	{
+		if (hotkeynum > 0)
+		{
+			hotkeynum--;
+		}
+	}
 	else if (_strnicmp(command, "toolbar edit", 12) == 0)
 	{
 		int n;
-		sscanf(command + 12 + 1, "%d", &n);
-		show_dialog_custom_toolbar(NULL, (gpointer)(n-1));
+		if (sscanf(command + 12 + 1, "%d", &n) != EOF)
+		{
+			show_dialog_custom_toolbar(NULL, (gpointer)(n - 1));
+		}
 	}
 	else if (_strnicmp(command, "toolbar add", 11) == 0)
 	{
 		int n;
-		if (toolbarnum < MAX_TOOLBAR_COMMAND_LEN)
+		if (toolbarnum < MAX_TOOLBAR_ITEM)
 		{
 			toolbarnum++;
 			toolbarlng[toolbarnum - 1] = 92;
@@ -3315,6 +3501,7 @@ void save_setting()
 		fprintf(out, "%d\t;hash autoclear (0: no, 1: yes)\n", hashautoclear);
 		fprintf(out, "%d\t;toolbar postion (0: left, 1: right)\n", toolbarpos);
 		fprintf(out, "%d\t;toolbar item number (<=32)\n", toolbarnum);
+		fprintf(out, "%d\t;hotkey number (<=32)\n", hotkeynum);
 		fclose(out);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -3325,6 +3512,16 @@ void save_setting()
 			fprintf(out, "%d\n", toolbarlng[i]);
 			fprintf(out, "%s\n", toolbaricon[i]);
 			fprintf(out, "%s\n", toolbarcommand[i]);
+			fclose(out);
+		}
+	}
+	for (i = 0; i < hotkeynum; i++)
+	{
+		sprintf(s, "function/hotkey%d.txt", i + 1);
+		if ((out = fopen(s, "w")) != NULL)
+		{
+			fprintf(out, "%d\n", hotkeykey[i]);
+			fprintf(out, "%s\n", hotkeycommand[i]);
 			fclose(out);
 		}
 	}
@@ -3388,34 +3585,33 @@ GdkPixbuf * copy_subpixbuf(GdkPixbuf *_src, int src_x, int src_y, int width, int
 
 gboolean key_press(GtkWidget *widget, GdkEventKey  *event, gpointer data)
 {
+	int i;
 	if (event->state & GDK_CONTROL_MASK)
 	{
-		switch (event->keyval)
+		for (i = 0; i < hotkeynum; i++)
 		{
-		case GDK_Up:
-			change_piece(windowmain, (gpointer)0);
-			return TRUE;
-		case GDK_Down:
-			change_piece(windowmain, (gpointer)3);
-			return TRUE;
-		case GDK_Left:
-			change_piece(windowmain, (gpointer)1);
-			return TRUE;
-		case GDK_Right:
-			change_piece(windowmain, (gpointer)2);
-			return TRUE;
+			if (hotkeykeylis[hotkeykey[i]][0] & GDK_CONTROL_MASK)
+			{
+				if (event->keyval == hotkeykeylis[hotkeykey[i]][1])
+				{
+					hotkey_function(widget, (gpointer)i);
+					return TRUE;
+				}
+			}
 		}
 	}
 	else
 	{
-		switch (event->keyval)
+		for (i = 0; i < hotkeynum; i++)
 		{
-		case GDK_Escape:
-			stop_thinking(windowmain, NULL);
-			return TRUE;
-		case GDK_F11:
-			start_thinking(windowmain, NULL);
-			return TRUE;
+			if (!(hotkeykeylis[hotkeykey[i]][0] & GDK_CONTROL_MASK))
+			{
+				if (event->keyval == hotkeykeylis[hotkeykey[i]][1])
+				{
+					hotkey_function(widget, (gpointer)i);
+					return TRUE;
+				}
+			}
 		}
 	}
 
@@ -4289,6 +4485,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (toolbarpos < 0 || toolbarpos > 1) toolbarpos = 1;
 		toolbarnum = read_int_from_file(in);
 		if (toolbarnum < 0 || toolbarnum > MAX_TOOLBAR_ITEM) toolbarnum = 6;
+		hotkeynum = read_int_from_file(in);
+		if (hotkeynum < 0 || hotkeynum > MAX_HOTKEY_ITEM) hotkeynum = 6;
 		fclose(in);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -4309,6 +4507,26 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 				toolbarcommand[i][j] = '\n';
 				j++;
 				toolbarcommand[i][j] = 0;
+			}
+			fclose(in);
+		}
+	}
+	for (i = 0; i < hotkeynum; i++)
+	{
+		sprintf(s, "function/hotkey%d.txt", i + 1);
+		if ((in = fopen(s, "r")) != NULL)
+		{
+			int j = 0;
+			char icon[80];
+			fscanf(in, "%d", &hotkeykey[i]);
+
+			while (fgets(hotkeycommand[i] + j, MAX_HOTKEY_COMMAND_LEN, in))
+			{
+				j += strlen(hotkeycommand[i] + j);
+				while (j > 0 && (hotkeycommand[i][j - 1] == '\n' || hotkeycommand[i][j - 1] == '\r')) j--;
+				hotkeycommand[i][j] = '\n';
+				j++;
+				hotkeycommand[i][j] = 0;
 			}
 			fclose(in);
 		}
