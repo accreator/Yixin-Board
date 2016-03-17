@@ -1917,6 +1917,11 @@ void show_dialog_load(GtkWidget *widget, gpointer data)
 	gtk_file_filter_add_pattern(filter, "*.[Pp][Oo][Ss]");
 	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
 
+	filter = gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "Piskvork saved positions");
+	gtk_file_filter_add_pattern(filter, "*.[Pp][Ss][Qq]");
+	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+
 	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_MOUSE);
 	if(gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
 	{
@@ -1978,6 +1983,27 @@ void show_dialog_load(GtkWidget *widget, gpointer data)
 					int x, y;
 					fscanf(in, "%d %d", &x, &y);
 					make_move(x, y);
+				}
+				fclose(in);
+				show_forbid();
+			}
+		}
+		else if ((filename[nl - 3] == 'P' || filename[nl - 3] == 'p') &&
+			(filename[nl - 2] == 'S' || filename[nl - 2] == 's') &&
+			(filename[nl - 1] == 'Q' || filename[nl - 1] == 'q'))
+		{
+			if ((in = fopen(filename, "r")) != NULL)
+			{
+				int x, y;
+				new_game(NULL, NULL);
+				fscanf(in, "%*[^\n]"); //TODO: use boardsizeh, boardsizew, etc.?
+
+				fscanf(in, "%d", &x);
+				while(x != -1)
+				{
+					fscanf(in, ",%d,%*d", &y);
+					make_move(y-1, x-1);
+					if (fscanf(in, "%d", &x) == EOF) break;
 				}
 				fclose(in);
 				show_forbid();
