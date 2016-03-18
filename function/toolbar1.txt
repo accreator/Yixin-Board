@@ -1,0 +1,5 @@
+48
+gtk-goto-first
+
+undo all
+
