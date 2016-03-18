@@ -17,3 +17,4 @@ gtkrc*
 *~
 !/release/win32/*.exe
 !/skin/*.bmp
+!/default_settings/*.txt
