@@ -42,6 +42,7 @@ int maxdepth = 100;
 int maxnode = 1000000000;
 int maxthreadnum = 1; //1..maxthreadnum
 int maxhashsize = 21;
+int increment = 0;
 int computerside = 0; /* 0 none 1 black 2 while 3 black&white */
 int cautionfactor = 1;
 int threadnum = 1;
@@ -68,6 +69,7 @@ int commandmodel = 0;
 int shownumber = 1;
 int showlog = 1;
 int showanalysis = 1;
+int showclock = 1;
 int showtoolbarboth = 1;
 int showsmallfont = 0;
 int showwarning = 1;
@@ -96,6 +98,15 @@ GtkWidget *scrolledtextlog, *scrolledtextcommand;
 GtkWidget *toolbar;
 
 int toolbarnum = 6;
+
+GtkWidget *windowclock;
+GtkWidget *clocklabel[2];
+int timercomputerturn;
+int timercomputermatch;
+int timerhumanturn;
+int timerhumanmatch;
+int timerstart;
+int timerstatus = 0;
 
 int toolbarlng[MAX_TOOLBAR_ITEM] =
 {
@@ -420,7 +431,7 @@ void show_thanklist()
 	printf_log("  XR\n");
 	printf_log("  舒自均\n");
 	printf_log("  Tianyi Hao\n");
-	printf_log("  吴豪\n");
+	printf_log("  Hao Wu\n");
 	printf_log("  雨中飞燕\n");
 	printf_log("  Tuyen Do\n");
 	printf_log("  肥国乃乃\n");
@@ -1208,6 +1219,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 					else
 					{
 						isthinking = 1;
+						clock_timer_change_status(1);
 						isneedrestart = 0;
 						timestart = clock();
 						sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
@@ -1382,6 +1394,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								if(isneedrestart)
 								{
 									isthinking = 1;
+									clock_timer_change_status(1);
 									isneedrestart = 0;
 									timeused = 0;
 									timestart = clock();
@@ -1409,6 +1422,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 									sprintf(command, "turn %d,%d\n", y, x);
 									send_command(command);
 									isthinking = 1;
+									clock_timer_change_status(1);
 									timestart = clock();
 								}
 							}
@@ -1568,7 +1582,7 @@ void set_checkmate(int x)
 
 void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 {
-	static GtkWidget *editable[4];
+	static GtkWidget *editable[5];
 	static int flag = 0;
 	int i;
 	if(widget == NULL)
@@ -1603,8 +1617,8 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *hbox[11];
 	GtkWidget *radiolevel[9];
 	GtkWidget *radiocheckmate[3];
-	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelblank[6];
-	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode;
+	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelincrement[2], *labelblank[9];
+	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode, *entryincrement;
 	GtkWidget *scalecaution, *scalethreads, *scalesplitdepth, *scalehash;
 	GtkWidget *tablesetting;
 	gint result;
@@ -1624,7 +1638,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	notebookvbox[2] = gtk_vbox_new(FALSE, 0);
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), notebookvbox[2], gtk_label_new(language==0?"Resource":_T(clanguage[20])));
 
-	for(i=0; i<6; i++)
+	for(i=0; i<9; i++)
 	{
 		labelblank[i] = gtk_label_new(" ");
 		gtk_label_set_width_chars(GTK_LABEL(labelblank[i]), 6);
@@ -1666,10 +1680,20 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_misc_set_alignment(GTK_MISC(labelmaxnode[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labelmaxnode[1]), 0, 0.5);
 
+	labelincrement[0] = gtk_label_new(language == 0 ? "Increment:" : _T(clanguage[95]));
+	entryincrement = gtk_entry_new();
+	gtk_entry_set_width_chars(GTK_ENTRY(entryincrement), 6);
+	sprintf(text, "%d", increment / 1000);
+	gtk_entry_set_text(GTK_ENTRY(entryincrement), text);
+	labelincrement[1] = gtk_label_new(language == 0 ? "s / move" : _T(clanguage[96]));
+	gtk_misc_set_alignment(GTK_MISC(labelincrement[0]), 1, 0.5);
+	gtk_misc_set_alignment(GTK_MISC(labelincrement[1]), 0, 0.5);
+
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimeturn);
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimematch);
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxdepth);
 	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxnode);
+	show_dialog_settings_custom_entry(NULL, (gpointer)entryincrement);
 
 	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language==0?"4 dan":_T(clanguage[28]));
 	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language==0?"3 dan":_T(clanguage[29]));
@@ -1695,7 +1719,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[levelchoice]), TRUE);
 
-	tablesetting = gtk_table_new(2, 9, FALSE);
+	tablesetting = gtk_table_new(3, 9, FALSE);
 	gtk_table_set_row_spacings(GTK_TABLE(tablesetting), 0); /* set the row distance between elements to be 0 */
 	gtk_table_set_col_spacings(GTK_TABLE(tablesetting), 0); /* set the column distance between elements to be 0 */
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[0], 0, 1, 0, 1);
@@ -1711,12 +1735,19 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[3], 0, 1, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[4], 4, 5, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[5], 8, 9, 1, 2);
-	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxdepth[0], 1, 2, 1, 2);
-	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entrymaxdepth, 2, 3, 1, 2);
-	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxdepth[1], 3, 4, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelincrement[0], 1, 2, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entryincrement, 2, 3, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelincrement[1], 3, 4, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxnode[0], 5, 6, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entrymaxnode, 6, 7, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxnode[1], 7, 8, 1, 2);
+
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[6], 0, 1, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[7], 4, 5, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelblank[8], 8, 9, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxdepth[0], 1, 2, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entrymaxdepth, 2, 3, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxdepth[1], 3, 4, 2, 3);
 
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[4], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), tablesetting, FALSE, FALSE, 3);
@@ -1834,6 +1865,14 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 					if(maxnode > 1000000) maxnode = 1000000;
 					if(maxnode < 1) maxnode = 1;
 					maxnode *= 1000;
+				}
+				ptext = gtk_entry_get_text(GTK_ENTRY(entryincrement));
+				if (is_integer(ptext))
+				{
+					sscanf(ptext, "%d", &increment);
+					if (increment > 1000000) increment = 1000000;
+					if (increment < 0) increment = 0;
+					increment *= 1000;
 				}
 				set_level(4);
 			}
@@ -1995,15 +2034,24 @@ void show_dialog_load(GtkWidget *widget, gpointer data)
 			if ((in = fopen(filename, "r")) != NULL)
 			{
 				int x, y;
+				char line[80];
 				new_game(NULL, NULL);
-				fscanf(in, "%*[^\n]"); //TODO: use boardsizeh, boardsizew, etc.?
+				fscanf(in, "%*[^\n]%*c"); //TODO: use boardsizeh, boardsizew, etc.?
 
-				fscanf(in, "%d", &x);
-				while(x != -1)
+				fscanf(in, "%[^\n]%*c", line);
+				if (line[0] >= '0' && line[0] <= '9')
 				{
-					fscanf(in, ",%d,%*d", &y);
-					make_move(y-1, x-1);
-					if (fscanf(in, "%d", &x) == EOF) break;
+					sscanf(line, "%d", &x);
+					while (x != -1)
+					{
+						sscanf(line, "%*d,%d,%*d", &y);
+						make_move(y - 1, x - 1);
+						if (fscanf(in, "%[^\n]%*c", line) == EOF) break;
+						if (line[0] >= '0' && line[0] <= '9')
+							sscanf(line, "%d", &x);
+						else
+							break;
+					}
 				}
 				fclose(in);
 				show_forbid();
@@ -2484,12 +2532,20 @@ void new_game(GtkWidget *widget, gpointer data)
 	refresh_board();
 	if(isthinking) isneedomit ++;
 	isthinking = 0;
+	clock_timer_change_status(2);
 	isneedrestart = 1;
 
 	if(widget != NULL) refreshboardflag = 0;
 	//gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &start, &end);
 	//gtk_text_buffer_delete(buffertextlog, &start, &end);
 }
+
+void new_game_resetclock(GtkWidget *widget, gpointer data)
+{
+	new_game(widget, data);
+	clock_timer_init();
+}
+
 void set_rule()
 {
 	char command[80];
@@ -2559,14 +2615,31 @@ void view_log(GtkWidget *widget, gpointer data)
 	{
 		gtk_widget_show(scrolledtextlog);
 		gtk_widget_show(scrolledtextcommand);
-		gtk_widget_show(toolbar);
+		if (toolbarpos == 1) gtk_widget_show(toolbar);
 	}
 	else
 	{
 		gtk_widget_hide(scrolledtextlog);
 		gtk_widget_hide(scrolledtextcommand);
-		gtk_widget_hide(toolbar);
+		if (toolbarpos == 1) gtk_widget_hide(toolbar);
 	}
+}
+void view_clock()
+{
+	showclock ^= 1;
+	if (showclock)
+	{
+		gtk_widget_show_all(windowclock);
+		gtk_window_move(windowclock, 0, 0);
+	}
+	else
+	{
+		gtk_widget_hide_all(windowclock);
+	}
+}
+gint windowclock_delete()
+{
+	return TRUE;
 }
 void change_language(GtkWidget *widget, gpointer data)
 {
@@ -2736,6 +2809,8 @@ void execute_command(gchar *command)
 		printf_log(" key list\n");
 		printf_log(" thinking start\n");
 		printf_log(" thinking stop\n");
+		printf_log(" draw\n"); //TODO
+		printf_log(" resign\n"); //TODO
 		printf_log(" undo one\n");
 		printf_log(" undo all\n");
 		printf_log(" redo one\n");
@@ -3528,6 +3603,8 @@ void save_setting()
 		fprintf(out, "%d\t;toolbar postion (0: left, 1: right)\n", toolbarpos);
 		fprintf(out, "%d\t;toolbar item number (<=32)\n", toolbarnum);
 		fprintf(out, "%d\t;hotkey number (<=32)\n", hotkeynum);
+		fprintf(out, "%d\t;show clock (0: no, 1: yes)\n", showclock);
+		fprintf(out, "%d\t;time increment per move\n", increment);
 		fclose(out);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -3570,6 +3647,108 @@ void yixin_quit()
 	}
 	gtk_main_quit();
 }
+
+void clock_label_refresh()
+{
+	char t[80];
+	int h_turn, m_turn, s_turn;
+	int h_match, m_match, s_match;
+	h_turn = (timercomputerturn / 60 / 60 / 1000) % 100;
+	m_turn = (timercomputerturn / 60 / 1000) % 60;
+	s_turn = (timercomputerturn / 1000) % 60;
+	h_match = ((timercomputermatch + timercomputerturn) / 60 / 60 / 1000) % 100;
+	m_match = ((timercomputermatch + timercomputerturn) / 60 / 1000) % 60;
+	s_match = ((timercomputermatch + timercomputerturn) / 1000) % 60;
+	sprintf(t, " %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
+	gtk_label_set_label(clocklabel[0], t);
+
+	h_turn = (timerhumanturn / 60 / 60 / 1000) % 100;
+	m_turn = (timerhumanturn / 60 / 1000) % 60;
+	s_turn = (timerhumanturn / 1000) % 60;
+	h_match = ((timerhumanmatch + timerhumanturn ) / 60 / 60 / 1000) % 100;
+	m_match = ((timerhumanmatch + timerhumanturn ) / 60 / 1000) % 60;
+	s_match = ((timerhumanmatch + timerhumanturn ) / 1000) % 60;
+	sprintf(t, " %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
+	gtk_label_set_label(clocklabel[1], t);
+}
+
+gboolean clock_timer_update()
+{
+	int t;
+	if (timerstatus == 0)
+	{
+		timerhumanmatch += timerhumanturn;
+		timerhumanturn = 0;
+		timercomputermatch += timercomputerturn;
+		timercomputerturn = 0;
+	}
+	else if (timerstatus == 1)
+	{
+		timerhumanmatch += timerhumanturn;
+		timerhumanturn = 0;
+		t = (clock() - timerstart) / (CLOCKS_PER_SEC / 1000);
+		if (t < timercomputerturn)
+		{
+			timercomputermatch += timercomputerturn;
+			timercomputerturn = 0;
+		}
+		timercomputerturn = t;
+	}
+	else if (timerstatus == 2)
+	{
+		timercomputermatch += timercomputerturn;
+		timercomputerturn = 0;
+		t = (clock() - timerstart) / (CLOCKS_PER_SEC / 1000);
+		if (t < timerhumanturn)
+		{
+			timerhumanmatch += timerhumanturn;
+			timerhumanturn = 0;
+		}
+		timerhumanturn = t;
+	}
+	clock_label_refresh();
+	return TRUE;
+}
+
+void clock_timer_change_status(int status)
+{
+	if (timerstatus == 0) return;
+	if (timerstatus == status) return;
+	if (status == 0)
+	{
+		timerstatus = 0;
+		return;
+	}
+	if (status == 1 && isthinking)
+	{
+		timerstatus = 1;
+	}
+	else if (status == 2 && !isthinking)
+	{
+		timerstatus = 2;
+	}
+	timerstart = clock();
+}
+
+void clock_timer_init()
+{
+	if (isthinking)
+	{
+		timerstart = clock();
+		timerstatus = 1;
+	}
+	else
+	{
+		timerstart = clock();
+		timerstatus = 2;
+	}
+	timercomputermatch = 0;
+	timerhumanmatch = 0;
+	timercomputerturn = 0;
+	timerhumanturn = 0;
+	clock_label_refresh();
+}
+
 
 GdkPixbuf * copy_subpixbuf(GdkPixbuf *_src, int src_x, int src_y, int width, int height)
 {
@@ -3644,6 +3823,45 @@ gboolean key_press(GtkWidget *widget, GdkEventKey  *event, gpointer data)
 	return FALSE;
 }
 
+void create_windowclock()
+{
+	GtkWidget *vbox;
+	GtkWidget *label[2];
+
+	windowclock = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_resizable(GTK_WINDOW(windowclock), FALSE);
+	gtk_window_set_deletable(GTK_WINDOW(windowclock), FALSE);
+	g_signal_connect(GTK_OBJECT(windowclock), "delete_event", G_CALLBACK(windowclock_delete), NULL);
+	gtk_window_set_title(GTK_WINDOW(windowclock), "Clock");
+	gtk_window_set_type_hint(GTK_WINDOW(windowclock), GDK_WINDOW_TYPE_HINT_DIALOG);
+
+	clocklabel[0] = gtk_label_new(" 00:00:00 / 00:00:00 ");
+	clocklabel[1] = gtk_label_new(" 00:00:00 / 00:00:00 ");
+
+	label[0] = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(label[0]), "<big><b>Computer</b></big>");
+	label[1] = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(label[1]), "<big><b>Human</b></big>");
+
+	vbox = gtk_vbox_new(FALSE, 0);
+
+	gtk_box_pack_start(GTK_BOX(vbox), label[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), label[1], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[1], FALSE, FALSE, 3);
+
+	gtk_container_add(GTK_CONTAINER(windowclock), vbox);
+	clock_timer_init();
+
+	g_timeout_add(200, clock_timer_update, NULL);
+
+	if (showclock)
+	{
+		gtk_widget_show_all(windowclock);
+		gtk_window_move(windowclock, 0, 0);
+	}
+}
+
 void create_windowmain()
 {
 	GtkWidget *menubar, *menugame, *menuplayers, *menuview, *menuhelp, *menurule, *menulanguage;
@@ -3653,7 +3871,7 @@ void create_windowmain()
 	//GtkWidget *menuitemnewrule[10]; //TODO
 	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemsettings;
 	GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemcustomlng[16] = { 0 }; //At most (16-1) different custom languages
-	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis;
+	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis, *menuitemclock;
 	GtkWidget *menuitemabout;
 
 	GtkToolItem *tools[MAX_TOOLBAR_ITEM];
@@ -3935,6 +4153,7 @@ void create_windowmain()
 	menuitemnumeration = gtk_check_menu_item_new_with_label(language==0?"Numeration":_T(clanguage[69]));
 	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":_T(clanguage[70]));
 	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":_T(clanguage[71]));
+	menuitemclock = gtk_check_menu_item_new_with_label(language == 0 ? "Clock" : _T(clanguage[94]));
 	menuitemlanguage = gtk_menu_item_new_with_label(language==0?"Language":_T(clanguage[72]));
 	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":_T(clanguage[73]));
 	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":_T(clanguage[74]));
@@ -4017,6 +4236,10 @@ void create_windowmain()
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemanalysis), TRUE);
 	}
+	if (showclock)
+	{
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemclock), TRUE);
+	}
 	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer Plays Black":_T(clanguage[81]));
 	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer Plays White":_T(clanguage[82]));
 	if(computerside&1)
@@ -4060,6 +4283,7 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemnumeration);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlog);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemanalysis);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemclock);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlanguage);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplaysblack);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplayswhite);
@@ -4071,13 +4295,14 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuitemview);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuitemhelp);
 
-	g_signal_connect(G_OBJECT(menuitemnewgame), "activate", G_CALLBACK(new_game), NULL);
+	g_signal_connect(G_OBJECT(menuitemnewgame), "activate", G_CALLBACK(new_game_resetclock), NULL);
 	g_signal_connect(G_OBJECT(menuitemload), "activate", G_CALLBACK(show_dialog_load), windowmain);
 	g_signal_connect(G_OBJECT(menuitemsave), "activate", G_CALLBACK(show_dialog_save), windowmain);
 	g_signal_connect(G_OBJECT(menuitemopenbook), "activate", G_CALLBACK(use_openbook), NULL);
 	g_signal_connect(G_OBJECT(menuitemnumeration), "activate", G_CALLBACK(view_numeration), NULL);
 	g_signal_connect(G_OBJECT(menuitemlog), "activate", G_CALLBACK(view_log), NULL);
 	g_signal_connect(G_OBJECT(menuitemanalysis), "activate", G_CALLBACK(view_analysis), NULL);
+	g_signal_connect(G_OBJECT(menuitemclock), "activate", G_CALLBACK(view_clock), NULL);
 	g_signal_connect(G_OBJECT(menuitemquit), "activate", G_CALLBACK(yixin_quit), NULL);
 	g_signal_connect(G_OBJECT(menuitemabout), "activate", G_CALLBACK(show_dialog_about), GTK_WINDOW(windowmain));
 	g_signal_connect(G_OBJECT(menuitemsettings), "activate", G_CALLBACK(show_dialog_settings), GTK_WINDOW(windowmain));
@@ -4151,6 +4376,8 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(windowmain), "key-press-event", G_CALLBACK(key_press), NULL);
 
 	gtk_widget_show_all(windowmain);
+
+	gtk_window_set_position(windowmain, GTK_WIN_POS_CENTER_ALWAYS);
 	
 	//gtk_widget_hide(toolbar_acc);
 
@@ -4314,15 +4541,10 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 		else
 		{
 			isthinking = 0;
+			clock_timer_change_status(2);
 			timeused += (clock() - timestart) / (CLOCKS_PER_SEC / 1000);
-			if(language)
-			{
-				printf_log(clanguage[83], timeoutmatch-timeused);
-			}
-			else
-			{
-				printf_log("Time Left: %dms", timeoutmatch-timeused);
-			}
+
+			printf_log(language ? clanguage[83] : "Time Left: %dms", timeoutmatch-timeused);
 			printf_log("\n\n");
 			if(blockautoreset)
 			{
@@ -4351,6 +4573,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			if(!isgameover && (((computerside&1)&&piecenum%2==0) || ((computerside&2)&&piecenum%2==1)))
 			{
 				isthinking = 1;
+				clock_timer_change_status(1);
 				timeused = 0;
 				timestart = clock();
 				sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
@@ -4513,6 +4736,10 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (toolbarnum < 0 || toolbarnum > MAX_TOOLBAR_ITEM) toolbarnum = 6;
 		hotkeynum = read_int_from_file(in);
 		if (hotkeynum < 0 || hotkeynum > MAX_HOTKEY_ITEM) hotkeynum = 6;
+		showclock = read_int_from_file(in);
+		if (showclock < 0 || showclock > 1) showclock = 0;
+		increment = read_int_from_file(in);
+		if (increment < 0 || increment > 2000000) increment = 0;
 		fclose(in);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -4680,6 +4907,7 @@ int main(int argc, char** argv)
 	load_engine();
 	init_engine();
 	gtk_window_set_default_icon(gdk_pixbuf_new_from_file("icon.ico", NULL)); /* set the default icon for all windows */
+	create_windowclock();
 	create_windowmain();
 	show_welcome();
 	gtk_main();

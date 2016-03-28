@@ -1,5 +1,5 @@
 15 15	;board size (10 ~ 24)
-1	;language (0: English, 1,2,...: custom)
+0	;language (0: English, 1,2,...: custom)
 0	;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move)
 0	;openbook (0: not use, 1: use)
 0	;computer play black (0: no, 1: yes)
