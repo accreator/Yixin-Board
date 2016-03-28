@@ -72,6 +72,7 @@ int showforbidden = 1;
 int showtoolbarboth = 1;
 int showsmallfont = 0;
 int showwarning = 1;
+int checktimeout = 1;
 int toolbarpos = 1;
 int language = 0; /* 0: English 1: Other languages */
 int rlanguage = 0;
@@ -99,11 +100,13 @@ GtkWidget *toolbar;
 int toolbarnum = 6;
 
 GtkWidget *windowclock;
-GtkWidget *clocklabel[2];
+GtkWidget *clocklabel[4];
 int timercomputerturn;
 int timercomputermatch;
 int timerhumanturn;
 int timerhumanmatch;
+int timercomputerincrement;
+int timerhumanincrement;
 int timerstart;
 int timerstatus = 0;
 
@@ -2583,6 +2586,10 @@ void change_rule(GtkWidget *widget, gpointer data)
 	}
 	set_rule();
 }
+void change_timeoutcheck(GtkWidget *widget, gpointer data)
+{
+	checktimeout ^= 1;
+}
 
 void change_side(GtkWidget *widget, gpointer data)
 {
@@ -3587,17 +3594,17 @@ void save_setting()
 	int i;
 	char s[80];
 
-	if((out = fopen("settings.txt", "w")) != NULL)
+	if ((out = fopen("settings.txt", "w")) != NULL)
 	{
 		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
 		fprintf(out, "%d\t;language (0: English, 1,2,...: custom)\n", rlanguage);
-		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move)\n", specialrule==2?3:(specialrule==1?4:inforule));
+		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move)\n", specialrule == 2 ? 3 : (specialrule == 1 ? 4 : inforule));
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
-		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside&1);
-		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside>>1);
+		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside & 1);
+		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside >> 1);
 		fprintf(out, "%d\t;level (0: 4dan, 1: 3dan, 2: 2dan, 3: 1dan, 5: 6dan, 6: 9dan, 7: meijin, 8: unlimited time 4: custom level)\n", levelchoice);
-		fprintf(out, "%d\t;time limit (turn)\n", timeoutturn/1000);
-		fprintf(out, "%d\t;time limit (match)\n", timeoutmatch/1000);
+		fprintf(out, "%d\t;time limit (turn)\n", timeoutturn / 1000);
+		fprintf(out, "%d\t;time limit (match)\n", timeoutmatch / 1000);
 		fprintf(out, "%d\t;max depth\n", maxdepth);
 		fprintf(out, "%d\t;max node\n", maxnode);
 		fprintf(out, "%d\t;style (rash 0 ~ %d cautious)\n", cautionfactor, CAUTION_NUM);
@@ -3620,11 +3627,12 @@ void save_setting()
 		fprintf(out, "%d\t;show clock (0: no, 1: yes)\n", showclock);
 		fprintf(out, "%d\t;time increment per move\n", increment);
 		fprintf(out, "%d\t;time show forbidden moves\n", showforbidden);
+		fprintf(out, "%d\t;check timeout\n", checktimeout);
 		fclose(out);
 	}
 	for (i = 0; i < toolbarnum; i++)
 	{
-		sprintf(s, "function/toolbar%d.txt", i+1);
+		sprintf(s, "function/toolbar%d.txt", i + 1);
 		if ((out = fopen(s, "w")) != NULL)
 		{
 			fprintf(out, "%d\n", toolbarlng[i]);
@@ -3668,23 +3676,141 @@ void clock_label_refresh()
 	char t[80];
 	int h_turn, m_turn, s_turn;
 	int h_match, m_match, s_match;
-	h_turn = (timercomputerturn / 60 / 60 / 1000) % 100;
-	m_turn = (timercomputerturn / 60 / 1000) % 60;
-	s_turn = (timercomputerturn / 1000) % 60;
-	h_match = ((timercomputermatch + timercomputerturn) / 60 / 60 / 1000) % 100;
-	m_match = ((timercomputermatch + timercomputerturn) / 60 / 1000) % 60;
-	s_match = ((timercomputermatch + timercomputerturn) / 1000) % 60;
-	sprintf(t, " %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
+	int tl_turn, tl_match;
+
+	if ((timercomputerturn / 60 / 60 / 1000) >= 100)
+	{
+		h_turn = 99;
+		m_turn = 59;
+		s_turn = 59;
+	}
+	else
+	{
+		h_turn = (timercomputerturn / 60 / 60 / 1000) % 100;
+		m_turn = (timercomputerturn / 60 / 1000) % 60;
+		s_turn = (timercomputerturn / 1000) % 60;
+	}
+	if (((timercomputermatch + timercomputerturn) / 60 / 60 / 1000) >= 100)
+	{
+		h_match = 99;
+		m_match = 59;
+		s_match = 59;
+	}
+	else
+	{
+		h_match = ((timercomputermatch + timercomputerturn) / 60 / 60 / 1000) % 100;
+		m_match = ((timercomputermatch + timercomputerturn) / 60 / 1000) % 60;
+		s_match = ((timercomputermatch + timercomputerturn) / 1000) % 60;
+	}
+	sprintf(t, " Used: %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
 	gtk_label_set_label(clocklabel[0], t);
 
-	h_turn = (timerhumanturn / 60 / 60 / 1000) % 100;
-	m_turn = (timerhumanturn / 60 / 1000) % 60;
-	s_turn = (timerhumanturn / 1000) % 60;
-	h_match = ((timerhumanmatch + timerhumanturn ) / 60 / 60 / 1000) % 100;
-	m_match = ((timerhumanmatch + timerhumanturn ) / 60 / 1000) % 60;
-	s_match = ((timerhumanmatch + timerhumanturn ) / 1000) % 60;
-	sprintf(t, " %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
+	if ((timerhumanturn / 60 / 60 / 1000) >= 100)
+	{
+		h_turn = 99;
+		m_turn = 59;
+		s_turn = 59;
+	}
+	else
+	{
+		h_turn = (timerhumanturn / 60 / 60 / 1000) % 100;
+		m_turn = (timerhumanturn / 60 / 1000) % 60;
+		s_turn = (timerhumanturn / 1000) % 60;
+	}
+	if (((timerhumanmatch + timerhumanturn) / 60 / 60 / 1000) >= 100)
+	{
+		h_match = 99;
+		m_match = 59;
+		s_match = 59;
+	}
+	else
+	{
+		h_match = ((timerhumanmatch + timerhumanturn) / 60 / 60 / 1000) % 100;
+		m_match = ((timerhumanmatch + timerhumanturn) / 60 / 1000) % 60;
+		s_match = ((timerhumanmatch + timerhumanturn) / 1000) % 60;
+	}
+	sprintf(t, " Used: %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
 	gtk_label_set_label(clocklabel[1], t);
+
+	if (levelchoice != 4)
+	{
+		h_turn = h_match = 99;
+		m_turn = m_match = 59;
+		s_turn = s_match = 59;
+	}
+	else
+	{
+		tl_match = timeoutmatch - (timercomputermatch + timercomputerturn) + timercomputerincrement;
+		tl_turn = min(timeoutturn - timercomputerturn, tl_match);
+		if (tl_turn < 0) tl_turn = 0;
+		if (tl_match < 0) tl_match = 0;
+		if ((tl_turn / 60 / 60 / 1000) >= 100)
+		{
+			h_turn = 99;
+			m_turn = 59;
+			s_turn = 59;
+		}
+		else
+		{
+			h_turn = (tl_turn / 60 / 60 / 1000) % 100;
+			m_turn = (tl_turn / 60 / 1000) % 60;
+			s_turn = (tl_turn / 1000) % 60;
+		}
+		if ((tl_match / 60 / 60 / 1000) >= 100)
+		{
+			h_match = 99;
+			m_match = 59;
+			s_match = 59;
+		}
+		else
+		{
+			h_match = (tl_match / 60 / 60 / 1000) % 100;
+			m_match = (tl_match / 60 / 1000) % 60;
+			s_match = (tl_match / 1000) % 60;
+		}
+	}
+	sprintf(t, " Left: %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
+	gtk_label_set_label(clocklabel[2], t);
+
+	if (levelchoice != 4)
+	{
+		h_turn = h_match = 99;
+		m_turn = m_match = 59;
+		s_turn = s_match = 59;
+	}
+	else
+	{
+		tl_match = timeoutmatch - (timerhumanmatch + timerhumanturn) + timerhumanincrement;
+		tl_turn = min(timeoutturn - timerhumanturn, tl_match);
+		if (tl_turn < 0) tl_turn = 0;
+		if (tl_match < 0) tl_match = 0;
+		if ((tl_turn / 60 / 60 / 1000) >= 100)
+		{
+			h_turn = 99;
+			m_turn = 59;
+			s_turn = 59;
+		}
+		else
+		{
+			h_turn = (tl_turn / 60 / 60 / 1000) % 100;
+			m_turn = (tl_turn / 60 / 1000) % 60;
+			s_turn = (tl_turn / 1000) % 60;
+		}
+		if ((tl_match / 60 / 60 / 1000) >= 100)
+		{
+			h_match = 99;
+			m_match = 59;
+			s_match = 59;
+		}
+		else
+		{
+			h_match = (tl_match / 60 / 60 / 1000) % 100;
+			m_match = (tl_match / 60 / 1000) % 60;
+			s_match = (tl_match / 1000) % 60;
+		}
+	}
+	sprintf(t, " Left: %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
+	gtk_label_set_label(clocklabel[3], t);
 }
 
 gboolean clock_timer_update()
@@ -3761,6 +3887,8 @@ void clock_timer_init()
 	timerhumanmatch = 0;
 	timercomputerturn = 0;
 	timerhumanturn = 0;
+	timercomputerincrement = 0;
+	timerhumanincrement = 0;
 	clock_label_refresh();
 }
 
@@ -3850,8 +3978,10 @@ void create_windowclock()
 	gtk_window_set_title(GTK_WINDOW(windowclock), "Clock");
 	gtk_window_set_type_hint(GTK_WINDOW(windowclock), GDK_WINDOW_TYPE_HINT_DIALOG);
 
-	clocklabel[0] = gtk_label_new(" 00:00:00 / 00:00:00 ");
-	clocklabel[1] = gtk_label_new(" 00:00:00 / 00:00:00 ");
+	clocklabel[0] = gtk_label_new(" Used: 00:00:00 / 00:00:00 ");
+	clocklabel[1] = gtk_label_new(" Used: 00:00:00 / 00:00:00 ");
+	clocklabel[2] = gtk_label_new(" Left: 00:00:00 / 00:00:00 ");
+	clocklabel[3] = gtk_label_new(" Left: 00:00:00 / 00:00:00 ");
 
 	label[0] = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(label[0]), "<big><b>Computer</b></big>");
@@ -3862,8 +3992,10 @@ void create_windowclock()
 
 	gtk_box_pack_start(GTK_BOX(vbox), label[0], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[2], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), label[1], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[1], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[3], FALSE, FALSE, 3);
 
 	gtk_container_add(GTK_CONTAINER(windowclock), vbox);
 	clock_timer_init();
@@ -3884,7 +4016,7 @@ void create_windowmain()
 	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemsize, *menuitemopenbook, *menuitemquit,
 		*menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5;
 	//GtkWidget *menuitemnewrule[10]; //TODO
-	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemsettings;
+	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemchecktimeout, *menuitemsettings;
 	GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemcustomlng[16] = { 0 }; //At most (16-1) different custom languages
 	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis, *menuitemclock, *menuitemforbidden;
 	GtkWidget *menuitemabout;
@@ -4262,6 +4394,7 @@ void create_windowmain()
 	}
 	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer Plays Black":_T(clanguage[81]));
 	menuitemcomputerplayswhite = gtk_check_menu_item_new_with_label(language==0?"Computer Plays White":_T(clanguage[82]));
+	menuitemchecktimeout = gtk_check_menu_item_new_with_label(language == 0 ? "Check Timeout" : _T(clanguage[99]));
 	if(computerside&1)
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemcomputerplaysblack), TRUE);
 	else
@@ -4270,6 +4403,10 @@ void create_windowmain()
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemcomputerplayswhite), TRUE);
 	else
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemcomputerplayswhite), FALSE);
+	if(checktimeout)
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemchecktimeout), TRUE);
+	else
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemchecktimeout), FALSE);
 	change_side_menu(3, menuitemcomputerplaysblack);
 	change_side_menu(4, menuitemcomputerplayswhite);
 
@@ -4308,6 +4445,7 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlanguage);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplaysblack);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplayswhite);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemchecktimeout);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemsettings);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuhelp), menuitemabout);
 
@@ -4336,6 +4474,7 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemsize), "activate", G_CALLBACK(show_dialog_size), 0);
 	g_signal_connect(G_OBJECT(menuitemcomputerplaysblack), "activate", G_CALLBACK(change_side), (gpointer)1);
 	g_signal_connect(G_OBJECT(menuitemcomputerplayswhite), "activate", G_CALLBACK(change_side), (gpointer)2);
+	g_signal_connect(G_OBJECT(menuitemchecktimeout), "activate", G_CALLBACK(change_timeoutcheck), NULL);
 	g_signal_connect(G_OBJECT(menuitemenglish), "activate", G_CALLBACK(change_language), (gpointer)0);
 	for (i = 1; i < 16; i++)
 	{
@@ -4760,6 +4899,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (increment < 0 || increment > 2000000) increment = 0;
 		showforbidden = read_int_from_file(in);
 		if (showforbidden < 0 || showforbidden > 1) showforbidden = 1;
+		checktimeout = read_int_from_file(in);
+		if (checktimeout < 0 || checktimeout > 1) checktimeout = 1;
 		fclose(in);
 	}
 	for (i = 0; i < toolbarnum; i++)
