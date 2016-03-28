@@ -35,8 +35,6 @@ int specialrule = 0;
 int infopondering = 0;
 int infocheckmate = 0;
 int timeoutturn = 10000;
-int timeused = 0;
-int timestart = 0;
 int timeoutmatch = 2000000;
 int maxdepth = 100;
 int maxnode = 1000000000;
@@ -70,6 +68,7 @@ int shownumber = 1;
 int showlog = 1;
 int showanalysis = 1;
 int showclock = 1;
+int showforbidden = 1;
 int showtoolbarboth = 1;
 int showsmallfont = 0;
 int showwarning = 1;
@@ -499,7 +498,7 @@ void refresh_board()
 			if(board[i][j] == 0)
 			{
 				int f = 0;
-				if(inforule == 2 && (computerside&1)==0 && piecenum%2==0 && forbid[i][j] && isgameover==0 && isthinking==0) f = 2;
+				if(inforule == 2 && (computerside&1)==0 && piecenum%2==0 && forbid[i][j] && isgameover==0 && isthinking==0 && showforbidden) f = 2;
 				if(f == 0)
 				{
 					if(boardblock[i][j]) f = 10;
@@ -1123,6 +1122,17 @@ void show_dialog_swap_info(GtkWidget *window)
 	gtk_widget_destroy(dialog);
 }
 
+void show_dialog_forbidden_info(GtkWidget *window)
+{
+	GtkWidget *dialog;
+	gint result;
+	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language == 0 ? "Forbidden Move" : _T(clanguage[98]));
+	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+}
+
 void show_dialog_illegal_opening(GtkWidget *window)
 {
 	GtkWidget *dialog;
@@ -1221,8 +1231,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						isthinking = 1;
 						clock_timer_change_status(1);
 						isneedrestart = 0;
-						timestart = clock();
-						sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
+						sprintf(command, "INFO time_left %d\n", timeoutmatch-timercomputermatch);
 						send_command(command);
 						if (hashautoclear) send_command("yxhashclear\n");
 						sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
@@ -1258,6 +1267,10 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								change_piece(NULL, (gpointer)1);
 							}
 						}
+					}
+					else if (board[y][x] == 0 && piecenum % 2 == 0 && forbid[y][x])
+					{
+						show_dialog_forbidden_info(widget);
 					}
 					else if(board[y][x] == 0 && (piecenum%2==1 || !forbid[y][x]))
 					{
@@ -1396,9 +1409,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 									isthinking = 1;
 									clock_timer_change_status(1);
 									isneedrestart = 0;
-									timeused = 0;
-									timestart = clock();
-									sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
+									sprintf(command, "INFO time_left %d\n", timeoutmatch- timercomputermatch);
 									send_command(command);
 									if (hashautoclear) send_command("yxhashclear\n");
 									sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
@@ -1416,14 +1427,13 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								}
 								else
 								{
-									sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
+									sprintf(command, "INFO time_left %d\n", timeoutmatch- timercomputermatch);
 									send_command(command);
 									if (hashautoclear) send_command("yxhashclear\n");
 									sprintf(command, "turn %d,%d\n", y, x);
 									send_command(command);
 									isthinking = 1;
 									clock_timer_change_status(1);
-									timestart = clock();
 								}
 							}
 						}
@@ -1463,7 +1473,7 @@ void set_level(int x)
 		send_command(command);
 		sprintf(command, "INFO timeout_match %d\n", timeoutmatch);
 		send_command(command);
-		sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
+		sprintf(command, "INFO time_left %d\n", timeoutmatch- timercomputermatch);
 		send_command(command);
 		sprintf(command, "INFO max_node %d\n", maxnode); //now it should not be -1
 		send_command(command);
@@ -2522,7 +2532,6 @@ void new_game(GtkWidget *widget, gpointer data)
 
 	piecenum = 0;
 	isgameover = 0;
-	timeused = 0;
 	memset(board, 0, sizeof(board));
 	memset(forbid, 0, sizeof(forbid));
 	memset(bestline, 0, sizeof(bestline));
@@ -2601,6 +2610,11 @@ void use_openbook(GtkWidget *widget, gpointer data)
 void view_analysis(GtkWidget *widget, gpointer data)
 {
 	showanalysis ^= 1;
+	refresh_board();
+}
+void view_forbidden(GtkWidget *widget, gpointer data)
+{
+	showforbidden ^= 1;
 	refresh_board();
 }
 void view_numeration(GtkWidget *widget, gpointer data)
@@ -3605,6 +3619,7 @@ void save_setting()
 		fprintf(out, "%d\t;hotkey number (<=32)\n", hotkeynum);
 		fprintf(out, "%d\t;show clock (0: no, 1: yes)\n", showclock);
 		fprintf(out, "%d\t;time increment per move\n", increment);
+		fprintf(out, "%d\t;time show forbidden moves\n", showforbidden);
 		fclose(out);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -3871,7 +3886,7 @@ void create_windowmain()
 	//GtkWidget *menuitemnewrule[10]; //TODO
 	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemsettings;
 	GtkWidget *menuitemlanguage, *menuitemenglish, *menuitemcustomlng[16] = { 0 }; //At most (16-1) different custom languages
-	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis, *menuitemclock;
+	GtkWidget *menuitemnumeration, *menuitemlog, *menuitemanalysis, *menuitemclock, *menuitemforbidden;
 	GtkWidget *menuitemabout;
 
 	GtkToolItem *tools[MAX_TOOLBAR_ITEM];
@@ -4154,6 +4169,7 @@ void create_windowmain()
 	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":_T(clanguage[70]));
 	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":_T(clanguage[71]));
 	menuitemclock = gtk_check_menu_item_new_with_label(language == 0 ? "Clock" : _T(clanguage[94]));
+	menuitemforbidden = gtk_check_menu_item_new_with_label(language == 0 ? "Forbidden Move" : _T(clanguage[97]));
 	menuitemlanguage = gtk_menu_item_new_with_label(language==0?"Language":_T(clanguage[72]));
 	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":_T(clanguage[73]));
 	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":_T(clanguage[74]));
@@ -4236,6 +4252,10 @@ void create_windowmain()
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemanalysis), TRUE);
 	}
+	if (showforbidden)
+	{
+		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemforbidden), TRUE);
+	}
 	if (showclock)
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemclock), TRUE);
@@ -4283,6 +4303,7 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemnumeration);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlog);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemanalysis);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemforbidden);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemclock);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlanguage);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplaysblack);
@@ -4303,6 +4324,7 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemlog), "activate", G_CALLBACK(view_log), NULL);
 	g_signal_connect(G_OBJECT(menuitemanalysis), "activate", G_CALLBACK(view_analysis), NULL);
 	g_signal_connect(G_OBJECT(menuitemclock), "activate", G_CALLBACK(view_clock), NULL);
+	g_signal_connect(G_OBJECT(menuitemforbidden), "activate", G_CALLBACK(view_forbidden), NULL);
 	g_signal_connect(G_OBJECT(menuitemquit), "activate", G_CALLBACK(yixin_quit), NULL);
 	g_signal_connect(G_OBJECT(menuitemabout), "activate", G_CALLBACK(show_dialog_about), GTK_WINDOW(windowmain));
 	g_signal_connect(G_OBJECT(menuitemsettings), "activate", G_CALLBACK(show_dialog_settings), GTK_WINDOW(windowmain));
@@ -4542,10 +4564,8 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 		{
 			isthinking = 0;
 			clock_timer_change_status(2);
-			timeused += (clock() - timestart) / (CLOCKS_PER_SEC / 1000);
 
-			printf_log(language ? clanguage[83] : "Time Left: %dms", timeoutmatch-timeused);
-			printf_log("\n\n");
+			printf_log("\n");
 			if(blockautoreset)
 			{
 				send_command("yxblockreset\n");
@@ -4574,9 +4594,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			{
 				isthinking = 1;
 				clock_timer_change_status(1);
-				timeused = 0;
-				timestart = clock();
-				sprintf(command, "INFO time_left %d\n", timeoutmatch-timeused);
+				sprintf(command, "INFO time_left %d\n", timeoutmatch- timercomputermatch);
 				send_command(command);
 				if(hashautoclear) send_command("yxhashclear\n");
 				sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
@@ -4737,9 +4755,11 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		hotkeynum = read_int_from_file(in);
 		if (hotkeynum < 0 || hotkeynum > MAX_HOTKEY_ITEM) hotkeynum = 6;
 		showclock = read_int_from_file(in);
-		if (showclock < 0 || showclock > 1) showclock = 0;
+		if (showclock < 0 || showclock > 1) showclock = 1;
 		increment = read_int_from_file(in);
 		if (increment < 0 || increment > 2000000) increment = 0;
+		showforbidden = read_int_from_file(in);
+		if (showforbidden < 0 || showforbidden > 1) showforbidden = 1;
 		fclose(in);
 	}
 	for (i = 0; i < toolbarnum; i++)
