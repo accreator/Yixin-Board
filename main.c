@@ -1173,9 +1173,11 @@ void show_dialog_swap_query(GtkWidget *window)
 		GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, msg);
 	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
+
 	switch(result)
 	{
 		case GTK_RESPONSE_YES:
+			timerhumanincrement += increment;
 			if (specialrule == 3)
 			{
 				isneedrestart = 1;
@@ -1400,7 +1402,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						isthinking = 1;
 						clock_timer_change_status(1);
 						isneedrestart = 0;
-						sprintf(command, "INFO time_left %d\n", timeoutmatch-timercomputermatch);
+						sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
 						send_command(command);
 						if (hashautoclear) send_command("yxhashclear\n");
 						sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
@@ -1492,6 +1494,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						}
 						if (specialrule == 3 && piecenum == 3 && computerside != 0 && computerside != 1)
 						{
+							timerhumanincrement += increment;
 							sprintf(command, "yxsoosorvstep2\n");
 							send_command(command);
 							for (i = 0; i < piecenum; i++)
@@ -1506,6 +1509,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						if (specialrule == 3 && piecenum == 4 && computerside != 0 && computerside != 2)
 						{
 							show_dialog_move5N(widget, NULL);
+							timerhumanincrement += increment;
 							sprintf(command, "yxsoosorvstep4 %d\n", move5N);
 							send_command(command);
 							for (i = 0; i < piecenum; i++)
@@ -1533,6 +1537,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							refreshboardflag = 0;
 							refreshboardflag2 = 1;
 							isneedrestart = 1;
+							timerhumanincrement += increment;
 							sprintf(command, "yxsoosorvstep6\n");
 							send_command(command);
 							for (i = 0; i < piecenum; i++)
@@ -1641,12 +1646,13 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							}
 							else
 							{
+								timerhumanincrement += increment;
 								if(isneedrestart)
 								{
 									isthinking = 1;
 									clock_timer_change_status(1);
 									isneedrestart = 0;
-									sprintf(command, "INFO time_left %d\n", timeoutmatch- timercomputermatch);
+									sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
 									send_command(command);
 									if (hashautoclear) send_command("yxhashclear\n");
 									sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
@@ -1664,7 +1670,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								}
 								else
 								{
-									sprintf(command, "INFO time_left %d\n", timeoutmatch- timercomputermatch);
+									sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
 									send_command(command);
 									if (hashautoclear) send_command("yxhashclear\n");
 									sprintf(command, "turn %d,%d\n", y, x);
@@ -1711,7 +1717,7 @@ void set_level(int x)
 		send_command(command);
 		sprintf(command, "INFO timeout_match %d\n", timeoutmatch);
 		send_command(command);
-		sprintf(command, "INFO time_left %d\n", timeoutmatch- timercomputermatch);
+		sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
 		send_command(command);
 		sprintf(command, "INFO max_node %d\n", maxnode); //now it should not be -1
 		send_command(command);
@@ -5027,6 +5033,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			sscanf(p, "%d %d", &y, &x);
 			make_move(y, x);
 			refresh_board();
+			timercomputerincrement += increment;
 			show_dialog_swap_query(windowmain);
 		}
 		if (strncmp(string, "MESSAGE SOOSORV SWAP1", 21) == 0)
@@ -5034,6 +5041,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			char *p = string + 21 + 1;
 			if (*p == 'Y')
 			{
+				timercomputerincrement += increment;
 				show_dialog_swap_info(windowmain);
 			}
 			else //*p == 'N'
@@ -5058,6 +5066,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			refresh_board();
 			if (!refreshboardflag2)
 				refreshboardflag = 1;
+			timercomputerincrement += increment;
 			show_dialog_swap_query(windowmain);
 		}
 		if (strncmp(string, "MESSAGE SOOSORV SWAP2", 21) == 0)
@@ -5065,6 +5074,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			char *p = string + 21 + 1;
 			if (*p == 'Y')
 			{
+				timercomputerincrement += increment;
 				show_dialog_swap_info(windowmain);
 			}
 			else //*p == 'N'
@@ -5097,7 +5107,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				isthinking = 1;
 				clock_timer_change_status(1);
 				isneedrestart = 0;
-				sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch);
+				sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
 				send_command(command);
 				if (hashautoclear) send_command("yxhashclear\n");
 				sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
@@ -5122,6 +5132,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				}
 				else if (*p == 'D') //"DONE"
 				{
+					timercomputerincrement += increment;
 					refresh_board();
 					refreshboardflag2 = 1;
 				}
@@ -5280,6 +5291,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 		}
 		else
 		{
+			timercomputerincrement += increment;
 			isthinking = 0;
 			clock_timer_change_status(2);
 
@@ -5313,7 +5325,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			{
 				isthinking = 1;
 				clock_timer_change_status(1);
-				sprintf(command, "INFO time_left %d\n", timeoutmatch- timercomputermatch);
+				sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
 				send_command(command);
 				if(hashautoclear) send_command("yxhashclear\n");
 				sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
