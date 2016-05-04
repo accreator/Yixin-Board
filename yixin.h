@@ -14,6 +14,8 @@ void new_game(GtkWidget *widget, gpointer data);
 void change_rule(GtkWidget *widget, gpointer data);
 void change_side(GtkWidget *widget, gpointer data);
 void change_side_menu(int flag, GtkWidget *w);
+void clock_timer_change_status(int status);
+void clock_timer_init();
 void execute_command(gchar *command);
 void change_piece(GtkWidget *widget, gpointer data);
 void stop_thinking(GtkWidget *widget, gpointer data);
