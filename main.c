@@ -24,6 +24,8 @@ typedef struct
 	char status;
 } BOOK;
 BOOK *openbook = NULL;
+int showdatabase = 0;
+int usedatabase = 1;
 int openbooksize = 0;
 int openbooknum = 0;
 int zobristflag = 1;
@@ -71,7 +73,6 @@ int showlog = 1;
 int showanalysis = 1;
 int showclock = 1;
 int showforbidden = 1;
-int showdatabase = 1;
 int showtoolbarboth = 1;
 int showsmallfont = 0;
 int showwarning = 1;
@@ -113,6 +114,9 @@ int timercomputerincrement;
 int timerhumanincrement;
 int timerstart;
 int timerstatus = 0;
+int timeoutflag = 0;
+
+FILE *debuglog;
 
 int toolbarlng[MAX_TOOLBAR_ITEM] =
 {
@@ -494,9 +498,19 @@ void send_command(char *command)
 	g_io_channel_flush(iochannelin, NULL);
 	
 	//printf_log(command); //for debug
+	if (debuglog != NULL)
+	{
+		fprintf(debuglog, "SEND_COMMAND [%s,%s,%s,%s]: %s\n",
+			gtk_label_get_text(clocklabel[0]),
+			gtk_label_get_text(clocklabel[1]),
+			gtk_label_get_text(clocklabel[2]),
+			gtk_label_get_text(clocklabel[3]),
+			command);
+	}
 }
 
 int refreshboardflag = 0; //it is set to 1 when making the 5th move under rif/soosorv rule, otherwise, 0
+int refreshboardflag2 = 0; //it is set to 1 when refreshboardflag has been set to 1
 void refresh_board()
 {
 	int i, j;
@@ -518,7 +532,7 @@ void refresh_board()
 						else if(boardpos[i][j] == 1) f = 9;
 						else if(boardpos[i][j] == 2) f = 11;
 					}
-					if (f == 0 && showdatabase)
+					if (f == 0 && usedatabase && showdatabase)
 					{
 						if(boardtag[i][j])
 							f = 12 + piecenum % 2;
@@ -699,7 +713,7 @@ void show_database()
 {
 	int i;
 	char command[80];
-	if (showdatabase)
+	if (usedatabase)
 	{
 		sprintf(command, "yxquerydatabaseall\n");
 		send_command(command);
@@ -1266,6 +1280,17 @@ void show_dialog_swap_info(GtkWidget *window)
 	gtk_widget_destroy(dialog);
 }
 
+void show_dialog_timeout(GtkWidget *window)
+{
+	GtkWidget *dialog;
+	gint result;
+	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, language == 0 ? "Time out!" : _T(clanguage[105]));
+	gtk_window_set_title(GTK_WINDOW(dialog), "Yixin");
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+}
+
 void show_dialog_forbidden_info(GtkWidget *window)
 {
 	GtkWidget *dialog;
@@ -1494,12 +1519,19 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						}
 						if (specialrule == 3 && piecenum >= 5 && piecenum <= 5 + move5N - 1 && computerside != 0 && computerside != 1)
 						{
-							refreshboardflag = 1;
-							flag = 1;
+							if (!refreshboardflag2)
+							{
+								refreshboardflag = 1;
+							}
+							if (refreshboardflag == 1)
+							{
+								flag = 1;
+							}
 						}
-						if (specialrule == 3 && piecenum == 5 + move5N - 1 && computerside != 0 && computerside != 1)
+						if (specialrule == 3 && piecenum == 5 + move5N - 1 && computerside != 0 && computerside != 1 && refreshboardflag2 == 0)
 						{
 							refreshboardflag = 0;
+							refreshboardflag2 = 1;
 							isneedrestart = 1;
 							sprintf(command, "yxsoosorvstep6\n");
 							send_command(command);
@@ -2815,6 +2847,11 @@ void new_game_resetclock(GtkWidget *widget, gpointer data)
 {
 	new_game(widget, data);
 	clock_timer_init();
+	
+	if (specialrule == 3)
+	{
+		refreshboardflag2 = 0;
+	}
 	if (specialrule == 3 && computerside == 1)
 	{
 		send_command("yxsoosorvstep1\n");
@@ -2894,11 +2931,11 @@ void view_forbidden(GtkWidget *widget, gpointer data)
 	showforbidden ^= 1;
 	refresh_board();
 }
-void view_database(GtkWidget *widget, gpointer data)
+void use_database(GtkWidget *widget, gpointer data)
 {
 	char command[80];
-	showdatabase ^= 1;
-	sprintf(command, "info usedatabase %d\n", showdatabase);
+	usedatabase ^= 1;
+	sprintf(command, "info usedatabase %d\n", usedatabase);
 	send_command(command);
 	refresh_board();
 }
@@ -3041,6 +3078,15 @@ void toolbar_function(GtkWidget *widget, gpointer data)
 void execute_command(gchar *command)
 {
 	int i;
+	if (debuglog != NULL)
+	{
+		fprintf(debuglog, "EXECUTE_COMMAND [%s,%s,%s,%s]: %s\n",
+			gtk_label_get_text(clocklabel[0]),
+			gtk_label_get_text(clocklabel[1]),
+			gtk_label_get_text(clocklabel[2]),
+			gtk_label_get_text(clocklabel[3]),
+			command);
+	}
 	if (_strnicmp(command, "command on", 10) == 0)
 	{
 		commandmodel = 1;
@@ -3936,7 +3982,7 @@ void save_setting()
 	{
 		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
 		fprintf(out, "%d\t;language (0: English, 1,2,...: custom)\n", rlanguage);
-		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move)\n", specialrule == 2 ? 3 : (specialrule == 1 ? 4 : inforule));
+		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move, 4: rif, 5: soosorv)\n", specialrule == 3 ? 5 : (specialrule == 2 ? 3 : (specialrule == 1 ? 4 : inforule)));
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside & 1);
 		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside >> 1);
@@ -3966,7 +4012,7 @@ void save_setting()
 		fprintf(out, "%d\t;time increment per move\n", increment);
 		fprintf(out, "%d\t;show forbidden moves\n", showforbidden);
 		fprintf(out, "%d\t;check timeout\n", checktimeout);
-		fprintf(out, "%d\t;show database moves\n", showdatabase);
+		fprintf(out, "%d\t;use database moves\n", usedatabase);
 		fclose(out);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -4007,6 +4053,7 @@ void yixin_quit()
 		}
 		free(clanguage);
 	}
+	if (debuglog != NULL) fclose(debuglog);
 	gtk_main_quit();
 }
 
@@ -4150,6 +4197,16 @@ void clock_label_refresh()
 	}
 	sprintf(t, " Left: %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
 	gtk_label_set_label(clocklabel[3], t);
+	
+	if (checktimeout && timeoutflag == 0)
+	{
+		if ((h_turn == 0 && m_turn == 0 && s_turn == 0) ||
+			(h_match == 0 && m_match == 0 && s_match == 0))
+		{
+			timeoutflag = 1;
+			show_dialog_timeout(windowmain);
+		}
+	}
 }
 
 gboolean clock_timer_update()
@@ -4228,6 +4285,7 @@ void clock_timer_init()
 	timerhumanturn = 0;
 	timercomputerincrement = 0;
 	timerhumanincrement = 0;
+	timeoutflag = 0;
 	clock_label_refresh();
 }
 
@@ -4641,7 +4699,7 @@ void create_windowmain()
 	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":_T(clanguage[71]));
 	menuitemclock = gtk_check_menu_item_new_with_label(language == 0 ? "Clock" : _T(clanguage[94]));
 	menuitemforbidden = gtk_check_menu_item_new_with_label(language == 0 ? "Forbidden Move" : _T(clanguage[97]));
-	menuitemdatabase = gtk_check_menu_item_new_with_label(language == 0 ? "Database Move" : _T(clanguage[103]));
+	menuitemdatabase = gtk_check_menu_item_new_with_label(language == 0 ? "Use Database" : _T(clanguage[103]));
 	menuitemlanguage = gtk_menu_item_new_with_label(language==0?"Language":_T(clanguage[72]));
 	menuitemquit = gtk_menu_item_new_with_label(language==0?"Quit":_T(clanguage[73]));
 	menuitemabout = gtk_menu_item_new_with_label(language==0?"About":_T(clanguage[74]));
@@ -4702,6 +4760,8 @@ void create_windowmain()
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule3), TRUE);
 			else if(specialrule == 1)
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule4), TRUE);
+			else if(specialrule == 3)
+				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule8), TRUE);
 			break;
 	}
 	set_rule();
@@ -4735,10 +4795,10 @@ void create_windowmain()
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemclock), TRUE);
 	}
-	if (showdatabase)
+	if (usedatabase)
 	{
-		showdatabase = 0; //hack
-		view_database(NULL, NULL);
+		usedatabase = 0; //hack
+		use_database(NULL, NULL);
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemdatabase), TRUE);
 	}
 	menuitemcomputerplaysblack = gtk_check_menu_item_new_with_label(language==0?"Computer Plays Black":_T(clanguage[81]));
@@ -4786,12 +4846,12 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemrule);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemsize);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemopenbook);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemdatabase);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemquit);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemnumeration);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlog);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemanalysis);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemforbidden);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemdatabase);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemclock);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemlanguage);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuplayers), menuitemcomputerplaysblack);
@@ -4814,7 +4874,7 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemanalysis), "activate", G_CALLBACK(view_analysis), NULL);
 	g_signal_connect(G_OBJECT(menuitemclock), "activate", G_CALLBACK(view_clock), NULL);
 	g_signal_connect(G_OBJECT(menuitemforbidden), "activate", G_CALLBACK(view_forbidden), NULL);
-	g_signal_connect(G_OBJECT(menuitemdatabase), "activate", G_CALLBACK(view_database), NULL);
+	g_signal_connect(G_OBJECT(menuitemdatabase), "activate", G_CALLBACK(use_database), NULL);
 	g_signal_connect(G_OBJECT(menuitemquit), "activate", G_CALLBACK(yixin_quit), NULL);
 	g_signal_connect(G_OBJECT(menuitemabout), "activate", G_CALLBACK(show_dialog_about), GTK_WINDOW(windowmain));
 	g_signal_connect(G_OBJECT(menuitemsettings), "activate", G_CALLBACK(show_dialog_settings), GTK_WINDOW(windowmain));
@@ -4927,6 +4987,16 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			continue;
 		}
 
+		if (debuglog != NULL)
+		{
+			fprintf(debuglog, "RECEIVE_COMMAND [%s,%s,%s,%s]: %s\n",
+				gtk_label_get_text(clocklabel[0]),
+				gtk_label_get_text(clocklabel[1]),
+				gtk_label_get_text(clocklabel[2]),
+				gtk_label_get_text(clocklabel[3]),
+				string);
+		}
+
 		for(i=0; i<(int)size; i++)
 		{
 			if(string[i] >= 'a' && string[i] <= 'z') string[i] = string[i] - 'a' + 'A';
@@ -4986,7 +5056,8 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			sscanf(p, "%d %d %d", &y, &x, &move5N);
 			make_move(y, x);
 			refresh_board();
-			refreshboardflag = 1;
+			if (!refreshboardflag2)
+				refreshboardflag = 1;
 			show_dialog_swap_query(windowmain);
 		}
 		if (strncmp(string, "MESSAGE SOOSORV SWAP2", 21) == 0)
@@ -5052,6 +5123,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				else if (*p == 'D') //"DONE"
 				{
 					refresh_board();
+					refreshboardflag2 = 1;
 				}
 				else
 				{
@@ -5337,7 +5409,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if(def_language >= 0 && def_language <= 1) language = def_language;
 		if(language < 0) language = 0;
 		inforule = read_int_from_file(in);
-		if(inforule < 0 || inforule > 4) inforule = 0;
+		if(inforule < 0 || inforule > 5) inforule = 0;
 		if(inforule == 3)
 		{
 			inforule = 0;
@@ -5347,6 +5419,11 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		{
 			inforule = 2;
 			specialrule = 1;
+		}
+		if (inforule == 5)
+		{
+			inforule = 2;
+			specialrule = 3;
 		}
 		useopenbook = read_int_from_file(in);
 		if(useopenbook < 0 || useopenbook > 1) useopenbook = 1;
@@ -5409,8 +5486,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (showforbidden < 0 || showforbidden > 1) showforbidden = 1;
 		checktimeout = read_int_from_file(in);
 		if (checktimeout < 0 || checktimeout > 1) checktimeout = 1;
-		showdatabase = read_int_from_file(in);
-		if (showdatabase < 0 || showdatabase > 1) showdatabase = 1;
+		usedatabase = read_int_from_file(in);
+		if (usedatabase < 0 || usedatabase > 1) usedatabase = 1;
 		fclose(in);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -5529,6 +5606,12 @@ void load_engine()
 	g_io_add_watch(iochannelout, G_IO_IN | G_IO_PRI | G_IO_HUP, (GIOFunc)iochannelout_watch, NULL);
 	//g_io_add_watch_full(iochannelout, G_PRIORITY_HIGH, G_IO_IN | G_IO_HUP, (GIOFunc)iochannelout_watch, NULL, NULL);
     g_io_add_watch(iochannelerr, G_IO_IN | G_IO_PRI | G_IO_HUP, (GIOFunc)iochannelerr_watch, NULL);
+
+	debuglog = fopen("debuglog.txt", "at+");
+	if (debuglog != NULL)
+	{
+		fprintf(debuglog, "----------new record----------\n");
+	}
 }
 void init_engine()
 {
