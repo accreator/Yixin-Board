@@ -24,7 +24,7 @@ typedef struct
 	char status;
 } BOOK;
 BOOK *openbook = NULL;
-int showdatabase = 0;
+int showdatabase = 1;
 int usedatabase = 1;
 int openbooksize = 0;
 int openbooknum = 0;
@@ -2091,7 +2091,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				if(is_integer(ptext))
 				{
 					sscanf(ptext, "%d", &timeoutturn);
-					if (timeoutturn > 2000) timeoutturn = 2000;
+					if (timeoutturn > 1000000) timeoutturn = 1000000;
 					if (timeoutturn < 0) timeoutturn = 0;
 					timeoutturn *= 1000;
 					if (timeoutturn == 0) timeoutturn = 100;
@@ -2395,7 +2395,7 @@ void show_dialog_move5N(GtkWidget *widget, gpointer data)
 	label[0] = gtk_label_new(language == 0 ? "Input N (1-8):" : _T(clanguage[104]));
 
 	entry[0] = gtk_entry_new();
-	sprintf(text, "%d", boardsizeh);
+	sprintf(text, "");
 	gtk_entry_set_text(GTK_ENTRY(entry[0]), text);
 
 	gtk_table_attach_defaults(GTK_TABLE(table), label[0], 0, 1, 0, 1);
