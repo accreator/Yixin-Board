@@ -10,6 +10,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data);
 void show_dialog_load(GtkWidget *widget, gpointer data);
 void show_dialog_save(GtkWidget *widget, gpointer data);
 void show_dialog_about(GtkWidget *widget, gpointer data);
+void show_dialog_move5N(GtkWidget *widget, gpointer data);
 void new_game(GtkWidget *widget, gpointer data);
 void change_rule(GtkWidget *widget, gpointer data);
 void change_side(GtkWidget *widget, gpointer data);
