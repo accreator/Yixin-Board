@@ -1044,8 +1044,8 @@ int move_openbook_n(int n, int *besty, int *bestx, int force)
 					if(moveopenbookexclude[j][k]) continue;
 					_d1 = (j - py[0])*(j - py[0]) + (k - px[0])*(k - px[0]);
 					_d2 = (j - py[2])*(j - py[2]) + (k - px[2])*(k - px[2]);
-					_d3 = (j - py[1])*(j - py[1]) + (k - px[0])*(k - px[1]);
-					_d4 = (j - py[3])*(j - py[3]) + (k - px[2])*(k - px[3]);
+					_d3 = (j - py[1])*(j - py[1]) + (k - px[1])*(k - px[1]);
+					_d4 = (j - py[3])*(j - py[3]) + (k - px[3])*(k - px[3]);
 					
 					if(sy[0] && fabs(d1 - _d1) <= 1e-6 && fabs(d2 - _d2) <= 1e-6)
 					{
@@ -5135,6 +5135,8 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 					timercomputerincrement += increment;
 					refresh_board();
 					refreshboardflag2 = 1;
+					if (move5N == 1)
+						refreshboardflag = 0;
 				}
 				else
 				{
@@ -5448,7 +5450,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if(levelchoice < 0 || levelchoice > 8) levelchoice = 4;
 		timeoutturn = read_int_from_file(in) * 1000;
 		if (timeoutturn == 0) timeoutturn = 100;
-		if(timeoutturn < 0 || timeoutturn > 2000000) timeoutturn = 10000;
+		if(timeoutturn < 0 || timeoutturn > 1000000000) timeoutturn = 10000;
 		timeoutmatch = read_int_from_file(in) * 1000;
 		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 2000000;
 		maxdepth = read_int_from_file(in);
