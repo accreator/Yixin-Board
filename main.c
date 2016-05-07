@@ -509,6 +509,8 @@ void send_command(char *command)
 	}
 }
 
+int swap2done = 0;
+
 int refreshboardflag = 0; //it is set to 1 when making the 5th move under rif/soosorv rule, otherwise, 0
 int refreshboardflag2 = 0; //it is set to 1 when refreshboardflag has been set to 1
 void refresh_board()
@@ -792,6 +794,10 @@ int search_openbook(I64 zobkey)
 		else if (specialrule == 3)
 		{
 			sprintf(name, "book5_%d_%d.dat", boardsizeh, boardsizew);
+		}
+		else if (specialrule == 4)
+		{
+			sprintf(name, "book6_%d_%d.dat", boardsizeh, boardsizew);
 		}
 		else
 		{
@@ -1160,6 +1166,72 @@ void show_dialog_undo_warning_query(GtkWidget *window)
 	gtk_widget_destroy(dialog);
 }
 
+void show_dialog_swap_query2(GtkWidget *window)
+{
+	GtkWidget *dialog;
+	gint result;
+	char msg[80];
+	char command[80];
+	int i;
+
+	sprintf(msg, "%s", language == 0 ? "Choose one option" : _T(clanguage[107]));
+	dialog = gtk_dialog_new_with_buttons(msg, GTK_WINDOW(windowmain), GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+		language == 0 ? "Stay with white" : _T(clanguage[108]), 1,
+		language == 0 ? "Swap" : _T(clanguage[109]), 2,
+		language == 0 ? "Add 2 more pieces" : _T(clanguage[110]), 3,
+		NULL);
+	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+	result = gtk_dialog_run(GTK_DIALOG(dialog));
+
+	switch (result)
+	{
+	case 1:
+		swap2done = 1;
+		break;
+	case 2:
+		//swap
+		timerhumanincrement += increment;
+		if (computerside == 2)
+		{
+			change_side_menu(1, NULL);
+			change_side_menu(-2, NULL);
+		}
+		else
+		{
+			change_side_menu(-1, NULL);
+			change_side_menu(2, NULL);
+		}
+		if (language) printf_log(clanguage[14]); else printf_log("Swap");
+		printf_log("\n");
+
+		isthinking = 1;
+		clock_timer_change_status(1);
+		isneedrestart = 0;
+		sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
+		send_command(command);
+		if (hashautoclear) send_command("yxhashclear\n");
+		sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
+		send_command(command);
+		sprintf(command, "board\n");
+		send_command(command);
+		for (i = 0; i<piecenum; i++)
+		{
+			sprintf(command, "%d,%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+			send_command(command);
+		}
+		sprintf(command, "done\n");
+		send_command(command);
+		
+		swap2done = 1;
+		break;
+	case 3:
+		//should do nothing
+		break;
+	}
+	gtk_widget_destroy(dialog);
+}
+
 void show_dialog_swap_query(GtkWidget *window)
 {
 	GtkWidget *dialog;
@@ -1178,7 +1250,30 @@ void show_dialog_swap_query(GtkWidget *window)
 	{
 		case GTK_RESPONSE_YES:
 			timerhumanincrement += increment;
-			if (specialrule == 3)
+			if (specialrule == 4)
+			{
+				int i;
+				char command[80];
+				isthinking = 1;
+				clock_timer_change_status(1);
+				isneedrestart = 0;
+				sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
+				send_command(command);
+				if (hashautoclear) send_command("yxhashclear\n");
+				sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
+				send_command(command);
+				sprintf(command, "board\n");
+				send_command(command);
+				for (i = 0; i<piecenum; i++)
+				{
+					sprintf(command, "%d,%d,%d\n", movepath[i] / boardsizew,
+						movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+					send_command(command);
+				}
+				sprintf(command, "done\n");
+				send_command(command);
+			}
+			else if (specialrule == 3)
 			{
 				isneedrestart = 1;
 				if (computerside == 2)
@@ -1254,6 +1349,19 @@ void show_dialog_swap_query(GtkWidget *window)
 			printf_log("\n");
 			break;
 		case GTK_RESPONSE_NO:
+			if (specialrule == 4)
+			{
+				if (computerside == 2)
+				{
+					change_side_menu(1, NULL);
+					change_side_menu(-2, NULL);
+				}
+				else
+				{
+					change_side_menu(-1, NULL);
+					change_side_menu(2, NULL);
+				}
+			}
 			printf_log("\n");
 			break;
 	}
@@ -1337,7 +1445,73 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 			}
 			if(x>=0 && x<boardsizew && y>=0 && y<boardsizeh && !isgameover)
 			{
-				if(!refreshboardflag && ((specialrule!=1 && specialrule!=3) || piecenum>=3 || piecenum==0) && (((computerside&1)&&piecenum%2==0) || ((computerside&2)&&piecenum%2==1)))
+				if (specialrule == 4 && (piecenum < 3 || (piecenum < 5 && !swap2done)))
+				{
+					if (board[y][x] == 0)
+					{
+						if (piecenum < 2 && !(computerside & 1))
+						{
+							make_move(y, x);
+						}
+						else if (piecenum == 2 && !(computerside & 1))
+						{
+							int i;
+							make_move(y, x);
+							timerhumanincrement += increment;
+
+							isthinking = 1;
+							clock_timer_change_status(1);
+							isneedrestart = 0;
+							sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
+							send_command(command);
+							if (hashautoclear) send_command("yxhashclear\n");
+							sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
+							send_command(command);
+							sprintf(command, "yxboard\n");
+							send_command(command);
+							for (i = 0; i<piecenum; i++)
+							{
+								sprintf(command, "%d,%d,%d\n", movepath[i] / boardsizew,
+									movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+								send_command(command);
+							}
+							sprintf(command, "done\n");
+							send_command(command);
+							send_command("yxswap2step2\n");
+						}
+						else if (piecenum == 3 && !(computerside & 2) && !swap2done)
+						{
+							make_move(y, x);
+						}
+						else if (piecenum == 4 && !(computerside & 2) && !swap2done)
+						{
+							int i;
+							make_move(y, x);
+							timerhumanincrement += increment;
+
+							isthinking = 1;
+							clock_timer_change_status(1);
+							isneedrestart = 0;
+							sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
+							send_command(command);
+							if (hashautoclear) send_command("yxhashclear\n");
+							sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
+							send_command(command);
+							sprintf(command, "yxboard\n");
+							send_command(command);
+							for (i = 0; i<piecenum; i++)
+							{
+								sprintf(command, "%d,%d,%d\n", movepath[i] / boardsizew,
+									movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+								send_command(command);
+							}
+							sprintf(command, "done\n");
+							send_command(command);
+							send_command("yxswap2step3\n");
+						}
+					}
+				}
+				else if(!refreshboardflag && ((specialrule!=1 && specialrule!=3) || piecenum>=3 || piecenum==0) && (((computerside&1)&&piecenum%2==0) || ((computerside&2)&&piecenum%2==1)))
 				{
 					int i;
 					//the first move of `swap after 1st move' rule
@@ -2854,6 +3028,14 @@ void new_game_resetclock(GtkWidget *widget, gpointer data)
 	new_game(widget, data);
 	clock_timer_init();
 	
+	if (specialrule == 4)
+	{
+		swap2done = 0;
+	}
+	if (specialrule == 4 && computerside == 1)
+	{
+		send_command("yxswap2step1\n");
+	}
 	if (specialrule == 3)
 	{
 		refreshboardflag2 = 0;
@@ -2891,6 +3073,11 @@ void change_rule(GtkWidget *widget, gpointer data)
 	{
 		inforule = 2;
 		specialrule = 3;
+	}
+	else if (inforule == 6)
+	{
+		inforule = 1;
+		specialrule = 4;
 	}
 	else
 	{
@@ -3988,7 +4175,8 @@ void save_setting()
 	{
 		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
 		fprintf(out, "%d\t;language (0: English, 1,2,...: custom)\n", rlanguage);
-		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move, 4: rif, 5: soosorv)\n", specialrule == 3 ? 5 : (specialrule == 2 ? 3 : (specialrule == 1 ? 4 : inforule)));
+		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move, 4: rif, 5: soosorv)\n",
+			specialrule == 4 ? 6 : (specialrule == 3 ? 5 : (specialrule == 2 ? 3 : (specialrule == 1 ? 4 : inforule))));
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside & 1);
 		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside >> 1);
@@ -4716,7 +4904,7 @@ void create_windowmain()
 	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Free Renju" : _T(clanguage[78]));
 	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "RIF Opening Rule" : _T(clanguage[79]));
 	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Swap After First Move" : _T(clanguage[80]));
-	//menuitemrule6 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Swap2" : _T(clanguage[100])); //TODO
+	menuitemrule6 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Swap2" : _T(clanguage[100]));
 	//menuitemrule7 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Yamaguchi Opening Rule" : _T(clanguage[101])); //TODO
 	menuitemrule8 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Soosorv-8 Opening Rule" : _T(clanguage[102]));
 	
@@ -4760,7 +4948,12 @@ void create_windowmain()
 			else if(specialrule == 2)
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule5), TRUE);
 			break;
-		case 1: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule2), TRUE); break;
+		case 1:
+			if(specialrule == 0)
+				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule2), TRUE);
+			else if(specialrule == 4)
+				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule6), TRUE);
+			break;
 		case 2:
 			if(specialrule == 0)
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule3), TRUE);
@@ -4837,6 +5030,7 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule3);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule4);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule5);
+	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule6);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule8);
 
 	gtk_menu_shell_append(GTK_MENU_SHELL(menulanguage), menuitemenglish);
@@ -4889,11 +5083,12 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemrule3), "activate", G_CALLBACK(change_rule), (gpointer)2);
 	g_signal_connect(G_OBJECT(menuitemrule4), "activate", G_CALLBACK(change_rule), (gpointer)3);
 	g_signal_connect(G_OBJECT(menuitemrule5), "activate", G_CALLBACK(change_rule), (gpointer)4);
-	g_signal_connect(G_OBJECT(menuitemrule8), "activate", G_CALLBACK(change_rule), (gpointer)5); //TODO
+	g_signal_connect(G_OBJECT(menuitemrule6), "activate", G_CALLBACK(change_rule), (gpointer)6);
+	g_signal_connect(G_OBJECT(menuitemrule8), "activate", G_CALLBACK(change_rule), (gpointer)5);
 	g_signal_connect(G_OBJECT(menuitemsize), "activate", G_CALLBACK(show_dialog_size), 0);
 	g_signal_connect(G_OBJECT(menuitemcomputerplaysblack), "activate", G_CALLBACK(change_side), (gpointer)1);
 	g_signal_connect(G_OBJECT(menuitemcomputerplayswhite), "activate", G_CALLBACK(change_side), (gpointer)2);
-	g_signal_connect(G_OBJECT(menuitemchecktimeout), "activate", G_CALLBACK(change_timeoutcheck), NULL); //TODO
+	g_signal_connect(G_OBJECT(menuitemchecktimeout), "activate", G_CALLBACK(change_timeoutcheck), NULL);
 	g_signal_connect(G_OBJECT(menuitemenglish), "activate", G_CALLBACK(change_language), (gpointer)0);
 	for (i = 1; i < 16; i++)
 	{
@@ -5012,6 +5207,108 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			printf_log("%s", string);
 			g_free(string);
 			continue;
+		}
+		if (strncmp(string, "MESSAGE SWAP2 MOVE1", 19) == 0)
+		{
+			char *p = string + 19 + 1;
+			sscanf(p, "%d %d", &y, &x);
+			make_move(y, x);
+			refresh_board();
+		}
+		if (strncmp(string, "MESSAGE SWAP2 MOVE2", 19) == 0)
+		{
+			char *p = string + 19 + 1;
+			sscanf(p, "%d %d", &y, &x);
+			make_move(y, x);
+			refresh_board();
+		}
+		if (strncmp(string, "MESSAGE SWAP2 MOVE3", 19) == 0)
+		{
+			char *p = string + 19 + 1;
+			sscanf(p, "%d %d", &y, &x);
+			make_move(y, x);
+			refresh_board();
+			timercomputerincrement += increment;
+			show_dialog_swap_query2(windowmain);
+		}
+		if (strncmp(string, "MESSAGE SWAP2 SWAP1 NO", 22) == 0)
+		{
+			swap2done = 1;
+
+			isthinking = 1;
+			clock_timer_change_status(1);
+			isneedrestart = 0;
+			sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
+			send_command(command);
+			if (hashautoclear) send_command("yxhashclear\n");
+			sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
+			send_command(command);
+			sprintf(command, "board\n");
+			send_command(command);
+			for (i = 0; i<piecenum; i++)
+			{
+				sprintf(command, "%d,%d,%d\n", movepath[i] / boardsizew,
+					movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+				send_command(command);
+			}
+			sprintf(command, "done\n");
+			send_command(command);
+		}
+		if (strncmp(string, "MESSAGE SWAP2 SWAP1 YES", 23) == 0)
+		{
+			swap2done = 1;
+			isthinking = 0;
+			clock_timer_change_status(2);
+			timercomputerincrement += increment;
+			show_dialog_swap_info(windowmain);
+		}
+		if (strncmp(string, "MESSAGE SWAP2 MOVE4", 19) == 0)
+		{
+			char *p = string + 19 + 1;
+			sscanf(p, "%d %d", &y, &x);
+			make_move(y, x);
+			refresh_board();
+		}
+		if (strncmp(string, "MESSAGE SWAP2 MOVE5", 19) == 0)
+		{
+			char *p = string + 19 + 1;
+			sscanf(p, "%d %d", &y, &x);
+			make_move(y, x);
+			swap2done = 1;
+			isthinking = 0;
+			clock_timer_change_status(2);
+			timercomputerincrement += increment;
+			refresh_board();
+			show_dialog_swap_query(windowmain);
+		}
+		if (strncmp(string, "MESSAGE SWAP2 SWAP2 YES", 23) == 0)
+		{
+			printf_log("Computer chooses black\n");
+			isthinking = 0;
+			clock_timer_change_status(2);
+			timercomputerincrement += increment;
+		}
+		if (strncmp(string, "MESSAGE SWAP2 SWAP2 NO", 22) == 0)
+		{
+			printf_log("Computer chooses white\n");
+			isthinking = 1;
+			clock_timer_change_status(1);
+			isneedrestart = 0;
+			sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
+			send_command(command);
+			if (hashautoclear) send_command("yxhashclear\n");
+			sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
+			send_command(command);
+			sprintf(command, "board\n");
+			send_command(command);
+			for (i = 0; i<piecenum; i++)
+			{
+				sprintf(command, "%d,%d,%d\n", movepath[i] / boardsizew,
+					movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
+				send_command(command);
+			}
+			sprintf(command, "done\n");
+			send_command(command);
 		}
 		if (strncmp(string, "MESSAGE SOOSORV MOVE1", 21) == 0)
 		{
@@ -5423,7 +5720,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if(def_language >= 0 && def_language <= 1) language = def_language;
 		if(language < 0) language = 0;
 		inforule = read_int_from_file(in);
-		if(inforule < 0 || inforule > 5) inforule = 0;
+		if(inforule < 0 || inforule > 6) inforule = 0;
 		if(inforule == 3)
 		{
 			inforule = 0;
@@ -5438,6 +5735,11 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		{
 			inforule = 2;
 			specialrule = 3;
+		}
+		if (inforule == 6)
+		{
+			inforule = 1;
+			specialrule = 4;
 		}
 		useopenbook = read_int_from_file(in);
 		if(useopenbook < 0 || useopenbook > 1) useopenbook = 1;
