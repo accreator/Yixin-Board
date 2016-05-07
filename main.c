@@ -5291,6 +5291,16 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 		if (strncmp(string, "MESSAGE SWAP2 SWAP2 NO", 22) == 0)
 		{
 			printf_log("Computer chooses white\n");
+			if (computerside == 2)
+			{
+				change_side_menu(1, NULL);
+				change_side_menu(-2, NULL);
+			}
+			else
+			{
+				change_side_menu(-1, NULL);
+				change_side_menu(2, NULL);
+			}
 			isthinking = 1;
 			clock_timer_change_status(1);
 			isneedrestart = 0;
