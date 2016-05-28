@@ -106,6 +106,7 @@ int toolbarnum = 6;
 
 GtkWidget *windowclock;
 GtkWidget *clocklabel[4];
+GtkWidget *playerlabel[2];
 int timercomputerturn;
 int timercomputermatch;
 int timerhumanturn;
@@ -116,6 +117,7 @@ int timerstart;
 int timerstatus = 0;
 int timeoutflag = 0;
 
+int recorddebuglog = 0;
 FILE *debuglog;
 
 int toolbarlng[MAX_TOOLBAR_ITEM] =
@@ -578,16 +580,7 @@ void refresh_board()
 				if(movepath[piecenum-1]/boardsizew == i && movepath[piecenum-1]%boardsizew == j) f = 2;
 				if (refreshboardflag == 1)
 				{
-					if (specialrule == 1)
-					{
-						if (movepath[piecenum - 2] / boardsizew == i && movepath[piecenum - 2] % boardsizew == j) _f = 2;
-						if (f)
-						{
-							bz -= 1;
-							bn -= 1;
-						}
-					}
-					else if (specialrule == 3)
+					if (specialrule == 1 || specialrule == 3)
 					{
 						int k;
 						for (k = 4; k < piecenum - 1; k++)
@@ -4115,7 +4108,7 @@ void execute_command(gchar *command)
 	}
 	else if (_strnicmp(command, "resign", 6) == 0)
 	{
-		//TODO
+		send_command("yxresign\n");
 	}
 	else if (_strnicmp(command, "dbval", 5) == 0)
 	{
@@ -4175,7 +4168,7 @@ void save_setting()
 	{
 		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
 		fprintf(out, "%d\t;language (0: English, 1,2,...: custom)\n", rlanguage);
-		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move, 4: rif, 5: soosorv)\n",
+		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move, 4: rif, 5: soosorv, 6: swap-2)\n",
 			specialrule == 4 ? 6 : (specialrule == 3 ? 5 : (specialrule == 2 ? 3 : (specialrule == 1 ? 4 : inforule))));
 		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
 		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside & 1);
@@ -4207,6 +4200,7 @@ void save_setting()
 		fprintf(out, "%d\t;show forbidden moves\n", showforbidden);
 		fprintf(out, "%d\t;check timeout\n", checktimeout);
 		fprintf(out, "%d\t;use database moves\n", usedatabase);
+		fprintf(out, "%d\t;record debug log\n", recorddebuglog);
 		fclose(out);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -4401,6 +4395,22 @@ void clock_label_refresh()
 			show_dialog_timeout(windowmain);
 		}
 	}
+
+	//temp modification
+	/*
+	if (refreshboardflag == 0 && piecenum > 5)
+	{
+		sprintf(t, "<big><b> [%s] Yixin(AI) </b></big>", computerside % 2 ? "Black" : "White");
+		gtk_label_set_markup(GTK_LABEL(playerlabel[0]), t);
+		sprintf(t, "<big><b> [%s] Epifanov Dmitry </b></big>", computerside % 2 ? "White" : "Black");
+		gtk_label_set_markup(GTK_LABEL(playerlabel[1]), t);
+	}
+	else
+	{
+		gtk_label_set_markup(GTK_LABEL(playerlabel[0]), "<big><b> Yixin(AI) </b></big>");
+		gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b> Epifanov Dmitry </b></big>");
+	}
+	*/
 }
 
 gboolean clock_timer_update()
@@ -4560,7 +4570,6 @@ gboolean key_press(GtkWidget *widget, GdkEventKey  *event, gpointer data)
 void create_windowclock()
 {
 	GtkWidget *vbox;
-	GtkWidget *label[2];
 
 	windowclock = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_resizable(GTK_WINDOW(windowclock), FALSE);
@@ -4574,17 +4583,20 @@ void create_windowclock()
 	clocklabel[2] = gtk_label_new(" Left: 00:00:00 / 00:00:00 ");
 	clocklabel[3] = gtk_label_new(" Left: 00:00:00 / 00:00:00 ");
 
-	label[0] = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(label[0]), "<big><b>Computer</b></big>");
-	label[1] = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(label[1]), "<big><b>Human</b></big>");
+	playerlabel[0] = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(playerlabel[0]), "<big><b>Computer</b></big>");
+	//gtk_label_set_markup(GTK_LABEL(playerlabel[0]), "<big><b> Yixin(AI) </b></big>");
+
+	playerlabel[1] = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b>Human</b></big>");
+	//gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b> Epifanov Dmitry </b></big>");
 
 	vbox = gtk_vbox_new(FALSE, 0);
 
-	gtk_box_pack_start(GTK_BOX(vbox), label[0], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), playerlabel[0], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[0], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[2], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), label[1], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(vbox), playerlabel[1], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[1], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), clocklabel[3], FALSE, FALSE, 3);
 
@@ -5214,6 +5226,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			sscanf(p, "%d %d", &y, &x);
 			make_move(y, x);
 			refresh_board();
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SWAP2 MOVE2", 19) == 0)
 		{
@@ -5221,6 +5236,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			sscanf(p, "%d %d", &y, &x);
 			make_move(y, x);
 			refresh_board();
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SWAP2 MOVE3", 19) == 0)
 		{
@@ -5230,6 +5248,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			refresh_board();
 			timercomputerincrement += increment;
 			show_dialog_swap_query2(windowmain);
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SWAP2 SWAP1 NO", 22) == 0)
 		{
@@ -5253,6 +5274,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			}
 			sprintf(command, "done\n");
 			send_command(command);
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SWAP2 SWAP1 YES", 23) == 0)
 		{
@@ -5261,6 +5285,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			clock_timer_change_status(2);
 			timercomputerincrement += increment;
 			show_dialog_swap_info(windowmain);
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SWAP2 MOVE4", 19) == 0)
 		{
@@ -5268,6 +5295,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			sscanf(p, "%d %d", &y, &x);
 			make_move(y, x);
 			refresh_board();
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SWAP2 MOVE5", 19) == 0)
 		{
@@ -5280,6 +5310,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			timercomputerincrement += increment;
 			refresh_board();
 			show_dialog_swap_query(windowmain);
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SWAP2 SWAP2 YES", 23) == 0)
 		{
@@ -5287,6 +5320,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			isthinking = 0;
 			clock_timer_change_status(2);
 			timercomputerincrement += increment;
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SWAP2 SWAP2 NO", 22) == 0)
 		{
@@ -5319,6 +5355,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			}
 			sprintf(command, "done\n");
 			send_command(command);
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SOOSORV MOVE1", 21) == 0)
 		{
@@ -5326,6 +5365,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			sscanf(p, "%d %d", &y, &x);
 			make_move(y, x);
 			refresh_board();
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SOOSORV MOVE2", 21) == 0)
 		{
@@ -5333,6 +5375,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			sscanf(p, "%d %d", &y, &x);
 			make_move(y, x);
 			refresh_board();
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SOOSORV MOVE3", 21) == 0)
 		{
@@ -5342,6 +5387,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 			refresh_board();
 			timercomputerincrement += increment;
 			show_dialog_swap_query(windowmain);
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SOOSORV SWAP1", 21) == 0)
 		{
@@ -5364,6 +5412,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				}
 				send_command("done\n");
 			}
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SOOSORV MOVE4", 21) == 0)
 		{
@@ -5375,6 +5426,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				refreshboardflag = 1;
 			timercomputerincrement += increment;
 			show_dialog_swap_query(windowmain);
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SOOSORV SWAP2", 21) == 0)
 		{
@@ -5397,6 +5451,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				}
 				send_command("done\n");
 			}
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE SOOSORV MOVE5", 21) == 0)
 		{
@@ -5451,6 +5508,9 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 					make_move(y, x);
 				}
 			}
+			
+			g_free(string);
+			continue;
 		}
 		if (strncmp(string, "MESSAGE DATABASE", 16) == 0)
 		{
@@ -5814,6 +5874,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (checktimeout < 0 || checktimeout > 1) checktimeout = 1;
 		usedatabase = read_int_from_file(in);
 		if (usedatabase < 0 || usedatabase > 1) usedatabase = 1;
+		recorddebuglog = read_int_from_file(in);
+		if (recorddebuglog < 0 || recorddebuglog > 1) recorddebuglog = 0;
 		fclose(in);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -5933,10 +5995,13 @@ void load_engine()
 	//g_io_add_watch_full(iochannelout, G_PRIORITY_HIGH, G_IO_IN | G_IO_HUP, (GIOFunc)iochannelout_watch, NULL, NULL);
     g_io_add_watch(iochannelerr, G_IO_IN | G_IO_PRI | G_IO_HUP, (GIOFunc)iochannelerr_watch, NULL);
 
-	debuglog = fopen("debuglog.txt", "at+");
-	if (debuglog != NULL)
+	if (recorddebuglog)
 	{
-		fprintf(debuglog, "----------new record----------\n");
+		debuglog = fopen("debuglog.txt", "at+");
+		if (debuglog != NULL)
+		{
+			fprintf(debuglog, "----------new record----------\n");
+		}
 	}
 }
 void init_engine()
