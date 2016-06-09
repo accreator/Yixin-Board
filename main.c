@@ -9,7 +9,7 @@
 #include "resource.h" /* not needed if you are not provided with resource.h, Yixin.rc and icon.ico */
 
 typedef long long I64;
-#define MAX_SIZE 24
+#define MAX_SIZE 22
 #define CAUTION_NUM 4  //0..CAUTION_NUM
 #define MIN_SPLIT_DEPTH 5
 #define MAX_SPLIT_DEPTH 20
@@ -307,15 +307,6 @@ int printf_log(char *fmt, ...)
 				i += 8;
 				continue;
 			}
-			/* removed from new engine
-			if(strncmp(buffer+i, "COMPLEXITY", 10) == 0)
-			{
-				strcpy(p, "局势复杂度");
-				p += 10;
-				i += 10;
-				continue;
-			}
-			*/
 			if(strncmp(buffer+i, "EVALUATION", 10) == 0)
 			{
 				strcpy(p, clanguage[1]);
@@ -1890,6 +1881,8 @@ void set_level(int x)
 		send_command(command);
 		sprintf(command, "INFO max_depth %d\n", maxdepth);
 		send_command(command);
+		sprintf(command, "INFO time_increment %d\n", increment);
+		send_command(command);
 	}
 	else
 	{
@@ -1928,8 +1921,9 @@ void set_level(int x)
 				send_command(command);
 				break;
 		}
-		timeoutmatch = 1000000000;
+		timeoutmatch = 100000000;
 		timeoutturn = 2000000;
+		increment = 0;
 		sprintf(command, "INFO timeout_match %d\n", timeoutmatch);
 		send_command(command);
 		sprintf(command, "INFO time_left %d\n", timeoutmatch);
@@ -1937,6 +1931,8 @@ void set_level(int x)
 		sprintf(command, "INFO timeout_turn %d\n", timeoutturn);
 		send_command(command);
 		sprintf(command, "INFO max_depth %d\n", boardsizeh * boardsizew);
+		send_command(command);
+		sprintf(command, "INFO time_increment %d\n", increment);
 		send_command(command);
 	}
 }
@@ -2258,7 +2254,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				if(is_integer(ptext))
 				{
 					sscanf(ptext, "%d", &timeoutturn);
-					if (timeoutturn > 1000000) timeoutturn = 1000000;
+					if (timeoutturn > 100000) timeoutturn = 100000;
 					if (timeoutturn < 0) timeoutturn = 0;
 					timeoutturn *= 1000;
 					if (timeoutturn == 0) timeoutturn = 100;
@@ -2267,7 +2263,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				if(is_integer(ptext))
 				{
 					sscanf(ptext, "%d", &timeoutmatch);
-					if(timeoutmatch > 1000000) timeoutmatch = 1000000;
+					if(timeoutmatch > 100000) timeoutmatch = 100000;
 					if(timeoutmatch < 1) timeoutmatch = 1;
 					timeoutmatch *= 1000;
 					if(timeoutmatch < timeoutturn) timeoutmatch = timeoutturn;
@@ -2291,7 +2287,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				if (is_integer(ptext))
 				{
 					sscanf(ptext, "%d", &increment);
-					if (increment > 1000000) increment = 1000000;
+					if (increment > 500) increment = 500;
 					if (increment < 0) increment = 0;
 					increment *= 1000;
 				}
@@ -2616,8 +2612,8 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	gtk_table_set_col_spacings(GTK_TABLE(table), 0); /* set the column distance between elements to be 0 */
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), table, FALSE, FALSE, 3);
 	
-	label[0] = gtk_label_new(language == 0 ? "Board Height (10 ~ 24):" : _T(clanguage[42]));
-	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 24):" : _T(clanguage[43]));
+	label[0] = gtk_label_new(language == 0 ? "Board Height (10 ~ 22):" : _T(clanguage[42]));
+	label[1] = gtk_label_new(language == 0 ? "Board Width (10 ~ 22):" : _T(clanguage[43]));
 	
 	entry[0] = gtk_entry_new();
 	sprintf(text, "%d", boardsizeh);
@@ -3350,6 +3346,8 @@ void execute_command(gchar *command)
 		printf_log(" redo all\n");
 		printf_log(" searchdefend\n");
 		printf_log(" dbval\n");
+		printf_log(" dbdel one\n");
+		printf_log(" dbdel all\n");
 		printf_log(" hash usage\n");
 		printf_log(" command [on,off]\n");
 		printf_log(" dbeditrawmsg\n");
@@ -4122,6 +4120,30 @@ void execute_command(gchar *command)
 		}
 		send_command("done\n");
 	}
+	else if (_strnicmp(command, "dbdel one", 9) == 0)
+	{
+		gchar _command[80];
+		send_command("yxdeletedatabaseone\n");
+		for (i = 0; i < piecenum; i++)
+		{
+			sprintf(_command, "%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew);
+			send_command(_command);
+		}
+		send_command("done\n");
+	}
+	else if (_strnicmp(command, "dbdel all", 9) == 0)
+	{
+		gchar _command[80];
+		send_command("yxdeletedatabaseall\n");
+		for (i = 0; i < piecenum; i++)
+		{
+			sprintf(_command, "%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew);
+			send_command(_command);
+		}
+		send_command("done\n");
+	}
 	else if (_strnicmp(command, "makebook", 8) == 0)
 	{
 		; //TODO
@@ -4395,22 +4417,6 @@ void clock_label_refresh()
 			show_dialog_timeout(windowmain);
 		}
 	}
-
-	//temp modification
-	/*
-	if (refreshboardflag == 0 && piecenum > 5)
-	{
-		sprintf(t, "<big><b> [%s] Yixin(AI) </b></big>", computerside % 2 ? "Black" : "White");
-		gtk_label_set_markup(GTK_LABEL(playerlabel[0]), t);
-		sprintf(t, "<big><b> [%s] Epifanov Dmitry </b></big>", computerside % 2 ? "White" : "Black");
-		gtk_label_set_markup(GTK_LABEL(playerlabel[1]), t);
-	}
-	else
-	{
-		gtk_label_set_markup(GTK_LABEL(playerlabel[0]), "<big><b> Yixin(AI) </b></big>");
-		gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b> Epifanov Dmitry </b></big>");
-	}
-	*/
 }
 
 gboolean clock_timer_update()
@@ -4585,11 +4591,9 @@ void create_windowclock()
 
 	playerlabel[0] = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(playerlabel[0]), "<big><b>Computer</b></big>");
-	//gtk_label_set_markup(GTK_LABEL(playerlabel[0]), "<big><b> Yixin(AI) </b></big>");
 
 	playerlabel[1] = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b>Human</b></big>");
-	//gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b> Epifanov Dmitry </b></big>");
 
 	vbox = gtk_vbox_new(FALSE, 0);
 
@@ -5822,9 +5826,9 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if(levelchoice < 0 || levelchoice > 8) levelchoice = 4;
 		timeoutturn = read_int_from_file(in) * 1000;
 		if (timeoutturn == 0) timeoutturn = 100;
-		if(timeoutturn < 0 || timeoutturn > 1000000000) timeoutturn = 10000;
+		if(timeoutturn < 0 || timeoutturn > 100000000) timeoutturn = 10000;
 		timeoutmatch = read_int_from_file(in) * 1000;
-		if(timeoutmatch <= 0 || timeoutmatch > 1000000000) timeoutmatch = 2000000;
+		if(timeoutmatch <= 0 || timeoutmatch > 100000000) timeoutmatch = 2000000;
 		maxdepth = read_int_from_file(in);
 		if(maxdepth < 2 || maxdepth > boardsizeh*boardsizew) maxdepth = boardsizeh*boardsizew;
 		maxnode = read_int_from_file(in);
@@ -5867,7 +5871,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		showclock = read_int_from_file(in);
 		if (showclock < 0 || showclock > 1) showclock = 1;
 		increment = read_int_from_file(in);
-		if (increment < 0 || increment > 2000000) increment = 0;
+		if (increment < 0 || increment > 200000) increment = 0;
 		showforbidden = read_int_from_file(in);
 		if (showforbidden < 0 || showforbidden > 1) showforbidden = 1;
 		checktimeout = read_int_from_file(in);
