@@ -93,7 +93,7 @@ GtkWidget *labelboard[2][MAX_SIZE];
 GtkWidget *vboxwindowmain;
 GdkPixbuf *pixbufboard[9][14];
 GdkPixbuf *pixbufboardnumber[9][14][MAX_SIZE*MAX_SIZE+1][2];
-GdkPixbuf *pixbufboardchar[9][14][128][2];
+
 int imgtypeboard[MAX_SIZE][MAX_SIZE];
 char piecepicname[80] = "piece.bmp";
 /* log */
@@ -459,7 +459,7 @@ GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color, i
 	gchar *markup;
 	GdkPixbuf *ret;
 	gchar format[100];
-	
+
 	pm = gdk_pixmap_new(windowmain->window, w, h, -1);
 	gdk_drawable_set_colormap(pm, gdk_colormap_get_system());
 	gc = gdk_gc_new(pm);
@@ -468,19 +468,21 @@ GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color, i
 	gtk_widget_realize(scratch);
 	layout = gtk_widget_create_pango_layout(scratch, NULL);
 	gtk_widget_destroy(scratch);
-	if(type == 0)
+	if (type == 0)
 		sprintf(format, "<big><b><span foreground='%s'>%%s</span></b></big>", color);
 	else
 		sprintf(format, "<b><span foreground='%s'>%%s</span></b>", color);
 	markup = g_strdup_printf(format, text);
 	pango_layout_set_markup(layout, markup, -1);
 	g_free(markup);
-	if(type == 0)
-		gdk_draw_layout(pm, gc, w/2-strlen(text)*4, h/2-10, layout);
+	if (type == 0)
+		gdk_draw_layout(pm, gc, w / 2 - strlen(text) * 4, h / 2 - 10, layout);
 	else
-		gdk_draw_layout(pm, gc, w/2-strlen(text)*4, h/2-8, layout);
+		gdk_draw_layout(pm, gc, w / 2 - strlen(text) * 4, h / 2 - 8, layout);
 	g_object_unref(layout);
 	ret = gdk_pixbuf_get_from_drawable(NULL, pm, NULL, 0, 0, 0, 0, w, h);
+	g_object_unref(pm);
+	g_object_unref(gc);
 	return ret;
 }
 
@@ -489,7 +491,7 @@ void send_command(char *command)
 	gsize size;
 	g_io_channel_write_chars(iochannelin, command, -1, &size, NULL);
 	g_io_channel_flush(iochannelin, NULL);
-	
+
 	//printf_log(command); //for debug
 	if (debuglog != NULL)
 	{
@@ -509,27 +511,27 @@ int refreshboardflag2 = 0; //it is set to 1 when refreshboardflag has been set t
 void refresh_board()
 {
 	int i, j;
-	for(i=0; i<boardsizeh; i++)
+	for (i = 0; i < boardsizeh; i++)
 	{
-		for(j=0; j<boardsizew; j++)
+		for (j = 0; j < boardsizew; j++)
 		{
-			if(board[i][j] == 0)
+			if (board[i][j] == 0)
 			{
 				int f = 0;
-				if(inforule == 2 && (computerside&1)==0 && piecenum%2==0 && forbid[i][j] && isgameover==0 && isthinking==0 && showforbidden) f = 2;
-				if(f == 0)
+				if (inforule == 2 && (computerside & 1) == 0 && piecenum % 2 == 0 && forbid[i][j] && isgameover == 0 && isthinking == 0 && showforbidden) f = 2;
+				if (f == 0)
 				{
-					if(boardblock[i][j]) f = 10;
-					else if(showanalysis)
+					if (boardblock[i][j]) f = 10;
+					else if (showanalysis)
 					{
-						if(boardlose[i][j]) f = 7;
-						else if(boardbest[i][j]) f = 8;
-						else if(boardpos[i][j] == 1) f = 9;
-						else if(boardpos[i][j] == 2) f = 11;
+						if (boardlose[i][j]) f = 7;
+						else if (boardbest[i][j]) f = 8;
+						else if (boardpos[i][j] == 1) f = 9;
+						else if (boardpos[i][j] == 2) f = 11;
 					}
 					if (f == 0 && usedatabase && showdatabase)
 					{
-						if(boardtag[i][j])
+						if (boardtag[i][j])
 							f = 12 + piecenum % 2;
 					}
 				}
@@ -543,6 +545,9 @@ void refresh_board()
 				else
 				{
 					int x, y;
+					GdkPixbuf *p = NULL;
+					char n[10];
+
 					if (imgtypeboard[i][j] <= 8)
 					{
 						y = imgtypeboard[i][j];
@@ -553,13 +558,19 @@ void refresh_board()
 						y = 0;
 						x = 1;
 					}
-					if (pixbufboardchar[y][x][boardtag[i][j]][piecenum % 2] == NULL)
+					if (boardtag[i][j] == 'w')
+						sprintf(n, "W");
+					else if (boardtag[i][j] == 'l')
+						sprintf(n, "L");
+					else if (boardtag[i][j] / 256 == 0)
+						sprintf(n, "%c", boardtag[i][j]);
+					else
 					{
-						char n[10];
-						sprintf(n, "%c", boardtag[i][j] == 'w' ? 'W' : (boardtag[i][j] == 'l' ? 'L' : boardtag[i][j]));
-						pixbufboardchar[y][x][boardtag[i][j]][piecenum % 2] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_height(pixbufboard[y][x]), n, piecenum%2 ? "#FFFFFF" : "#000000", showsmallfont);
+						sprintf(n, "%c%c", boardtag[i][j] / 256, boardtag[i][j] % 256);
 					}
-					gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), pixbufboardchar[y][x][boardtag[i][j]][piecenum % 2]);
+					p = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_height(pixbufboard[y][x]), n, piecenum % 2 ? "#FFFFFF" : "#000000", showsmallfont);
+					gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), p);
+					g_object_unref(G_OBJECT(p));
 				}
 			}
 			else
@@ -3348,6 +3359,7 @@ void execute_command(gchar *command)
 		printf_log(" dbval\n");
 		printf_log(" dbdel one\n");
 		printf_log(" dbdel all\n");
+		printf_log(" dbset [filename]\n");
 		printf_log(" hash usage\n");
 		printf_log(" command [on,off]\n");
 		printf_log(" dbeditrawmsg\n");
@@ -4098,6 +4110,29 @@ void execute_command(gchar *command)
 				send_command(_command);
 			}
 			send_command("done\n");
+		}
+	}
+	else if (_strnicmp(command, "dbset", 5) == 0)
+	{
+		gchar _command[80];
+		sprintf(_command, "%s", command + 5 + 1);
+		i = strlen(_command);
+		while (i > 0)
+		{
+			if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
+			{
+				_command[i - 1] = 0;
+				i--;
+			}
+			else
+				break;
+		}
+		_command[i] = '\n';
+		_command[i + 1] = 0;
+		if (i > 0)
+		{
+			send_command("yxsetdatabase\n");
+			send_command(_command);
 		}
 	}
 	else if (_strnicmp(command, "draw", 4) == 0)
