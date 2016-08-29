@@ -93,6 +93,7 @@ GtkWidget *labelboard[2][MAX_SIZE];
 GtkWidget *vboxwindowmain;
 GdkPixbuf *pixbufboard[9][14];
 GdkPixbuf *pixbufboardnumber[9][14][MAX_SIZE*MAX_SIZE+1][2];
+GdkPixbuf *pixbufboardchar[9][14][128][2];
 
 int imgtypeboard[MAX_SIZE][MAX_SIZE];
 char piecepicname[80] = "piece.bmp";
@@ -101,6 +102,8 @@ GtkWidget *textlog;
 GtkTextBuffer *buffertextlog, *buffertextcommand;
 GtkWidget *scrolledtextlog, *scrolledtextcommand;
 GtkWidget *toolbar;
+
+double hdpiscale = 1.0;
 
 int toolbarnum = 6;
 
@@ -469,16 +472,16 @@ GdkPixbuf *draw_overlay(GdkPixbuf *pb, int w, int h, gchar *text, char *color, i
 	layout = gtk_widget_create_pango_layout(scratch, NULL);
 	gtk_widget_destroy(scratch);
 	if (type == 0)
-		sprintf(format, "<big><b><span foreground='%s'>%%s</span></b></big>", color);
+		sprintf(format, "<b><span foreground='%s' size='%d'>%%s</span></b>", color, 11000);
 	else
-		sprintf(format, "<b><span foreground='%s'>%%s</span></b>", color);
+		sprintf(format, "<b><span foreground='%s' size='%d'>%%s</span></b>", color, 9000);
 	markup = g_strdup_printf(format, text);
 	pango_layout_set_markup(layout, markup, -1);
 	g_free(markup);
 	if (type == 0)
-		gdk_draw_layout(pm, gc, w / 2 - strlen(text) * 4, h / 2 - 10, layout);
+		gdk_draw_layout(pm, gc, w / 2 - (int)(strlen(text) * 4 * hdpiscale), h / 2 - (int)(10* hdpiscale), layout);
 	else
-		gdk_draw_layout(pm, gc, w / 2 - strlen(text) * 4, h / 2 - 8, layout);
+		gdk_draw_layout(pm, gc, w / 2 - (int)(strlen(text) * 4 * hdpiscale), h / 2 - (int)(8 * hdpiscale), layout);
 	g_object_unref(layout);
 	ret = gdk_pixbuf_get_from_drawable(NULL, pm, NULL, 0, 0, 0, 0, w, h);
 	g_object_unref(pm);
@@ -558,19 +561,33 @@ void refresh_board()
 						y = 0;
 						x = 1;
 					}
-					if (boardtag[i][j] == 'w')
-						sprintf(n, "W");
-					else if (boardtag[i][j] == 'l')
-						sprintf(n, "L");
-					else if (boardtag[i][j] / 256 == 0)
-						sprintf(n, "%c", boardtag[i][j]);
+					
+					if (boardtag[i][j] < 128)
+					{
+						if (pixbufboardchar[y][x][boardtag[i][j]][piecenum % 2] == NULL)
+						{
+							sprintf(n, "%c", boardtag[i][j] == 'w' ? 'W' : (boardtag[i][j] == 'l' ? 'L' : boardtag[i][j]));
+							pixbufboardchar[y][x][boardtag[i][j]][piecenum % 2] = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_height(pixbufboard[y][x]), n, piecenum % 2 ? "#FFFFFF" : "#000000", showsmallfont);
+						}
+						gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), pixbufboardchar[y][x][boardtag[i][j]][piecenum % 2]);
+
+					}
 					else
 					{
-						sprintf(n, "%c%c", boardtag[i][j] / 256, boardtag[i][j] % 256);
+						if (boardtag[i][j] == 'w')
+							sprintf(n, "W");
+						else if (boardtag[i][j] == 'l')
+							sprintf(n, "L");
+						else if (boardtag[i][j] / 256 == 0)
+							sprintf(n, "%c", boardtag[i][j]);
+						else
+						{
+							sprintf(n, "%c%c", boardtag[i][j] / 256, boardtag[i][j] % 256);
+						}
+						p = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_height(pixbufboard[y][x]), n, piecenum % 2 ? "#FFFFFF" : "#000000", showsmallfont);
+						gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), p);
+						g_object_unref(G_OBJECT(p));
 					}
-					p = draw_overlay(pixbufboard[y][x], gdk_pixbuf_get_width(pixbufboard[y][x]), gdk_pixbuf_get_height(pixbufboard[y][x]), n, piecenum % 2 ? "#FFFFFF" : "#000000", showsmallfont);
-					gtk_image_set_from_pixbuf(GTK_IMAGE(imageboard[i][j]), p);
-					g_object_unref(G_OBJECT(p));
 				}
 			}
 			else
@@ -2544,6 +2561,50 @@ void show_dialog_save(GtkWidget *widget, gpointer data)
 	gtk_widget_destroy (dialog);
 }
 
+void show_dialog_dbset(GtkWidget *widget, gpointer data)
+{
+	GtkWidget *dialog;
+	GtkFileFilter* filter;
+	FILE *out;
+	dialog = gtk_file_chooser_dialog_new("Set Database", data, GTK_FILE_CHOOSER_ACTION_SAVE,
+		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT, NULL);
+	filter = gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "Yixin database");
+	gtk_file_filter_add_pattern(filter, "*.[Dd][Bb]");
+	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_MOUSE);
+	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
+	{
+		char *filenameutf, *filename;
+		char _filename[256];
+		int len;
+		filenameutf = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+		filename = g_locale_from_utf8(filenameutf, -1, NULL, NULL, NULL);
+		len = strlen(filename);
+		if (len >= 3 && (filename[len - 1] == 'B' || filename[len - 1] == 'b') &&
+			(filename[len - 2] == 'D' || filename[len - 2] == 'd') && 
+			(filename[len - 3] == '.'))
+		{
+			sprintf(_filename, "%s", filename);
+		}
+		else
+		{
+			sprintf(_filename, "%s.db", filename);
+		}
+		printf_log("%s\n", _filename);
+		
+		len = strlen(_filename);
+		_filename[len] = '\n';
+		_filename[len + 1] = 0;
+		send_command("yxsetdatabase\n");
+		send_command(_filename);
+
+		g_free(filenameutf);
+		g_free(filename);
+	}
+	gtk_widget_destroy(dialog);
+}
+
 void show_dialog_move5N(GtkWidget *widget, gpointer data)
 {
 	gchar text[80];
@@ -3196,6 +3257,8 @@ void change_piece(GtkWidget *widget, gpointer data)
 	case 3: p = MAX_SIZE*MAX_SIZE; break;
 	}
 	while(p > 0 && movepath[p-1] == -1) p --;
+
+	memset(boardtag, 0, sizeof(boardtag));
 
 	new_game(NULL, NULL);
 	for(i=0; i<p; i++) make_move(movepath[i]/boardsizew, movepath[i]%boardsizew);
@@ -4116,23 +4179,30 @@ void execute_command(gchar *command)
 	{
 		gchar _command[80];
 		sprintf(_command, "%s", command + 5 + 1);
-		i = strlen(_command);
-		while (i > 0)
+		if (command[5] == 0 || command[5] == '\n' || command[5] == '\r')
 		{
-			if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
-			{
-				_command[i - 1] = 0;
-				i--;
-			}
-			else
-				break;
+			show_dialog_dbset(NULL, windowmain);
 		}
-		_command[i] = '\n';
-		_command[i + 1] = 0;
-		if (i > 0)
+		else
 		{
-			send_command("yxsetdatabase\n");
-			send_command(_command);
+			i = strlen(_command);
+			while (i > 0)
+			{
+				if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
+				{
+					_command[i - 1] = 0;
+					i--;
+				}
+				else
+					break;
+			}
+			_command[i] = '\n';
+			_command[i + 1] = 0;
+			if (i > 0)
+			{
+				send_command("yxsetdatabase\n");
+				send_command(_command);
+			}
 		}
 	}
 	else if (_strnicmp(command, "draw", 4) == 0)
@@ -4258,6 +4328,7 @@ void save_setting()
 		fprintf(out, "%d\t;check timeout\n", checktimeout);
 		fprintf(out, "%d\t;use database moves\n", usedatabase);
 		fprintf(out, "%d\t;record debug log\n", recorddebuglog);
+		fprintf(out, "%d\t;hdpi scale\n", (int)(hdpiscale * 100 + 1e-10));
 		fclose(out);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -5169,14 +5240,14 @@ void create_windowmain()
 	buffertextlog = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textlog));
 	scrolledtextlog = gtk_scrolled_window_new(NULL, NULL);
 	gtk_container_add(GTK_CONTAINER(scrolledtextlog), textlog);
-	gtk_widget_set_size_request(scrolledtextlog, 400, max(0, size*boardsizeh - 50 - (toolbarpos == 1 ? 50 : 0)));
+	gtk_widget_set_size_request(scrolledtextlog, (int)(hdpiscale*400), max(0, size*boardsizeh - (int)(hdpiscale * 50) - (toolbarpos == 1 ? 50 : 0)));
 
 	textcommand = gtk_text_view_new();
 	buffertextcommand = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textcommand));
 	scrolledtextcommand = gtk_scrolled_window_new(NULL, NULL);
 	//gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolledtextcommand), textcommand);
 	gtk_container_add(GTK_CONTAINER(scrolledtextcommand), textcommand);
-	gtk_widget_set_size_request(scrolledtextcommand, 400, 50);
+	gtk_widget_set_size_request(scrolledtextcommand, (int)(hdpiscale*400), (int)(hdpiscale*50));
 	g_signal_connect(textcommand, "key-release-event", G_CALLBACK(key_command), NULL);
 
 	vbox[0] = gtk_vbox_new(FALSE, 0);
@@ -5915,6 +5986,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (usedatabase < 0 || usedatabase > 1) usedatabase = 1;
 		recorddebuglog = read_int_from_file(in);
 		if (recorddebuglog < 0 || recorddebuglog > 1) recorddebuglog = 0;
+		t = read_int_from_file(in);
+		if (t > 0 && t<1000) hdpiscale = t / 100.0;
 		fclose(in);
 	}
 	for (i = 0; i < toolbarnum; i++)
