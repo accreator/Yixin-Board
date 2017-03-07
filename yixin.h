@@ -1,5 +1,7 @@
 ﻿#include <cairo.h>
 #include <gtk/gtk.h>
+#include <glib.h>
+#include <gio/gio.h>
 #include "gdk/gdkkeysyms.h"
 
 void send_command(char *command);
