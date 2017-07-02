@@ -48,6 +48,7 @@ int cautionfactor = 1;
 int threadnum = 1;
 int hashsize = 19;
 int threadsplitdepth = 7;
+int nbestsym = 0;
 int board[MAX_SIZE][MAX_SIZE];
 int boardnumber[MAX_SIZE][MAX_SIZE];
 int movepath[MAX_SIZE*MAX_SIZE];
@@ -504,6 +505,7 @@ void send_command(char *command)
 			gtk_label_get_text(clocklabel[2]),
 			gtk_label_get_text(clocklabel[3]),
 			command);
+		fflush(debuglog);
 	}
 }
 
@@ -3338,6 +3340,7 @@ void execute_command(gchar *command)
 			gtk_label_get_text(clocklabel[2]),
 			gtk_label_get_text(clocklabel[3]),
 			command);
+		fflush(debuglog);
 	}
 	if (_strnicmp(command, "command on", 10) == 0)
 	{
@@ -3421,10 +3424,12 @@ void execute_command(gchar *command)
 		printf_log(" dbset [filename]\n");
 		printf_log(" hash usage\n");
 		printf_log(" command [on,off]\n");
-		printf_log(" dbeditrawmsg\n");
+		printf_log(" dbeditlabel\n");
 		printf_log(" dbedittag\n");
 		printf_log(" dbeditval\n");
 		printf_log(" dbeditdep\n");
+		printf_log(" dbsetbestmove\n");
+		printf_log(" dbclearbestmove\n");
 		printf_log(" dbtotxt [filename]\n");
 		printf_log(" forbid\n");
 		printf_log(" forbid undo\n");
@@ -4170,6 +4175,8 @@ void execute_command(gchar *command)
 		gchar _command[80];
 		int s;
 		if (sscanf(command + 5, "%d", &s) != 1) s = 2;
+		sprintf(_command, "info nbestsym %d\n", nbestsym);
+		send_command(_command);
 		sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
 		send_command(_command);
 		sprintf(_command, "yxboard\n");
@@ -4203,12 +4210,36 @@ void execute_command(gchar *command)
 		sprintf(_command, "yxsearchdefend\n");
 		send_command(_command);
 	}
-	else if (_strnicmp(command, "dbeditrawmsg", 12) == 0)
+	else if (_strnicmp(command, "dbsetbestmove", 13) == 0)
 	{
 		gchar _command[80];
-		if (strlen(command) >= 13)
+		send_command("yxsetbestmovedatabase\n");
+		for (i = 0; i < piecenum; i++)
 		{
-			sprintf(_command, "yxeditrawmsgdatabase %s", command + 12 + 1);
+			sprintf(_command, "%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew);
+			send_command(_command);
+		}
+		send_command("done\n");
+	}
+	else if (_strnicmp(command, "dbclearbestmove", 15) == 0)
+	{
+		gchar _command[80];
+		send_command("yxclearbestmovedatabase\n");
+		for (i = 0; i < piecenum; i++)
+		{
+			sprintf(_command, "%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew);
+			send_command(_command);
+		}
+		send_command("done\n");
+	}
+	else if (_strnicmp(command, "dbeditlabel", 11) == 0)
+	{
+		gchar _command[80];
+		if (strlen(command) >= 12)
+		{
+			sprintf(_command, "yxeditlabeldatabase %s", command + 11 + 1);
 			send_command(_command);
 			for (i = 0; i < piecenum; i++)
 			{
@@ -4295,6 +4326,30 @@ void execute_command(gchar *command)
 			send_command(_command);
 		}
 	}
+	else if (_strnicmp(command, "txttodb", 7) == 0)
+	{
+		gchar _command[80];
+		sprintf(_command, "%s", command + 7 + 1);
+
+		i = strlen(_command);
+		while (i > 0)
+		{
+			if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
+			{
+				_command[i - 1] = 0;
+				i--;
+			}
+			else
+				break;
+		}
+		_command[i] = '\n';
+		_command[i + 1] = 0;
+		if (i > 0)
+		{
+			send_command("yxtxttodb\n");
+			send_command(_command);
+		}
+	}
 	else if (_strnicmp(command, "dbset", 5) == 0)
 	{
 		gchar _command[80];
@@ -4332,6 +4387,10 @@ void execute_command(gchar *command)
 	else if (_strnicmp(command, "resign", 6) == 0)
 	{
 		send_command("yxresign\n");
+	}
+	else if (_strnicmp(command, "dbcheck", 5) == 0)
+	{
+		send_command("yxdbcheck\n");
 	}
 	else if (_strnicmp(command, "dbval", 5) == 0)
 	{
@@ -4453,6 +4512,7 @@ void save_setting()
 		fprintf(out, "%d\t;use database moves\n", usedatabase);
 		fprintf(out, "%d\t;record debug log\n", recorddebuglog);
 		fprintf(out, "%d\t;hdpi scale\n", (int)(hdpiscale * 100 + 1e-10));
+		fprintf(out, "%d\t;symmetric nbest for the 5th moves\n", nbestsym);
 		fclose(out);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -4482,19 +4542,6 @@ void yixin_quit()
 {
 	//stop_thinking(NULL, NULL);
 	send_command("end\n");
-	if (openbook != NULL) free(openbook);
-	save_setting();
-	if (clanguage != NULL)
-	{
-		int i;
-		for (i = 0; i < 1024; i++)
-		{
-			if (clanguage[i] != NULL) free(clanguage[i]);
-		}
-		free(clanguage);
-	}
-	if (debuglog != NULL) fclose(debuglog);
-	gtk_main_quit();
 }
 
 void clock_label_refresh()
@@ -5442,6 +5489,7 @@ gboolean iochannelout_watch(GIOChannel *channel, GIOCondition cond, gpointer dat
 				gtk_label_get_text(clocklabel[2]),
 				gtk_label_get_text(clocklabel[3]),
 				string);
+			fflush(debuglog);
 		}
 
 		for(i=0; i<(int)size; i++)
@@ -6112,6 +6160,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (recorddebuglog < 0 || recorddebuglog > 1) recorddebuglog = 0;
 		t = read_int_from_file(in);
 		if (t > 0 && t<1000) hdpiscale = t / 100.0;
+		t = read_int_from_file(in);
+		if (t >= 0 && t <= 1) nbestsym = t;
 		fclose(in);
 	}
 	for (i = 0; i < toolbarnum; i++)
@@ -6192,6 +6242,25 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		language = 0;
 	}
 }
+static void childexit_watch(GPid pid, gint status, gpointer *data)
+{
+	g_spawn_close_pid(pid);
+
+	if (openbook != NULL) free(openbook);
+	save_setting();
+	if (clanguage != NULL)
+	{
+		int i;
+		for (i = 0; i < 1024; i++)
+		{
+			if (clanguage[i] != NULL) free(clanguage[i]);
+		}
+		free(clanguage);
+	}
+	if (debuglog != NULL) fclose(debuglog);
+	gtk_main_quit();
+}
+
 void load_engine()
 {
 #ifdef G_OS_WIN32
@@ -6226,10 +6295,11 @@ void load_engine()
     iochannelout = g_io_channel_unix_new(out);
     iochannelerr = g_io_channel_unix_new(err);
 #endif
+	g_child_watch_add(pid, (GChildWatchFunc)childexit_watch, NULL);
 	g_io_add_watch(iochannelout, G_IO_IN | G_IO_PRI | G_IO_HUP, (GIOFunc)iochannelout_watch, NULL);
 	//g_io_add_watch_full(iochannelout, G_PRIORITY_HIGH, G_IO_IN | G_IO_HUP, (GIOFunc)iochannelout_watch, NULL, NULL);
     g_io_add_watch(iochannelerr, G_IO_IN | G_IO_PRI | G_IO_HUP, (GIOFunc)iochannelerr_watch, NULL);
-
+	
 	if (recorddebuglog)
 	{
 		debuglog = fopen("debuglog.txt", "at+");
