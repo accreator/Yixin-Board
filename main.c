@@ -18,16 +18,8 @@ typedef long long I64;
 #define MAX_HOTKEY_ITEM 32
 #define MAX_HOTKEY_COMMAND_LEN 2048
 
-typedef struct
-{
-	I64 zobkey;
-	char status;
-} BOOK;
-BOOK *openbook = NULL;
 int showdatabase = 1;
 int usedatabase = 1;
-int openbooksize = 0;
-int openbooknum = 0;
 int zobristflag = 1;
 I64 zobrist[MAX_SIZE][MAX_SIZE][3];
 int boardsizeh = 15, boardsizew = 15;
@@ -66,7 +58,6 @@ char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
 char bestline[MAX_SIZE*MAX_SIZE*5+1] = "";
 int bestval;
 int move5N;
-int useopenbook = 1;
 int levelchoice = 4;
 int commandmodel = 0;
 int shownumber = 1;
@@ -511,7 +502,7 @@ void send_command(char *command)
 
 int swap2done = 0;
 
-int refreshboardflag = 0; //it is set to 1 when making the 5th move under rif/soosorv rule, otherwise, 0
+int refreshboardflag = 0; //it is set to 1 when making the 5th move under soosorv rule, otherwise, 0
 int refreshboardflag2 = 0; //it is set to 1 when refreshboardflag has been set to 1
 void refresh_board()
 {
@@ -601,7 +592,7 @@ void refresh_board()
 				if(movepath[piecenum-1]/boardsizew == i && movepath[piecenum-1]%boardsizew == j) f = 2;
 				if (refreshboardflag == 1)
 				{
-					if (specialrule == 1 || specialrule == 3)
+					if (specialrule == 3)
 					{
 						int k;
 						for (k = 4; k < piecenum - 1; k++)
@@ -766,399 +757,6 @@ void show_forbid()
 	send_command(command);
 	sprintf(command, "yxshowforbid\n");
 	send_command(command);
-}
-//TODO: this old format should be removed in the future
-void openbook_enlarge()
-{
-	BOOK *newbook;
-	int i;
-	if (openbooknum + 1 < openbooksize) return;
-	if (openbooksize == 0) openbooksize = 256;
-	openbooksize *= 2;
-	newbook = (BOOK *)malloc(openbooksize * sizeof(BOOK));
-	if (openbook != NULL)
-	{
-		for (i = 0; i < openbooknum; i++)
-		{
-			newbook[i] = openbook[i];
-		}
-		free(openbook);
-	}
-	openbook = newbook;
-}
-//TODO: this old format should be removed in the future
-int search_openbook(I64 zobkey)
-{
-	int l, r, m;
-	static int flag = -1;
-	if (boardsizeh > 20 || boardsizew > 20) return 0; //TODO: support board of size > 20
-	if(flag != inforule+(specialrule<<2))
-	{
-		char name[80];
-		FILE *in;
-		openbooknum = 0;
-		if(specialrule == 2)
-		{
-			sprintf(name, "book3_%d_%d.dat", boardsizeh, boardsizew);
-		}
-		else if(specialrule == 1)
-		{
-			sprintf(name, "book4_%d_%d.dat", boardsizeh, boardsizew);
-		}
-		else if (specialrule == 3)
-		{
-			sprintf(name, "book5_%d_%d.dat", boardsizeh, boardsizew);
-		}
-		else if (specialrule == 4)
-		{
-			sprintf(name, "book6_%d_%d.dat", boardsizeh, boardsizew);
-		}
-		else
-		{
-			sprintf(name, "book%d_%d_%d.dat", inforule, boardsizeh, boardsizew);
-		}
-		//printf_log("Loading openbook \"%s\"...", name);
-		if((in = fopen(name, "rb")) != NULL)
-		{
-			while(!feof(in))
-			{
-				openbook_enlarge();
-				fread(&openbook[openbooknum].zobkey, sizeof(I64), 1, in);
-				fread(&openbook[openbooknum].status, sizeof(char), 1, in);
-				openbooknum ++;
-			}
-			fclose(in);
-			//printf_log("Done (%d entries)\n", openbooknum);
-		}
-		else
-		{
-			//printf_log("Error\n");
-		}
-		flag = inforule+(specialrule<<2);
-	}
-	if(openbooknum == 0) return 0;
-	l = 0;
-	r = openbooknum-1;
-	while(l <= r)
-	{
-		m = (l+r)/2;
-		if(zobkey >= openbook[m].zobkey)
-			l = m + 1;
-		else
-			r = m - 1;
-	}
-	if(l>0 && openbook[l-1].zobkey == zobkey)
-	{
-		return openbook[l-1].status;
-	}
-	return 0;
-}
-
-int moveopenbookexclude[MAX_SIZE][MAX_SIZE] = {{0}};
-
-//TODO: this old format should be removed in the future
-int move_openbook(int *besty, int *bestx)
-{
-	int i, j, k;
-	int p;
-	int result[MAX_SIZE][MAX_SIZE] = {{0}};
-	int resultnum = 0;
-	int bestv = 0;
-
-	if(zobristflag)
-	{
-		FILE *in;
-		if((in = fopen("base.dat", "r")) != NULL)
-		{
-			//TODO: support board of size > 20
-			for(i=0; i<20; i++)
-			{
-				for(j=0; j<20; j++)
-				{
-					for(k=0; k<3; k++)
-					{
-						fscanf(in, "%I64d ", &zobrist[i][j][k]);
-					}
-				}
-			}
-			fclose(in);
-			zobristflag = 0;
-		}
-		else
-		{
-			//printf_log("base.dat is lost\n");
-			return 0;
-		}
-	}
-	if(bestx==NULL && besty==NULL) return 0; //just for init zobrist
-
-	for(k=0; k<8; k++)
-	{
-		int _x, _y;
-		I64 zobkey;
-		I64 _zobkey;
-		_zobkey = 0;
-		if (boardsizew != boardsizeh)
-		{
-			if (k == 0 || k == 2 || k == 4 || k == 6) continue;
-		}
-		for(i=0; i<piecenum; i++)
-		{
-			_y = movepath[i]/boardsizew;
-			_x = movepath[i]%boardsizew;
-			switch(k)
-			{
-				case 0: _zobkey ^= zobrist[_x][_y][i%2]; break;
-				case 1: _zobkey ^= zobrist[_y][_x][i%2]; break;
-				case 2: _zobkey ^= zobrist[boardsizeh-1-_x][_y][i%2]; break;
-				case 3: _zobkey ^= zobrist[boardsizeh-1-_y][_x][i%2]; break;
-				case 4: _zobkey ^= zobrist[_x][boardsizew-1-_y][i%2]; break;
-				case 5: _zobkey ^= zobrist[_y][boardsizew-1-_x][i%2]; break;
-				case 6: _zobkey ^= zobrist[boardsizeh-1-_x][boardsizew-1-_y][i%2]; break;
-				case 7: _zobkey ^= zobrist[boardsizeh-1-_y][boardsizew-1-_x][i%2]; break;
-			}
-		}
-		for(i=0; i<boardsizeh; i++)
-		{
-			for(j=0; j<boardsizew; j++)
-			{
-				_y = i;
-				_x = j;
-				if(moveopenbookexclude[_y][_x]) continue;
-				if(board[_y][_x] != 0 || result[_y][_x] != 0) continue;
-				zobkey = _zobkey;
-				switch(k)
-				{
-					case 0: zobkey ^= zobrist[_x][_y][piecenum%2]; break;
-					case 1: zobkey ^= zobrist[_y][_x][piecenum%2]; break;
-					case 2: zobkey ^= zobrist[boardsizeh-1-_x][_y][piecenum%2]; break;
-					case 3: zobkey ^= zobrist[boardsizeh-1-_y][_x][piecenum%2]; break;
-					case 4: zobkey ^= zobrist[_x][boardsizew-1-_y][piecenum%2]; break;
-					case 5: zobkey ^= zobrist[_y][boardsizew-1-_x][piecenum%2]; break;
-					case 6: zobkey ^= zobrist[boardsizeh-1-_x][boardsizew-1-_y][piecenum%2]; break;
-					case 7: zobkey ^= zobrist[boardsizeh-1-_y][boardsizew-1-_x][piecenum%2]; break;
-				}
-				if(search_openbook(zobkey) == 'a')
-				{
-					if(bestv != 'a')
-					{
-						memset(result, 0, sizeof(result));
-						resultnum = 0;
-						bestv = 'a';
-					}
-					result[_y][_x] = 1;
-					resultnum ++;
-				}
-				else if(specialrule == 1)
-				{
-					if(bestv != 'a' &&
-					   ((piecenum%2==0 && search_openbook(zobkey)>='C' && search_openbook(zobkey)<='G' && (search_openbook(zobkey)<bestv || bestv==0)) ||
-					    (piecenum%2==1 && search_openbook(zobkey)>='A' && search_openbook(zobkey)<='E' && (search_openbook(zobkey)>bestv || bestv==0))))
-					{
-						memset(result, 0, sizeof(result));
-						resultnum = 0;
-						bestv = search_openbook(zobkey);
-						result[_y][_x] = 1;
-						resultnum ++;
-					}
-					if((search_openbook(zobkey) == '!') ||
-					   (search_openbook(zobkey) >= '1' && search_openbook(zobkey) <= '1') ||
-					   (piecenum%2==0 && search_openbook(zobkey)<='B' && search_openbook(zobkey)>='A') ||
-					   (piecenum%2==1 && search_openbook(zobkey)>='F' && search_openbook(zobkey)<='G')
-					  )
-					{
-						if(bestv != 'a')
-						{
-							memset(result, 0, sizeof(result));
-							resultnum = 0;
-							bestv = 'a';
-						}
-						result[_y][_x] = 1;
-						resultnum ++;
-					}
-				}
-			}
-		}
-	}
-
-	if(resultnum == 0) return 0;
-	p = rand() % resultnum;
-	k = 0;
-	for(i=0; i<boardsizeh; i++)
-	{
-		for(j=0; j<boardsizew; j++)
-		{
-			if(result[i][j])
-			{
-				if(p == k)
-				{
-					*besty = i;
-					*bestx = j;
-					return 1;
-				}
-				k ++;
-			}
-		}
-	}
-	return 1; //in fact this statement will never be reached
-}
-
-//TODO: this old format should be removed in the future
-//this function can generate the best n moves from the openbook
-//and store the results to besty and bestx
-int move_openbook_n(int n, int *besty, int *bestx, int force)
-{
-	int i, j, k, l;
-	double d[4][4];
-	int px[4], py[4];
-	int sy[3] = {0};
-	/*
-	not necessary, since the judgement of board[][] has been done in move_openbook
-
-	if(force != 2)
-	{
-		for(i=0; i<piecenum; i++)
-		{
-			moveopenbookexclude[movepath[piecenum-1]/boardsizew][movepath[piecenum-1]%boardsizew] = 1;
-		}
-	}
-	*/
-	for(i=0; i<4; i++)
-	{
-		py[i] = movepath[i] / boardsizew;
-		px[i] = movepath[i] % boardsizew;
-	}
-	for(i=0; i<4; i++)
-	{
-		for(j=0; j<4; j++)
-		{
-			d[i][j] = (double)(px[i] - px[j])*(double)(px[i] - px[j]) + (double)(py[i] - py[j])*(double)(py[i] - py[j]);
-			d[i][j] = sqrt(d[i][j]);
-		}
-	}
-	if(fabs(d[0][1] - d[0][3]) <= 1e-6 && fabs(d[2][1] - d[2][3]) <= 1e-6) sy[0] = 1;
-	if((fabs(d[0][1]+d[2][1]-d[0][2]) <= 1e-6 || fabs(d[0][1]+d[0][2]-d[1][2]) <= 1e-6 || fabs(d[0][2]+d[2][1]-d[0][1]) <= 1e-6) &&
-		(fabs(d[0][3]+d[2][3]-d[0][2]) <= 1e-6 || fabs(d[0][3]+d[0][2]-d[3][2]) <= 1e-6 || fabs(d[0][2]+d[2][3]-d[0][3]) <= 1e-6)) sy[0] = 1;
-	if(fabs(d[0][1] - d[2][3]) <= 1e-6 && fabs(d[1][2] - d[0][3]) <= 1e-6) sy[1] = 1;
-	if(fabs(d[0][1] - d[2][1]) <= 1e-6 && fabs(d[0][3] - d[2][3]) <= 1e-6) sy[2] = 1;
-	if((fabs(d[0][1]+d[0][3]-d[1][3]) <= 1e-6 || fabs(d[0][1]+d[1][2]-d[0][3]) <= 1e-6 || fabs(d[0][3]+d[1][3]-d[0][1]) <= 1e-6) &&
-		(fabs(d[2][1]+d[2][3]-d[1][3]) <= 1e-6 || fabs(d[1][2]+d[1][3]-d[2][3]) <= 1e-6 || fabs(d[2][3]+d[1][3]-d[2][1]) <= 1e-6)) sy[2] = 1;
-
-	for(i=0; i<n; i++)
-	{
-		if(move_openbook(besty+i, bestx+i) == 0) break;
-		moveopenbookexclude[besty[i]][bestx[i]] = 1;
-		if(sy[0] || sy[1] || sy[2])
-		{
-			double d1, d2, d3, d4;
-			d1 = (besty[i] - py[0])*(besty[i] - py[0]) + (bestx[i] - px[0])*(bestx[i] - px[0]);
-			d2 = (besty[i] - py[2])*(besty[i] - py[2]) + (bestx[i] - px[2])*(bestx[i] - px[2]);
-			d3 = (besty[i] - py[1])*(besty[i] - py[1]) + (bestx[i] - px[1])*(bestx[i] - px[1]);
-			d4 = (besty[i] - py[3])*(besty[i] - py[3]) + (bestx[i] - px[3])*(bestx[i] - px[3]);
-			
-			for(j=0; j<boardsizeh; j++)
-			{
-				for(k=0; k<boardsizew; k++)
-				{
-					double _d1, _d2, _d3, _d4;
-					if(moveopenbookexclude[j][k]) continue;
-					_d1 = (j - py[0])*(j - py[0]) + (k - px[0])*(k - px[0]);
-					_d2 = (j - py[2])*(j - py[2]) + (k - px[2])*(k - px[2]);
-					_d3 = (j - py[1])*(j - py[1]) + (k - px[1])*(k - px[1]);
-					_d4 = (j - py[3])*(j - py[3]) + (k - px[3])*(k - px[3]);
-					
-					if(sy[0] && fabs(d1 - _d1) <= 1e-6 && fabs(d2 - _d2) <= 1e-6)
-					{
-						moveopenbookexclude[j][k] = 1;
-					}
-					if(sy[1] && fabs(d1 - _d2) <= 1e-6 && fabs(d2 - _d1) <= 1e-6)
-					{
-						moveopenbookexclude[j][k] = 1;
-					}
-					if(sy[2] && fabs(d3 - _d3) <= 1e-6 && fabs(d4 - _d4) <= 1e-6)
-					{
-						moveopenbookexclude[j][k] = 1;
-					}
-				}
-			}
-		}
-	}
-
-	if(force == 1 && i<n)
-	{
-		int x, y, nx, ny;
-		y = movepath[piecenum-1] / boardsizew;
-		x = movepath[piecenum-1] % boardsizew;
-		for(j=1; j<max(boardsizeh, boardsizew); j++)
-		{
-			for(k=-j; k<=j; k++)
-			{
-				int t = j - abs(k);
-				for(l=-t; l<=t; l++)
-				{
-					nx = x + k;
-					ny = y + l;
-					if(nx < 0 || ny < 0 || nx >= boardsizew || ny >= boardsizeh) continue;
-					movepath[piecenum-1] = ny * boardsizew + nx;
-					i += move_openbook_n(n-i, besty+i, bestx+i, 2);
-					if(i >= n) break;
-				}
-				if(i >= n) break;
-			}
-			if(i >= n) break;
-		}
-		movepath[piecenum-1] = y * boardsizew + x;
-		if(i < n)
-		{
-			printf_log("ERROR Opening book error\n");
-			for(; i<n; i++)
-			{
-				besty[i] = bestx[i] = 0;
-			}
-		}
-	}
-	if(force != 2)
-	{
-		memset(moveopenbookexclude, 0, sizeof(moveopenbookexclude));
-	}
-	return i;
-}
-
-//TODO: this old format should be removed in the future
-int eval_openbook()
-{
-	int i, k;
-	int v;
-	move_openbook(NULL, NULL);
-	for(k=0; k<8; k++)
-	{
-		int _x, _y;
-		I64 _zobkey;
-		_zobkey = 0;
-		if (boardsizew != boardsizeh)
-		{
-			if (k == 0 || k == 2 || k == 4 || k == 6) continue;
-		}
-		for(i=0; i<piecenum; i++)
-		{
-			_y = movepath[i]/boardsizew;
-			_x = movepath[i]%boardsizew;
-			switch(k)
-			{
-				case 0: _zobkey ^= zobrist[_x][_y][i%2]; break;
-				case 1: _zobkey ^= zobrist[_y][_x][i%2]; break;
-				case 2: _zobkey ^= zobrist[boardsizeh-1-_x][_y][i%2]; break;
-				case 3: _zobkey ^= zobrist[boardsizeh-1-_y][_x][i%2]; break;
-				case 4: _zobkey ^= zobrist[_x][boardsizew-1-_y][i%2]; break;
-				case 5: _zobkey ^= zobrist[_y][boardsizew-1-_x][i%2]; break;
-				case 6: _zobkey ^= zobrist[boardsizeh-1-_x][boardsizew-1-_y][i%2]; break;
-				case 7: _zobkey ^= zobrist[boardsizeh-1-_y][boardsizew-1-_x][i%2]; break;
-			}
-		}
-		v = search_openbook(_zobkey);
-		if(v != 0) return v;
-	}
-	return 0;
 }
 
 void show_dialog_undo_warning_query(GtkWidget *window)
@@ -1332,22 +930,6 @@ void show_dialog_swap_query(GtkWidget *window)
 			{
 				isneedrestart = 1;
 				make_move(4, 5);
-				if(computerside == 2)
-				{
-					change_side_menu(1, NULL);
-					change_side_menu(-2, NULL);
-				}
-				else
-				{
-					change_side_menu(-1, NULL);
-					change_side_menu(2, NULL);
-				}
-			}
-			else if(specialrule == 1)
-			{
-				isneedrestart = 1;
-				//TODO: should support more variations (with openbook)
-				make_move(boardsizeh/2-1, boardsizew/2+1);
 				if(computerside == 2)
 				{
 					change_side_menu(1, NULL);
@@ -1535,56 +1117,6 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 						make_move(2, 3);
 						show_dialog_swap_query(widget);
 					}
-					else if(specialrule == 1 && piecenum == 0 && computerside != 3)
-					{
-						isneedrestart = 1;
-						//TODO: it should support more variations (with openbook)
-						make_move(boardsizeh/2, boardsizew/2);
-						make_move(boardsizeh/2-1, boardsizew/2);
-						make_move(boardsizeh/2-2, boardsizew/2+2);
-						show_dialog_swap_query(widget);
-					}
-					else if(specialrule == 1 && piecenum == 4 && computerside != 3)
-					{
-						int besty[2], bestx[2];
-						isneedrestart = 1;
-						if(movepath[0]%boardsizew == boardsizew/2 && movepath[0]/boardsizew == boardsizeh/2 &&
-							movepath[1]%boardsizew <= boardsizew/2+1 && movepath[1]%boardsizew >= boardsizew/2-1 &&
-							movepath[1]/boardsizew <= boardsizeh/2+1 && movepath[1]/boardsizew >= boardsizeh/2-1 &&
-							movepath[2]%boardsizew <= boardsizew/2+2 && movepath[2]%boardsizew >= boardsizew/2-2 &&
-							movepath[2]/boardsizew <= boardsizeh/2+2 && movepath[2]/boardsizew >= boardsizeh/2-2)
-						{
-							//should use openbook
-							refreshboardflag = 1;
-							move_openbook_n(2, besty, bestx, 1);
-							make_move(besty[0], bestx[0]);
-							make_move(besty[1], bestx[1]);
-						}
-						else
-						{
-							show_dialog_illegal_opening(widget);
-							new_game(NULL, NULL);
-						}
-					}
-					else if(useopenbook && move_openbook(&y, &x) && is_legal_move(y, x))
-					{
-						isneedrestart = 1;
-						if(language == 0)
-						{
-							printf_log("Use openbook");
-						}
-						else
-						{
-							printf_log(clanguage[17]);
-						}
-						printf_log("\n");
-						make_move(y, x);
-						if(inforule == 2 && (computerside&1)==0)
-						{
-							sprintf(command, "yxshowforbid\n");
-							send_command(command);
-						}
-					}
 					else
 					{
 						isthinking = 1;
@@ -1623,29 +1155,11 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							make_move(y, x);
 						}
 					}
-					else if(specialrule == 1 && refreshboardflag == 1 && computerside != 2)
-					{
-						if(boardnumber[y][x] == piecenum || boardnumber[y][x] == piecenum-1)
-						{
-							isneedrestart = 1;
-							refreshboardflag = 0;
-							if(boardnumber[y][x] == piecenum)
-							{
-								change_piece(NULL, (gpointer)1);
-								change_piece(NULL, (gpointer)1);
-								make_move(y, x);
-							}
-							else
-							{
-								change_piece(NULL, (gpointer)1);
-							}
-						}
-					}
-					else if (board[y][x] == 0 && piecenum % 2 == 0 && forbid[y][x])
+					else if (board[y][x] == 0 && piecenum % 2 == 0 && forbid[y][x] && !refreshboardflag)
 					{
 						show_dialog_forbidden_info(widget);
 					}
-					else if(board[y][x] == 0 && (piecenum%2==1 || !forbid[y][x]))
+					else if(board[y][x] == 0 && (piecenum%2==1 || !forbid[y][x] || refreshboardflag))
 					{
 						int i;
 						int flag = 0;
@@ -1662,7 +1176,7 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 								show_dialog_swap_info(widget);
 							}
 						}
-						if((specialrule == 1 || specialrule == 3) && piecenum == 3 && /*computerside != 0 &&*/ computerside != 1)
+						if(specialrule == 3 && piecenum == 3 && /*computerside != 0 &&*/ computerside != 1)
 						{
 							//check whether the current opening is one of the 26 standard openings
 							if(movepath[0]%boardsizew == boardsizew/2 && movepath[0]/boardsizew == boardsizeh/2 &&
@@ -1737,135 +1251,41 @@ gboolean on_button_press_windowmain(GtkWidget *widget, GdkEventButton *event, Gd
 							send_command("done\n");
 							flag = 1;
 						}
-						if(specialrule == 1 && piecenum == 3 && computerside != 0 && computerside != 1)
-						{
-							//TODO: should be decided by openbook
-							if(eval_openbook() <= 'C' && eval_openbook() >= 'A')
-							{
-								show_dialog_swap_info(widget);
-								flag = 1;
-							}
-						}
-						if(specialrule == 1 && piecenum == 4 && computerside != 0 && computerside != 2)
-						{
-							int besty[2], bestx[2];
-							isneedrestart = 1;
-							
-							if(movepath[0]%boardsizew == boardsizew/2 && movepath[0]/boardsizew == boardsizeh/2 &&
-								movepath[1]%boardsizew <= boardsizew/2+1 && movepath[1]%boardsizew >= boardsizew/2-1 &&
-								movepath[1]/boardsizew <= boardsizeh/2+1 && movepath[1]/boardsizew >= boardsizeh/2-1 &&
-								movepath[2]%boardsizew <= boardsizew/2+2 && movepath[2]%boardsizew >= boardsizew/2-2 &&
-								movepath[2]/boardsizew <= boardsizeh/2+2 && movepath[2]/boardsizew >= boardsizeh/2-2)
-							{
-								refreshboardflag = 1;
-								//use openbook
-								move_openbook_n(2, besty, bestx, 1);
-								make_move(besty[0], bestx[0]);
-								make_move(besty[1], bestx[1]);
-							}
-							else
-							{
-								show_dialog_illegal_opening(widget);
-								new_game(NULL, NULL);
-							}
-							flag = 1;
-						}
-						if(specialrule == 1 && piecenum == 5 && computerside != 0 && computerside != 1)
-						{
-							refreshboardflag = 1;
-							flag = 1;
-						}
-						if(specialrule == 1 && piecenum == 6 && computerside != 0 && computerside != 1)
-						{
-							int x1, y1;
-							int x2, y2;
-							int v1, v2;
-							refreshboardflag = 0;
-							isneedrestart = 1;
-							if(movepath[0]%boardsizew == boardsizew/2 && movepath[0]/boardsizew == boardsizeh/2 &&
-								movepath[1]%boardsizew <= boardsizew/2+1 && movepath[1]%boardsizew >= boardsizew/2-1 &&
-								movepath[1]/boardsizew <= boardsizeh/2+1 && movepath[1]/boardsizew >= boardsizeh/2-1 &&
-								movepath[2]%boardsizew <= boardsizew/2+2 && movepath[2]%boardsizew >= boardsizew/2-2 &&
-								movepath[2]/boardsizew <= boardsizeh/2+2 && movepath[2]/boardsizew >= boardsizeh/2-2)
-							{
-								//use openbook (should analyze at the same time)
-								y1 = movepath[piecenum-1] / boardsizew;
-								x1 = movepath[piecenum-1] % boardsizew;
-								y2 = movepath[piecenum-2] / boardsizew;
-								x2 = movepath[piecenum-2] % boardsizew;
-								change_piece(NULL, (gpointer)1);
-								v2 = eval_openbook();
-								change_piece(NULL, (gpointer)1);
-								make_move(y1, x1);
-								v1 = eval_openbook();
-								if(v1==0 || v2=='!' || v2=='1' || v2=='a' ||
-								   (v2>='A' && v2<='F' && v1>='A' && v1<='F' && v2<=v1) ||
-								   (v2>='1' && v2<='9' && v1>='1' && v1<='9' && v2<=v1) ||
-								   (v2>='1' && v2<='9' && (v1<'1' || v1>'9')))
-								{
-									//do nothing
-								}
-								else
-								{
-									change_piece(NULL, (gpointer)1);
-									make_move(y2, x2);
-								}
-							}
-							else
-							{
-								show_dialog_illegal_opening(widget);
-								new_game(NULL, NULL);
-							}
-						}
+						
 						show_forbid();
-						if(!isgameover && !flag &&  ((specialrule!=1 && specialrule!=3) || piecenum>=3) && (((computerside&1)&&piecenum%2==0) || ((computerside&2)&&piecenum%2==1)))
+						if (!isgameover && !flag && ((specialrule != 1 && specialrule != 3) || piecenum >= 3) && (((computerside & 1) && piecenum % 2 == 0) || ((computerside & 2) && piecenum % 2 == 1)))
 						{
-							if(useopenbook && move_openbook(&y, &x) && is_legal_move(y, x))
+							timerhumanincrement += increment;
+							if (isneedrestart)
 							{
-								isneedrestart = 1;
-								if (language) printf_log(clanguage[17]); else printf_log("Use openbook");
-								printf_log("\n");
-								make_move(y, x);
-								if(inforule == 2 && (computerside&1)==0)
+								isthinking = 1;
+								clock_timer_change_status(1);
+								isneedrestart = 0;
+								sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
+								send_command(command);
+								if (hashautoclear) send_command("yxhashclear\n");
+								sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
+								send_command(command);
+								sprintf(command, "board\n");
+								send_command(command);
+								for (i = 0; i < piecenum; i++)
 								{
-									sprintf(command, "yxshowforbid\n");
+									sprintf(command, "%d,%d,%d\n", movepath[i] / boardsizew,
+										movepath[i] % boardsizew, piecenum % 2 == i % 2 ? 1 : 2);
 									send_command(command);
 								}
+								sprintf(command, "done\n");
+								send_command(command);
 							}
 							else
 							{
-								timerhumanincrement += increment;
-								if(isneedrestart)
-								{
-									isthinking = 1;
-									clock_timer_change_status(1);
-									isneedrestart = 0;
-									sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
-									send_command(command);
-									if (hashautoclear) send_command("yxhashclear\n");
-									sprintf(command, "start %d %d\n", boardsizew, boardsizeh);
-									send_command(command);
-									sprintf(command, "board\n");
-									send_command(command);
-									for(i=0; i<piecenum; i++)
-									{
-										sprintf(command, "%d,%d,%d\n", movepath[i]/boardsizew,
-											movepath[i]%boardsizew, piecenum%2==i%2 ? 1 : 2);
-										send_command(command);
-									}
-									sprintf(command, "done\n");
-									send_command(command);
-								}
-								else
-								{
-									sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
-									send_command(command);
-									if (hashautoclear) send_command("yxhashclear\n");
-									sprintf(command, "turn %d,%d\n", y, x);
-									send_command(command);
-									isthinking = 1;
-									clock_timer_change_status(1);
-								}
+								sprintf(command, "INFO time_left %d\n", timeoutmatch - timercomputermatch + timercomputerincrement);
+								send_command(command);
+								if (hashautoclear) send_command("yxhashclear\n");
+								sprintf(command, "turn %d,%d\n", y, x);
+								send_command(command);
+								isthinking = 1;
+								clock_timer_change_status(1);
 							}
 						}
 					}
@@ -2493,11 +1913,13 @@ void show_dialog_load(GtkWidget *widget, gpointer data)
 					sscanf(line, "%d", &x);
 					while (x != -1)
 					{
-						sscanf(line, "%*d,%d,%*d", &y);
+						if (sscanf(line, "%*d,%d,%*d", &y) == 0) break;
 						make_move(y - 1, x - 1);
 						if (fscanf(in, "%[^\n]%*c", line) == EOF) break;
 						if (line[0] >= '0' && line[0] <= '9')
-							sscanf(line, "%d", &x);
+						{
+							if (sscanf(line, "%d", &x) == 0) break;
+						}
 						else
 							break;
 					}
@@ -3166,11 +2588,6 @@ void change_side_menu(int flag, GtkWidget *w)
 		case 1: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(rec[0]), TRUE); break;
 		case 2: gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(rec[1]), TRUE); break;
 	}
-}
-
-void use_openbook(GtkWidget *widget, gpointer data)
-{
-	useopenbook ^= 1;
 }
 void view_analysis(GtkWidget *widget, gpointer data)
 {
@@ -4478,9 +3895,8 @@ void save_setting()
 	{
 		fprintf(out, "%d %d\t;board size (10 ~ %d)\n", rboardsizeh, rboardsizew, MAX_SIZE);
 		fprintf(out, "%d\t;language (0: English, 1,2,...: custom)\n", rlanguage);
-		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move, 4: rif, 5: soosorv, 6: swap-2)\n",
-			specialrule == 4 ? 6 : (specialrule == 3 ? 5 : (specialrule == 2 ? 3 : (specialrule == 1 ? 4 : inforule))));
-		fprintf(out, "%d\t;openbook (0: not use, 1: use)\n", useopenbook);
+		fprintf(out, "%d\t;rule (0: freestyle, 1: standard, 2: free renju, 3: swap after 1st move, 5: soosorv, 6: swap-2)\n",
+			specialrule == 4 ? 6 : (specialrule == 3 ? 5 : (specialrule == 2 ? 3 : inforule)));
 		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside & 1);
 		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside >> 1);
 		fprintf(out, "%d\t;level (0: 4dan, 1: 3dan, 2: 2dan, 3: 1dan, 5: 6dan, 6: 9dan, 7: meijin, 8: unlimited time 4: custom level)\n", levelchoice);
@@ -4868,9 +4284,12 @@ void create_windowclock()
 
 	playerlabel[0] = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(playerlabel[0]), "<big><b>Computer</b></big>");
+	//gtk_label_set_markup(GTK_LABEL(playerlabel[0]), "<big><b>Yixin</b></big>");
 
 	playerlabel[1] = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b>Human</b></big>");
+	//gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b>Lin Shu-Hsuan</b></big>");
+	//gtk_label_set_markup(GTK_LABEL(playerlabel[1]), "<big><b>Rudolf Dupszki</b></big>");
 
 	vbox = gtk_vbox_new(FALSE, 0);
 
@@ -4897,7 +4316,7 @@ void create_windowmain()
 {
 	GtkWidget *menubar, *menugame, *menuplayers, *menuview, *menuhelp, *menurule, *menulanguage;
 	GtkWidget *menuitemgame, *menuitemplayers, *menuitemview, *menuitemhelp;
-	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemsize, *menuitemopenbook, *menuitemquit,
+	GtkWidget *menuitemnewgame, *menuitemload, *menuitemsave, *menuitemrule, *menuitemsize, *menuitemquit,
 		*menuitemrule1, *menuitemrule2, *menuitemrule3, *menuitemrule4, *menuitemrule5, *menuitemrule6, *menuitemrule7, *menuitemrule8;
 	//GtkWidget *menuitemnewrule[10]; //TODO
 	GtkWidget *menuitemcomputerplaysblack, *menuitemcomputerplayswhite, *menuitemchecktimeout, *menuitemsettings;
@@ -5180,7 +4599,6 @@ void create_windowmain()
 	menuitemsave = gtk_menu_item_new_with_label(language==0?"Save":_T(clanguage[65]));
 	menuitemrule = gtk_menu_item_new_with_label(language==0?"Rule":_T(clanguage[66]));
 	menuitemsize = gtk_menu_item_new_with_label(language==0?"Board Size":_T(clanguage[67]));
-	menuitemopenbook = gtk_check_menu_item_new_with_label(language==0?"Use Openbook":_T(clanguage[68]));
 	menuitemnumeration = gtk_check_menu_item_new_with_label(language==0?"Numeration":_T(clanguage[69]));
 	menuitemlog = gtk_check_menu_item_new_with_label(language==0?"Log":_T(clanguage[70]));
 	menuitemanalysis = gtk_check_menu_item_new_with_label(language==0?"Analysis":_T(clanguage[71]));
@@ -5195,7 +4613,7 @@ void create_windowmain()
 	menuitemrule1 = gtk_radio_menu_item_new_with_label(NULL, language==0?"Freestyle Gomoku":_T(clanguage[76]));
 	menuitemrule2 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Standard Gomoku" : _T(clanguage[77]));
 	menuitemrule3 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Free Renju" : _T(clanguage[78]));
-	menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "RIF Opening Rule" : _T(clanguage[79]));
+	//menuitemrule4 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "RIF Opening Rule" : _T(clanguage[79]));
 	menuitemrule5 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Swap After First Move" : _T(clanguage[80]));
 	menuitemrule6 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Swap2" : _T(clanguage[100]));
 	//menuitemrule7 = gtk_radio_menu_item_new_with_label(gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(menuitemrule1)), language == 0 ? "Yamaguchi Opening Rule" : _T(clanguage[101])); //TODO
@@ -5250,8 +4668,6 @@ void create_windowmain()
 		case 2:
 			if(specialrule == 0)
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule3), TRUE);
-			else if(specialrule == 1)
-				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule4), TRUE);
 			else if(specialrule == 3)
 				gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemrule8), TRUE);
 			break;
@@ -5263,10 +4679,6 @@ void create_windowmain()
 	else
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemcustomlng[language]), TRUE);
 
-	if(useopenbook)
-	{
-		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemopenbook), TRUE);
-	}
 	if(shownumber)
 	{
 		gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menuitemnumeration), TRUE);
@@ -5321,7 +4733,6 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule1);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule2);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule3);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule4);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule5);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule6);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menurule), menuitemrule8);
@@ -5338,7 +4749,6 @@ void create_windowmain()
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemsave);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemrule);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemsize);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemopenbook);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemdatabase);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menugame), menuitemquit);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menuview), menuitemnumeration);
@@ -5361,7 +4771,6 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemnewgame), "activate", G_CALLBACK(new_game_resetclock), NULL);
 	g_signal_connect(G_OBJECT(menuitemload), "activate", G_CALLBACK(show_dialog_load), windowmain);
 	g_signal_connect(G_OBJECT(menuitemsave), "activate", G_CALLBACK(show_dialog_save), windowmain);
-	g_signal_connect(G_OBJECT(menuitemopenbook), "activate", G_CALLBACK(use_openbook), NULL);
 	g_signal_connect(G_OBJECT(menuitemnumeration), "activate", G_CALLBACK(view_numeration), NULL);
 	g_signal_connect(G_OBJECT(menuitemlog), "activate", G_CALLBACK(view_log), NULL);
 	g_signal_connect(G_OBJECT(menuitemanalysis), "activate", G_CALLBACK(view_analysis), NULL);
@@ -5374,7 +4783,6 @@ void create_windowmain()
 	g_signal_connect(G_OBJECT(menuitemrule1), "activate", G_CALLBACK(change_rule), (gpointer)0);
 	g_signal_connect(G_OBJECT(menuitemrule2), "activate", G_CALLBACK(change_rule), (gpointer)1);
 	g_signal_connect(G_OBJECT(menuitemrule3), "activate", G_CALLBACK(change_rule), (gpointer)2);
-	g_signal_connect(G_OBJECT(menuitemrule4), "activate", G_CALLBACK(change_rule), (gpointer)3);
 	g_signal_connect(G_OBJECT(menuitemrule5), "activate", G_CALLBACK(change_rule), (gpointer)4);
 	g_signal_connect(G_OBJECT(menuitemrule6), "activate", G_CALLBACK(change_rule), (gpointer)6);
 	g_signal_connect(G_OBJECT(menuitemrule8), "activate", G_CALLBACK(change_rule), (gpointer)5);
@@ -6093,8 +5501,6 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 			inforule = 1;
 			specialrule = 4;
 		}
-		useopenbook = read_int_from_file(in);
-		if(useopenbook < 0 || useopenbook > 1) useopenbook = 1;
 		computerside = 0;
 		t = read_int_from_file(in);
 		if(t == 1) computerside |= 1;
@@ -6246,7 +5652,6 @@ static void childexit_watch(GPid pid, gint status, gpointer *data)
 {
 	g_spawn_close_pid(pid);
 
-	if (openbook != NULL) free(openbook);
 	save_setting();
 	if (clanguage != NULL)
 	{

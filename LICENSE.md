@@ -1,4 +1,4 @@
-Copyright (c) 2009-2015, Kai Sun
+Copyright (c) 2009-2017, Kai Sun
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
