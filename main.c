@@ -58,7 +58,7 @@ char isthinking = 0, isgameover = 0, isneedrestart = 0, isneedomit = 0;
 char bestline[MAX_SIZE*MAX_SIZE*5+1] = "";
 int bestval;
 int move5N;
-int levelchoice = 4;
+int levelchoice = 0;
 int commandmodel = 0;
 int shownumber = 1;
 int showlog = 1;
@@ -422,7 +422,7 @@ void show_welcome()
 
 void show_thanklist()
 {
-	printf_log(language==0?"I would like to thank my contributors, whose support makes Yixin what it is.":
+	printf_log(language==0?"Thanks to all who helped development of Yixin:":
 			clanguage[11]);
 	printf_log("\n");
 	printf_log("  彼方\n");
@@ -439,6 +439,7 @@ void show_thanklist()
 	printf_log("  Epifanov Dmitry\n");
 	printf_log("  TZ\n");
 	printf_log("  濤声依旧\n");
+	printf_log("  嘿嘿\n");
 	printf_log("  张锡森\n");
 	printf_log("  ax_pokl\n");
 	printf_log("  Ola Strom");
@@ -1319,7 +1320,7 @@ void set_level(int x)
 {
 	gchar command[80];
 	levelchoice = x;
-	if(levelchoice == 4)
+	if(levelchoice == 1)
 	{
 		sprintf(command, "INFO timeout_turn %d\n", timeoutturn);
 		send_command(command);
@@ -1338,38 +1339,46 @@ void set_level(int x)
 	{
 		switch(levelchoice)
 		{
-			case 0:
-				sprintf(command, "INFO max_node %d\n", 60000);
-				send_command(command);
-				break;
-			case 1:
-				sprintf(command, "INFO max_node %d\n", 30000); //if the speed is 500k, then it will take at most 60s
-				send_command(command);
-				break;
-			case 2:
-				sprintf(command, "INFO max_node %d\n", 20000);
-				send_command(command);
-				break;
-			case 3:
-				sprintf(command, "INFO max_node %d\n", 10000);
-				send_command(command);
-				break;
-			case 5:
-				sprintf(command, "INFO max_node %d\n", 240000);
-				send_command(command);
-				break;
-			case 6:
-				sprintf(command, "INFO max_node %d\n", 1920000);
-				send_command(command);
-				break;
-			case 7:
-				sprintf(command, "INFO max_node %d\n", 500000000);
-				send_command(command);
-				break;
-			case 8:
-				sprintf(command, "INFO max_node %d\n", -1);
-				send_command(command);
-				break;
+		case 0:
+			sprintf(command, "INFO max_node %d\n", -1);
+			send_command(command);
+			break;
+		case 2:
+			sprintf(command, "INFO max_node %d\n", 10000);
+			send_command(command);
+			break;
+		case 3:
+			sprintf(command, "INFO max_node %d\n", 20000);
+			send_command(command);
+			break;
+		case 4:
+			sprintf(command, "INFO max_node %d\n", 30000); //if the speed is 500k, then it will take at most 60s
+			send_command(command);
+			break;
+		case 5:
+			sprintf(command, "INFO max_node %d\n", 60000);
+			send_command(command);
+			break;
+		case 6:
+			sprintf(command, "INFO max_node %d\n", 120000);
+			send_command(command);
+			break;
+		case 7:
+			sprintf(command, "INFO max_node %d\n", 240000);
+			send_command(command);
+			break;
+		case 8:
+			sprintf(command, "INFO max_node %d\n", 1920000);
+			send_command(command);
+			break;
+		case 9:
+			sprintf(command, "INFO max_node %d\n", 38400000);
+			send_command(command);
+			break;
+		case 10:
+			sprintf(command, "INFO max_node %d\n", 500000000);
+			send_command(command);
+			break;				
 		}
 		timeoutmatch = 100000000;
 		timeoutturn = 2000000;
@@ -1449,7 +1458,7 @@ void set_checkmate(int x)
 
 void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 {
-	static GtkWidget *editable[5];
+	static GtkWidget *editable[2];
 	static int flag = 0;
 	int i;
 	if(widget == NULL)
@@ -1465,10 +1474,20 @@ void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 		}
 		return;
 	}
-	for(i=0; i<flag; i++)
+	if (data == 0) //unlimited time
 	{
-		//gtk_editable_set_editable(GTK_EDITABLE(editable[i]), FALSE);
-		gtk_widget_set_sensitive(editable[i], (int)data==0 ? FALSE : TRUE);
+		gtk_widget_set_visible(editable[0], FALSE);
+		gtk_widget_set_visible(editable[1], FALSE);
+	}
+	else if (data == 1) //custom level
+	{
+		gtk_widget_set_visible(editable[0], TRUE);
+		gtk_widget_set_visible(editable[1], FALSE);
+	}
+	else //if (data >= 2) //predefined level
+	{
+		gtk_widget_set_visible(editable[0], FALSE);
+		gtk_widget_set_visible(editable[1], TRUE);
 	}
 }
 
@@ -1481,12 +1500,12 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *dialog;
 	GtkWidget *notebook;
 	GtkWidget *notebookvbox[3];
-	GtkWidget *hbox[11];
-	GtkWidget *radiolevel[9];
+	GtkWidget *hbox[12];
+	GtkWidget *radiolevel[3];
 	GtkWidget *radiocheckmate[3];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelincrement[2], *labelblank[9];
 	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode, *entryincrement;
-	GtkWidget *scalecaution, *scalethreads, *scalesplitdepth, *scalehash;
+	GtkWidget *scalelevel, *scalecaution, *scalethreads, *scalesplitdepth, *scalehash;
 	GtkWidget *tablesetting;
 	gint result;
 
@@ -1556,35 +1575,20 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_misc_set_alignment(GTK_MISC(labelincrement[0]), 1, 0.5);
 	gtk_misc_set_alignment(GTK_MISC(labelincrement[1]), 0, 0.5);
 
-	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimeturn);
-	show_dialog_settings_custom_entry(NULL, (gpointer)entrytimematch);
-	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxdepth);
-	show_dialog_settings_custom_entry(NULL, (gpointer)entrymaxnode);
-	show_dialog_settings_custom_entry(NULL, (gpointer)entryincrement);
+	scalelevel = gtk_hscale_new_with_range(1, 10, 1);
+	if (levelchoice < 2)
+		gtk_range_set_value(GTK_RANGE(scalelevel), 1);
+	else
+		gtk_range_set_value(GTK_RANGE(scalelevel), levelchoice - 1);
+	gtk_widget_set_size_request(scalelevel, 100, -1);
 
-	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language==0?"4 dan":_T(clanguage[28]));
-	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language==0?"3 dan":_T(clanguage[29]));
-	radiolevel[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[1])), language==0?"2 dan":_T(clanguage[30]));
-	radiolevel[3] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[2])), language==0?"1 dan":_T(clanguage[31]));
-	radiolevel[4] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[3])), language==0?"Custom Level":_T(clanguage[32]));
-	radiolevel[5] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[4])), language==0?"6 dan (Slow)":_T(clanguage[33]));
-	radiolevel[6] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[5])), language==0?"9 dan (Very Slow)":_T(clanguage[34]));
-	radiolevel[7] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[6])), language==0?"Meijin (Extremely Slow)":_T(clanguage[35]));
-	radiolevel[8] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[7])), language==0?"Unlimited Time":_T(clanguage[36]));
+	radiolevel[0] = gtk_radio_button_new_with_label(NULL, language == 0 ? "Unlimited Time" : _T(clanguage[36]));
+	radiolevel[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[0])), language == 0 ? "Custom Level" : _T(clanguage[32]));
+	radiolevel[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiolevel[1])), language == 0 ? "Predefined Level" : _T(clanguage[28]));
 
 	g_signal_connect(G_OBJECT(radiolevel[0]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
-	g_signal_connect(G_OBJECT(radiolevel[1]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
-	g_signal_connect(G_OBJECT(radiolevel[2]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
-	g_signal_connect(G_OBJECT(radiolevel[3]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
-	g_signal_connect(G_OBJECT(radiolevel[4]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)1);
-	g_signal_connect(G_OBJECT(radiolevel[5]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
-	g_signal_connect(G_OBJECT(radiolevel[6]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
-	g_signal_connect(G_OBJECT(radiolevel[7]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
-	g_signal_connect(G_OBJECT(radiolevel[8]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)0);
-
-	if(levelchoice != 4) show_dialog_settings_custom_entry(widget, (gpointer)0);
-	
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[levelchoice]), TRUE);
+	g_signal_connect(G_OBJECT(radiolevel[1]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)1);
+	g_signal_connect(G_OBJECT(radiolevel[2]), "toggled", G_CALLBACK(show_dialog_settings_custom_entry), (gpointer)2);
 
 	tablesetting = gtk_table_new(3, 9, FALSE);
 	gtk_table_set_row_spacings(GTK_TABLE(tablesetting), 0); /* set the row distance between elements to be 0 */
@@ -1616,16 +1620,21 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), entrymaxdepth, 2, 3, 2, 3);
 	gtk_table_attach_defaults(GTK_TABLE(tablesetting), labelmaxdepth[1], 3, 4, 2, 3);
 
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[4], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), tablesetting, FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[7], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[6], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[5], FALSE, FALSE, 3);
+	hbox[11] = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox[11]), gtk_label_new("     "), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[11]), gtk_label_new(language == 0 ? "Fast" : _T(clanguage[29])), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[11]), scalelevel, FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[11]), gtk_label_new(language == 0 ? "Slow" : _T(clanguage[30])), FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(hbox[11]), gtk_label_new("     "), FALSE, FALSE, 3);
+
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[0], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[1], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[2], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[3], FALSE, FALSE, 3);
-	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[8], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), hbox[11], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), radiolevel[1], FALSE, FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(notebookvbox[0]), tablesetting, FALSE, FALSE, 3);
+	
+	show_dialog_settings_custom_entry(NULL, (gpointer)tablesetting);
+	show_dialog_settings_custom_entry(NULL, (gpointer)hbox[11]);
 
 	scalecaution = gtk_hscale_new_with_range(0, CAUTION_NUM, 1);
 	//gtk_scale_set_value_pos(GTK_SCALE(scalecaution), GTK_POS_LEFT);
@@ -1692,13 +1701,29 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[4], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[2]), hbox[3], FALSE, FALSE, 3);
 
-
 	gtk_widget_show_all(dialog);
+
+	if (levelchoice == 0)
+	{
+		show_dialog_settings_custom_entry(widget, (gpointer)0);
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[0]), TRUE);
+	}
+	else if (levelchoice == 1)
+	{
+		show_dialog_settings_custom_entry(widget, (gpointer)1);
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[1]), TRUE);
+	}
+	else
+	{
+		show_dialog_settings_custom_entry(widget, (gpointer)2);
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[2]), TRUE);
+	}
+
 	result = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch(result)
 	{
 		case 1:
-			if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[4])))
+			if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[1])))
 			{
 				ptext = gtk_entry_get_text(GTK_ENTRY(entrytimeturn));
 				if(is_integer(ptext))
@@ -1741,7 +1766,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 					if (increment < 0) increment = 0;
 					increment *= 1000;
 				}
-				set_level(4);
+				set_level(1);
 			}
 			else
 			{
@@ -1749,33 +1774,9 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				{
 					set_level(0);
 				}
-				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[1])))
+				else
 				{
-					set_level(1);
-				}
-				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[2])))
-				{
-					set_level(2);
-				}
-				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[3])))
-				{
-					set_level(3);
-				}
-				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[5])))
-				{
-					set_level(5);
-				}
-				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[6])))
-				{
-					set_level(6);
-				}
-				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[7])))
-				{
-					set_level(7);
-				}
-				else if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiolevel[8])))
-				{
-					set_level(8);
+					set_level((int)(gtk_range_get_value(GTK_RANGE(scalelevel)) + 1 + 1e-8));
 				}
 			}
 
@@ -2468,7 +2469,7 @@ void show_dialog_about(GtkWidget *widget, gpointer data)
 	name = gtk_label_new(NULL);
 	gtk_label_set_markup(GTK_LABEL(name), "<big><b>Yixin Board</b></big>");
 	version = gtk_label_new("Version "VERSION);
-	author = gtk_label_new("(C)2009-2016 Kai Sun");
+	author = gtk_label_new("(C)2009-2017 Kai Sun");
 	www = gtk_label_new("www.aiexp.info");
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), icon, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), name, FALSE, FALSE, 3);
@@ -3899,7 +3900,7 @@ void save_setting()
 			specialrule == 4 ? 6 : (specialrule == 3 ? 5 : (specialrule == 2 ? 3 : inforule)));
 		fprintf(out, "%d\t;computer play black (0: no, 1: yes)\n", computerside & 1);
 		fprintf(out, "%d\t;computer play white (0: no, 1: yes)\n", computerside >> 1);
-		fprintf(out, "%d\t;level (0: 4dan, 1: 3dan, 2: 2dan, 3: 1dan, 5: 6dan, 6: 9dan, 7: meijin, 8: unlimited time 4: custom level)\n", levelchoice);
+		fprintf(out, "%d\t;level (0: unlimited time 1: custom level 2-: predefined level)\n", levelchoice);
 		fprintf(out, "%d\t;time limit (turn)\n", timeoutturn / 1000);
 		fprintf(out, "%d\t;time limit (match)\n", timeoutmatch / 1000);
 		fprintf(out, "%d\t;max depth\n", maxdepth);
@@ -4021,7 +4022,7 @@ void clock_label_refresh()
 	sprintf(t, " Used: %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
 	gtk_label_set_label(clocklabel[1], t);
 
-	if (levelchoice != 4)
+	if (levelchoice != 1)
 	{
 		h_turn = h_match = 99;
 		m_turn = m_match = 59;
@@ -4061,7 +4062,7 @@ void clock_label_refresh()
 	sprintf(t, " Left: %02d:%02d:%02d / %02d:%02d:%02d ", h_turn, m_turn, s_turn, h_match, m_match, s_match);
 	gtk_label_set_label(clocklabel[2], t);
 
-	if (levelchoice != 4)
+	if (levelchoice != 1)
 	{
 		h_turn = h_match = 99;
 		m_turn = m_match = 59;
@@ -5507,7 +5508,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		t = read_int_from_file(in);
 		if(t == 1) computerside |= 2;
 		levelchoice = read_int_from_file(in);
-		if(levelchoice < 0 || levelchoice > 8) levelchoice = 4;
+		if(levelchoice < 0 || levelchoice > 11) levelchoice = 1;
 		timeoutturn = read_int_from_file(in) * 1000;
 		if (timeoutturn == 0) timeoutturn = 100;
 		if(timeoutturn < 0 || timeoutturn > 100000000) timeoutturn = 10000;

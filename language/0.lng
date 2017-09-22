@@ -11,7 +11,7 @@
 8=MS
 9=RULE
 10=To get help, type help and press Enter here
-11=I would like to thank my contributors, whose support makes Yixin what it is.
+11=Thanks to all who helped development of Yixin:
 12=The operation will stop the calculation. Do you want to continue?
 13=Swap?
 14=Swap
@@ -27,14 +27,10 @@
 25=ply
 26=Max node number:
 27=M
-28=4 dan
-29=3 dan
-30=2 dan
-31=1 dan
+28=Predefined Level
+29=Fast
+30=Slow
 32=Custom Level
-33=6 dan (Slow)
-34=9 dan (Very Slow)
-35=Meijin (Extremely Slow)
 36=Unlimited Time
 37=Rash
 38=Cautious
