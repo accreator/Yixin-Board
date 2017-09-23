@@ -30,6 +30,7 @@
 28=Predefined Level
 29=Fast
 30=Slow
+31=Additional Threat Check in Global Search:
 32=Custom Level
 36=Unlimited Time
 37=Rash
@@ -79,9 +80,9 @@
 82=Computer Plays White
 83=Time Left: %dms
 85=Pondering
-86=VCT Search Only
-87=Global Search
-88=VC2 Search Only
+86=Check VCT
+87=None
+88=Check VC2
 89=Icon:
 90=Text:
 91=Command:

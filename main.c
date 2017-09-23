@@ -27,7 +27,7 @@ int rboardsizeh = 15, rboardsizew = 15;
 int inforule = 0;
 int specialrule = 0;
 int infopondering = 0;
-int infocheckmate = 0;
+int infovcthread = 0;
 int timeoutturn = 10000;
 int timeoutmatch = 2000000;
 int maxdepth = 100;
@@ -1446,13 +1446,13 @@ void set_pondering(int x)
 	send_command(command);
 }
 
-void set_checkmate(int x)
+void setvcthread(int x)
 {
 	gchar command[80];
 	if (x < 0) x = 0;
 	if (x > 2) x = 2;
-	infocheckmate = x;
-	sprintf(command, "INFO checkmate %d\n", infocheckmate);
+	infovcthread = x;
+	sprintf(command, "INFO vcthread %d\n", infovcthread);
 	send_command(command);
 }
 
@@ -1502,7 +1502,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	GtkWidget *notebookvbox[3];
 	GtkWidget *hbox[12];
 	GtkWidget *radiolevel[3];
-	GtkWidget *radiocheckmate[3];
+	GtkWidget *radiovcthread[3];
 	GtkWidget *labeltimeturn[2], *labeltimematch[2], *labelmaxdepth[2], *labelmaxnode[2], *labelincrement[2], *labelblank[9];
 	GtkWidget *entrytimeturn, *entrytimematch, *entrymaxdepth, *entrymaxnode, *entryincrement;
 	GtkWidget *scalelevel, *scalecaution, *scalethreads, *scalesplitdepth, *scalehash;
@@ -1653,15 +1653,15 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_range_set_value(GTK_RANGE(scalehash), hashsize);
 	gtk_widget_set_size_request(scalehash, 100, -1);
 
-	radiocheckmate[0] = gtk_radio_button_new_with_label(NULL, language == 0 ? "Global Search" : _T(clanguage[87]));
-	radiocheckmate[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiocheckmate[0])), language == 0 ? "VCT Search Only" : _T(clanguage[86]));
-	radiocheckmate[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiocheckmate[1])), language == 0 ? "VC2 Search Only" : _T(clanguage[88]));
+	radiovcthread[0] = gtk_radio_button_new_with_label(NULL, language == 0 ? "None" : _T(clanguage[87]));
+	radiovcthread[1] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiovcthread[0])), language == 0 ? "Check VCT" : _T(clanguage[86]));
+	radiovcthread[2] = gtk_radio_button_new_with_label(gtk_radio_button_get_group(GTK_RADIO_BUTTON(radiovcthread[1])), language == 0 ? "Check VC2" : _T(clanguage[88]));
 
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiocheckmate[infocheckmate]), TRUE);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiovcthread[infovcthread]), TRUE);
 
-	hbox[8] = radiocheckmate[0];
-	hbox[9] = radiocheckmate[1];
-	hbox[10] = radiocheckmate[2];
+	hbox[8] = radiovcthread[0];
+	hbox[9] = radiovcthread[1];
+	hbox[10] = radiovcthread[2];
 
 	hbox[7] = gtk_hseparator_new();
 
@@ -1670,6 +1670,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 	gtk_box_pack_start(GTK_BOX(hbox[1]), scalecaution, FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(hbox[1]), gtk_label_new(language==0?"Cautious":_T(clanguage[38])), FALSE, FALSE, 3);
 
+	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), gtk_label_new(language == 0 ? "Additional Threat Check in Global Search:" : _T(clanguage[31])), FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[8], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[9], FALSE, FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(notebookvbox[1]), hbox[10], FALSE, FALSE, 3);
@@ -1793,12 +1794,12 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 
 			set_pondering(gtk_toggle_button_get_active(hbox[5]) == TRUE ? 1 : 0);
 
-			if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiocheckmate[0])))
-				set_checkmate(0);
-			else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiocheckmate[1])))
-				set_checkmate(1);
-			else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiocheckmate[2])))
-				set_checkmate(2);
+			if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiovcthread[0])))
+				setvcthread(0);
+			else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiovcthread[1])))
+				setvcthread(1);
+			else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiovcthread[2])))
+				setvcthread(2);
 			break;
 		case 2:
 			break;
@@ -3917,7 +3918,7 @@ void save_setting()
 		fprintf(out, "%d\t;split depth\n", threadsplitdepth);
 		fprintf(out, "%d\t;blockpath autoreset (0: no, 1: yes)\n", blockpathautoreset);
 		fprintf(out, "%d\t;pondering (0: off, 1: on)\n", infopondering);
-		fprintf(out, "%d\t;chekmate (0: normal, 1: vct search only, 2: vc2 search only)\n", infocheckmate);
+		fprintf(out, "%d\t;checkmate in global search (0: no, 1: vc2, 2: vct)\n", infovcthread);
 		fprintf(out, "%d\t;hash autoclear (0: no, 1: yes)\n", hashautoclear);
 		fprintf(out, "%d\t;toolbar postion (0: left, 1: right)\n", toolbarpos);
 		fprintf(out, "%d\t;toolbar item number (<=32)\n", toolbarnum);
@@ -5543,8 +5544,8 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		if (blockpathautoreset < 0 || blockpathautoreset > 1) blockpathautoreset = 0;
 		infopondering = read_int_from_file(in);
 		if (infopondering < 0 || infopondering > 1) infopondering = 0;
-		infocheckmate = read_int_from_file(in);
-		if (infocheckmate < 0 || infocheckmate > 2) infocheckmate = 0;
+		infovcthread = read_int_from_file(in);
+		if (infovcthread < 0 || infovcthread > 2) infovcthread = 0;
 		hashautoclear = read_int_from_file(in);
 		if (hashautoclear < 0 || hashautoclear > 1) hashautoclear = 0;
 		toolbarpos = read_int_from_file(in);
@@ -5611,6 +5612,29 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 			}
 			fclose(in);
 		}
+	}
+	for (i = 0; ; i++)
+	{
+		int width, height;
+		GdkPixbuf *pixbuf;
+		GtkStockItem item;
+		GtkIconFactory *factory;
+		GtkIconSet *iconset;
+		sprintf(s, "icon/yixin%d.ico", i + 1);
+		if ((pixbuf = gdk_pixbuf_new_from_file(s, NULL)) == NULL) break;
+		item.stock_id = s;
+		item.label = s;
+		item.modifier = 0;
+		item.keyval = 0;
+		item.translation_domain = 0;
+		gtk_stock_add(&item, 1);
+		factory = gtk_icon_factory_new();
+		iconset = gtk_icon_set_new_from_pixbuf(pixbuf);
+		gtk_icon_factory_add_default(factory);
+		gtk_icon_factory_add(factory, s, iconset);
+		gtk_icon_set_unref(iconset);
+		g_object_unref(G_OBJECT(pixbuf));
+		g_object_unref(factory);
 	}
 	sprintf(s, "piece_%d.bmp", max(boardsizeh, boardsizew));
 	if((in = fopen(s, "rb")) != NULL)
@@ -5727,7 +5751,7 @@ void init_engine()
 	set_threadnum(threadnum);
 	set_hashsize(hashsize);
 	set_pondering(infopondering);
-	set_checkmate(infocheckmate);
+	setvcthread(infovcthread);
 }
 int main(int argc, char** argv)
 {
