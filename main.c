@@ -1991,8 +1991,8 @@ void show_dialog_dbset(GtkWidget *widget, gpointer data)
 {
 	GtkWidget *dialog;
 	GtkFileFilter* filter;
-	dialog = gtk_file_chooser_dialog_new("Set Database", data, GTK_FILE_CHOOSER_ACTION_SAVE,
-		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT, NULL);
+	dialog = gtk_file_chooser_dialog_new("Set Database", data, GTK_FILE_CHOOSER_ACTION_OPEN,
+		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT, NULL);
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "Yixin database");
 	gtk_file_filter_add_pattern(filter, "*.[Dd][Bb]");
