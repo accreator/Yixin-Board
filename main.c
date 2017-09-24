@@ -1709,14 +1709,17 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 
 	if (levelchoice == 0)
 	{
+		show_dialog_settings_custom_entry(widget, (gpointer)0);
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[0]), TRUE);
 	}
 	else if (levelchoice == 1)
 	{
+		show_dialog_settings_custom_entry(widget, (gpointer)1);
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[1]), TRUE);
 	}
 	else
 	{
+		show_dialog_settings_custom_entry(widget, (gpointer)2);
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[2]), TRUE);
 	}
 
