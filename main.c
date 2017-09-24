@@ -1475,22 +1475,27 @@ void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 		return;
 	}
 
-	//it seems that gtk_widget_set_visible is not working properly with gtk_widget_hide and gtk_widget_show (0.2.24.10) 
-	//so here we use sensitive instead of visible
+	//FIXME: it seems that gtk_widget_set_visible is not working properly with gtk_widget_hide and gtk_widget_show in 0.2.24.10
 	if (data == 0) //unlimited time
 	{
-		gtk_widget_set_sensitive(editable[0], FALSE);
-		gtk_widget_set_sensitive(editable[1], FALSE);
+		//gtk_widget_set_sensitive(editable[0], FALSE);
+		//gtk_widget_set_sensitive(editable[1], FALSE);
+		gtk_widget_set_visible(editable[0], FALSE);
+		gtk_widget_set_visible(editable[1], FALSE);
 	}
 	else if (data == 1) //custom level
 	{
-		gtk_widget_set_sensitive(editable[0], TRUE);
-		gtk_widget_set_sensitive(editable[1], FALSE);
+		//gtk_widget_set_sensitive(editable[0], TRUE);
+		//gtk_widget_set_sensitive(editable[1], FALSE);
+		gtk_widget_set_visible(editable[0], TRUE);
+		gtk_widget_set_visible(editable[1], FALSE);
 	}
 	else //if (data >= 2) //predefined level
 	{
-		gtk_widget_set_sensitive(editable[0], FALSE);
-		gtk_widget_set_sensitive(editable[1], TRUE);
+		//gtk_widget_set_sensitive(editable[0], FALSE);
+		//gtk_widget_set_sensitive(editable[1], TRUE);
+		gtk_widget_set_visible(editable[0], FALSE);
+		gtk_widget_set_visible(editable[1], TRUE);
 	}
 }
 
