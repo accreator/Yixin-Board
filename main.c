@@ -1461,7 +1461,6 @@ void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 {
 	static GtkWidget *editable[2];
 	static int flag = 0;
-	int i;
 	if(widget == NULL)
 	{
 		if(data == 0)
@@ -1475,20 +1474,23 @@ void show_dialog_settings_custom_entry(GtkWidget *widget, gpointer data)
 		}
 		return;
 	}
+
+	//it seems that gtk_widget_set_visible is not working properly with gtk_widget_hide and gtk_widget_show (0.2.24.10) 
+	//so here we use sensitive instead of visible
 	if (data == 0) //unlimited time
 	{
-		gtk_widget_set_visible(editable[0], FALSE);
-		gtk_widget_set_visible(editable[1], FALSE);
+		gtk_widget_set_sensitive(editable[0], FALSE);
+		gtk_widget_set_sensitive(editable[1], FALSE);
 	}
 	else if (data == 1) //custom level
 	{
-		gtk_widget_set_visible(editable[0], TRUE);
-		gtk_widget_set_visible(editable[1], FALSE);
+		gtk_widget_set_sensitive(editable[0], TRUE);
+		gtk_widget_set_sensitive(editable[1], FALSE);
 	}
 	else //if (data >= 2) //predefined level
 	{
-		gtk_widget_set_visible(editable[0], FALSE);
-		gtk_widget_set_visible(editable[1], TRUE);
+		gtk_widget_set_sensitive(editable[0], FALSE);
+		gtk_widget_set_sensitive(editable[1], TRUE);
 	}
 }
 
@@ -1707,17 +1709,14 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 
 	if (levelchoice == 0)
 	{
-		show_dialog_settings_custom_entry(widget, (gpointer)0);
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[0]), TRUE);
 	}
 	else if (levelchoice == 1)
 	{
-		show_dialog_settings_custom_entry(widget, (gpointer)1);
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[1]), TRUE);
 	}
 	else
 	{
-		show_dialog_settings_custom_entry(widget, (gpointer)2);
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiolevel[2]), TRUE);
 	}
 
@@ -2042,8 +2041,6 @@ void show_dialog_move5N(GtkWidget *widget, gpointer data)
 	gint result;
 	int done = 0;
 
-	show_dialog_settings_custom_entry(NULL, 0);
-
 	dialog = gtk_dialog_new_with_buttons("Number of 5th Moves", GTK_WINDOW(windowmain), GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "OK", 1, NULL);
 	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
@@ -2092,8 +2089,6 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 	GtkWidget *label[2];
 	GtkWidget *entry[2];
 	gint result;
-
-	show_dialog_settings_custom_entry(NULL, 0);
 
 	dialog = gtk_dialog_new_with_buttons("Settings", GTK_WINDOW(windowmain), GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "OK", 1, "Cancel", 2, NULL);
 	gtk_window_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
@@ -5590,7 +5585,6 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 	}
 	for (i = 0; ; i++)
 	{
-		int width, height;
 		GdkPixbuf *pixbuf;
 		GtkStockItem item;
 		GtkIconFactory *factory;
