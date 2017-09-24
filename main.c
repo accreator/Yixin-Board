@@ -18,6 +18,7 @@ typedef long long I64;
 #define MAX_HOTKEY_ITEM 32
 #define MAX_HOTKEY_COMMAND_LEN 2048
 
+int respawn = 0;
 int showdatabase = 1;
 int usedatabase = 1;
 int zobristflag = 1;
@@ -2084,11 +2085,6 @@ void show_dialog_move5N(GtkWidget *widget, gpointer data)
 
 void show_dialog_size(GtkWidget *widget, gpointer data)
 {
-#ifdef G_OS_WIN32
-	gchar *argv[] = {"Yixin.exe", NULL};
-#else
-	gchar *argv[] = {"./Yixin", NULL};
-#endif
 	gchar text[80];
 	const gchar *ptext[2];
 	GtkWidget *dialog;
@@ -2142,8 +2138,7 @@ void show_dialog_size(GtkWidget *widget, gpointer data)
 					rboardsizew = s2;
 					if(boardsizeh != s1 || boardsizew != s2)
 					{
-						save_setting();
-						g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+						respawn = 1;
 						yixin_quit();
 					}
 				}
@@ -2295,12 +2290,6 @@ void show_dialog_custom_toolbar(GtkWidget *widget, gpointer data)
 	case 1:
 	{
 		gchar *command;
-#ifdef G_OS_WIN32
-		gchar *argv[] = { "Yixin.exe", NULL };
-#else
-		gchar *argv[] = { "./Yixin", NULL };
-#endif
-
 		ptext = gtk_entry_get_text(GTK_ENTRY(entry));
 		if (is_integer(ptext))
 		{
@@ -2363,8 +2352,7 @@ void show_dialog_custom_toolbar(GtkWidget *widget, gpointer data)
 		command = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(buffercommand), &start, &end, FALSE);
 		strcpy(toolbarcommand[(int)data], command);
 
-		save_setting();
-		g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+		respawn = 1;
 		yixin_quit();
 	}
 	case 2:
@@ -2650,15 +2638,9 @@ gint windowclock_delete()
 }
 void change_language(GtkWidget *widget, gpointer data)
 {
-#ifdef G_OS_WIN32
-	gchar *argv[] = {"Yixin.exe", NULL};
-#else
-	gchar *argv[] = {"./Yixin", NULL};
-#endif
 	if(language == (int)data) return;
 	rlanguage = (int)data;
-	save_setting();
-	g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+	respawn = 1;
 	yixin_quit();
 }
 void change_piece(GtkWidget *widget, gpointer data)
@@ -3517,16 +3499,10 @@ void execute_command(gchar *command)
 	}
 	else if (_strnicmp(command, "toolbar remove", 14) == 0)
 	{
-#ifdef G_OS_WIN32
-		gchar *argv[] = { "Yixin.exe", NULL };
-#else
-		gchar *argv[] = { "./Yixin", NULL };
-#endif
 		if (toolbarnum > 0)
 		{
 			toolbarnum--;
-			save_setting();
-			g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
+			respawn = 1;
 			yixin_quit();
 		}
 	}
@@ -3918,7 +3894,7 @@ void save_setting()
 		fprintf(out, "%d\t;split depth\n", threadsplitdepth);
 		fprintf(out, "%d\t;blockpath autoreset (0: no, 1: yes)\n", blockpathautoreset);
 		fprintf(out, "%d\t;pondering (0: off, 1: on)\n", infopondering);
-		fprintf(out, "%d\t;checkmate in global search (0: no, 1: vc2, 2: vct)\n", infovcthread);
+		fprintf(out, "%d\t;checkmate in global search (0: no, 1: vct, 2: vc2)\n", infovcthread);
 		fprintf(out, "%d\t;hash autoclear (0: no, 1: yes)\n", hashautoclear);
 		fprintf(out, "%d\t;toolbar postion (0: left, 1: right)\n", toolbarpos);
 		fprintf(out, "%d\t;toolbar item number (<=32)\n", toolbarnum);
@@ -3958,7 +3934,6 @@ void save_setting()
 
 void yixin_quit()
 {
-	//stop_thinking(NULL, NULL);
 	send_command("end\n");
 }
 
@@ -5675,6 +5650,11 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 }
 static void childexit_watch(GPid pid, gint status, gpointer *data)
 {
+#ifdef G_OS_WIN32
+	gchar *argv[] = { "Yixin.exe", NULL };
+#else
+	gchar *argv[] = { "./Yixin", NULL };
+#endif
 	g_spawn_close_pid(pid);
 
 	save_setting();
@@ -5688,6 +5668,7 @@ static void childexit_watch(GPid pid, gint status, gpointer *data)
 		free(clanguage);
 	}
 	if (debuglog != NULL) fclose(debuglog);
+	if (respawn) g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, NULL, NULL);
 	gtk_main_quit();
 }
 
