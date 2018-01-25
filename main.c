@@ -2825,6 +2825,7 @@ void execute_command(gchar *command)
 		printf_log(" dbval\n");
 		printf_log(" dbdel one\n");
 		printf_log(" dbdel all\n");
+		printf_log(" dbdel all [wl,nonwl]\n");
 		printf_log(" dbset [filename]\n");
 		printf_log(" hash usage\n");
 		printf_log(" command [on,off]\n");
@@ -3700,6 +3701,30 @@ void execute_command(gchar *command)
 			send_command("done\n");
 		}
 	}
+	else if (_strnicmp(command, "dbtopos", 7) == 0)
+	{
+		gchar _command[80];
+		sprintf(_command, "%s", command + 7 + 1);
+
+		i = strlen(_command);
+		while (i > 0)
+		{
+			if (_command[i - 1] == '\n' || _command[i - 1] == '\r')
+			{
+				_command[i - 1] = 0;
+				i--;
+			}
+			else
+				break;
+		}
+		_command[i] = '\n';
+		_command[i + 1] = 0;
+		if (i > 0)
+		{
+			send_command("yxdbtopos\n");
+			send_command(_command);
+		}
+	}
 	else if (_strnicmp(command, "dbtotxt", 7) == 0)
 	{
 		gchar _command[80];
@@ -3790,6 +3815,10 @@ void execute_command(gchar *command)
 	{
 		send_command("yxdbcheck\n");
 	}
+	else if (_strnicmp(command, "dbfix", 5) == 0)
+	{
+		send_command("yxdbfix\n");
+	}
 	else if (_strnicmp(command, "dbval", 5) == 0)
 	{
 		gchar _command[80];
@@ -3806,6 +3835,30 @@ void execute_command(gchar *command)
 	{
 		gchar _command[80];
 		send_command("yxdeletedatabaseone\n");
+		for (i = 0; i < piecenum; i++)
+		{
+			sprintf(_command, "%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew);
+			send_command(_command);
+		}
+		send_command("done\n");
+	}
+	else if (_strnicmp(command, "dbdel all nonwl", 15) == 0)
+	{
+		gchar _command[80];
+		send_command("yxdeletedatabaseall nonwl\n");
+		for (i = 0; i < piecenum; i++)
+		{
+			sprintf(_command, "%d,%d\n", movepath[i] / boardsizew,
+				movepath[i] % boardsizew);
+			send_command(_command);
+		}
+		send_command("done\n");
+	}
+	else if (_strnicmp(command, "dbdel all wl", 12) == 0)
+	{
+		gchar _command[80];
+		send_command("yxdeletedatabaseall wl\n");
 		for (i = 0; i < piecenum; i++)
 		{
 			sprintf(_command, "%d,%d\n", movepath[i] / boardsizew,
