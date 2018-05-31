@@ -18,6 +18,15 @@ typedef long long I64;
 #define MAX_HOTKEY_ITEM 32
 #define MAX_HOTKEY_COMMAND_LEN 2048
 
+int yixin_strnicmp(const char *string1, const char *string2, size_t count)
+{
+#ifdef _WIN32
+ return _strnicmp(string1, string2, count);
+#else
+ return strncasecmp(string1, string2, count);
+#endif
+}
+
 int respawn = 0;
 int showdatabase = 1;
 int usedatabase = 1;
@@ -2746,11 +2755,11 @@ void execute_command(gchar *command)
 			command);
 		fflush(debuglog);
 	}
-	if (_strnicmp(command, "command on", 10) == 0)
+	if (yixin_strnicmp(command, "command on", 10) == 0)
 	{
 		commandmodel = 1;
 	}
-	else if (_strnicmp(command, "command off", 11) == 0)
+	else if (yixin_strnicmp(command, "command off", 11) == 0)
 	{
 		commandmodel = 0;
 	}
@@ -2759,7 +2768,7 @@ void execute_command(gchar *command)
 		printf_log(command);
 		send_command(command);
 	}
-	else if (_strnicmp(command, "help", 4) == 0)
+	else if (yixin_strnicmp(command, "help", 4) == 0)
 	{
 		if (language)
 		{
@@ -2842,13 +2851,13 @@ void execute_command(gchar *command)
 		//printf_log("   %s: sleep 5\n", language ? clanguage[51] : "Example");
 		printf_log("\n");
 	}
-	else if (_strnicmp(command, "clear", 5) == 0)
+	else if (yixin_strnicmp(command, "clear", 5) == 0)
 	{
 		GtkTextIter _start, _end;
 		gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(buffertextlog), &_start, &_end);
 		gtk_text_buffer_delete(buffertextlog, &_start, &_end);
 	}
-	else if (_strnicmp(command, "rotate", 6) == 0)
+	else if (yixin_strnicmp(command, "rotate", 6) == 0)
 	{
 		int p = piecenum;
 		int j, k = 1;
@@ -2884,7 +2893,7 @@ void execute_command(gchar *command)
 			show_database();
 		}
 	}
-	else if (_strnicmp(command, "flip", 4) == 0)
+	else if (yixin_strnicmp(command, "flip", 4) == 0)
 	{
 		int p = piecenum;
 		int k = 0;
@@ -2935,7 +2944,7 @@ void execute_command(gchar *command)
 			show_database();
 		}
 	}
-	else if (_strnicmp(command, "move", 4) == 0)
+	else if (yixin_strnicmp(command, "move", 4) == 0)
 	{
 		int p = piecenum;
 		int k = 0;
@@ -3008,7 +3017,7 @@ void execute_command(gchar *command)
 		show_forbid();
 		show_database();
 	}
-	else if (_strnicmp(command, "putpos", 6) == 0)
+	else if (yixin_strnicmp(command, "putpos", 6) == 0)
 	{
 		new_game(NULL, NULL);
 		i = 6;
@@ -3034,7 +3043,7 @@ void execute_command(gchar *command)
 		show_forbid();
 		show_database();
 	}
-	else if (_strnicmp(command, "getpos", 6) == 0)
+	else if (yixin_strnicmp(command, "getpos", 6) == 0)
 	{
 		for (i = 0; i < piecenum; i++)
 		{
@@ -3042,11 +3051,11 @@ void execute_command(gchar *command)
 		}
 		printf_log("\n");
 	}
-	else if (_strnicmp(command, "blockpath reset", 15) == 0)
+	else if (yixin_strnicmp(command, "blockpath reset", 15) == 0)
 	{
 		send_command("yxblockpathreset\n");
 	}
-	else if (_strnicmp(command, "blockpath autoreset", 19) == 0)
+	else if (yixin_strnicmp(command, "blockpath autoreset", 19) == 0)
 	{
 		if (strlen(command) >= 22)
 		{
@@ -3060,7 +3069,7 @@ void execute_command(gchar *command)
 			}
 		}
 	}
-	else if (_strnicmp(command, "blockpath undo", 14) == 0)
+	else if (yixin_strnicmp(command, "blockpath undo", 14) == 0)
 	{
 		gchar _command[80];
 		int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
@@ -3104,7 +3113,7 @@ void execute_command(gchar *command)
 			send_command("done\n");
 		}
 	}
-	else if (_strnicmp(command, "blockpath except", 16) == 0)
+	else if (yixin_strnicmp(command, "blockpath except", 16) == 0)
 	{
 		gchar _command[80];
 		int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
@@ -3158,11 +3167,11 @@ void execute_command(gchar *command)
 			}
 		}
 	}
-	else if (_strnicmp(command, "blockpath list", 14) == 0)
+	else if (yixin_strnicmp(command, "blockpath list", 14) == 0)
 	{
 		; //TODO
 	}
-	else if (_strnicmp(command, "blockpath", 9) == 0)
+	else if (yixin_strnicmp(command, "blockpath", 9) == 0)
 	{
 		gchar _command[80];
 		int xl[MAX_SIZE*MAX_SIZE], yl[MAX_SIZE*MAX_SIZE];
@@ -3206,13 +3215,13 @@ void execute_command(gchar *command)
 			send_command("done\n");
 		}
 	}
-	else if (_strnicmp(command, "block reset", 11) == 0)
+	else if (yixin_strnicmp(command, "block reset", 11) == 0)
 	{
 		send_command("yxblockreset\n");
 		memset(boardblock, 0, sizeof(boardblock));
 		refresh_board();
 	}
-	else if (_strnicmp(command, "block autoreset", 15) == 0)
+	else if (yixin_strnicmp(command, "block autoreset", 15) == 0)
 	{
 		if (strlen(command) >= 18)
 		{
@@ -3226,7 +3235,7 @@ void execute_command(gchar *command)
 			}
 		}
 	}
-	else if (_strnicmp(command, "block undo", 10) == 0)
+	else if (yixin_strnicmp(command, "block undo", 10) == 0)
 	{
 		gchar _command[80];
 		do
@@ -3251,7 +3260,7 @@ void execute_command(gchar *command)
 			refresh_board();
 		} while (0);
 	}
-	else if (_strnicmp(command, "block compare", 13) == 0)
+	else if (yixin_strnicmp(command, "block compare", 13) == 0)
 	{
 		gchar _command[80];
 		int j;
@@ -3302,7 +3311,7 @@ void execute_command(gchar *command)
 		}
 		refresh_board();
 	}
-	else if (_strnicmp(command, "block", 5) == 0)
+	else if (yixin_strnicmp(command, "block", 5) == 0)
 	{
 		gchar _command[80];
 		i = 0;
@@ -3331,7 +3340,7 @@ void execute_command(gchar *command)
 		} while (isalpha(command[6 + i]));
 		refresh_board();
 	}
-	else if (_strnicmp(command, "forbid undo", 11) == 0)
+	else if (yixin_strnicmp(command, "forbid undo", 11) == 0)
 	{
 		gchar _command[80];
 		do
@@ -3352,7 +3361,7 @@ void execute_command(gchar *command)
 			send_command(_command);
 		} while (0);
 	}
-	else if (_strnicmp(command, "forbid", 6) == 0)
+	else if (yixin_strnicmp(command, "forbid", 6) == 0)
 	{
 		gchar _command[80];
 		do
@@ -3373,7 +3382,7 @@ void execute_command(gchar *command)
 			send_command(_command);
 		} while (0);
 	}
-	else if (_strnicmp(command, "hash autoclear", 14) == 0)
+	else if (yixin_strnicmp(command, "hash autoclear", 14) == 0)
 	{
 		if (strlen(command) >= 17)
 		{
@@ -3387,11 +3396,11 @@ void execute_command(gchar *command)
 			}
 		}
 	}
-	else if (_strnicmp(command, "hash clear", 10) == 0)
+	else if (yixin_strnicmp(command, "hash clear", 10) == 0)
 	{
 		send_command("yxhashclear\n");
 	}
-	else if (_strnicmp(command, "hash dump", 9) == 0)
+	else if (yixin_strnicmp(command, "hash dump", 9) == 0)
 	{
 		gchar _command[80];
 		sprintf(_command, "%s", command + 9 + 1);
@@ -3414,7 +3423,7 @@ void execute_command(gchar *command)
 			send_command(_command);
 		}
 	}
-	else if (_strnicmp(command, "hash load", 9) == 0)
+	else if (yixin_strnicmp(command, "hash load", 9) == 0)
 	{
 		gchar _command[80];
 		sprintf(_command, "%s", command + 9 + 1);
@@ -3437,11 +3446,11 @@ void execute_command(gchar *command)
 			send_command(_command);
 		}
 	}
-	else if (_strnicmp(command, "hash usage", 10) == 0)
+	else if (yixin_strnicmp(command, "hash usage", 10) == 0)
 	{
 		send_command("yxshowhashusage\n");
 	}
-	else if (_strnicmp(command, "search from", 11) == 0)
+	else if (yixin_strnicmp(command, "search from", 11) == 0)
 	{
 		gchar _command[80];
 		int depth = 1;
@@ -3449,7 +3458,7 @@ void execute_command(gchar *command)
 		sprintf(_command, "info start_depth %d\n", depth);
 		send_command(_command);
 	}
-	else if (_strnicmp(command, "key list", 8) == 0)
+	else if (yixin_strnicmp(command, "key list", 8) == 0)
 	{
 		for (i = 0; i < hotkeynum; i++)
 		{
@@ -3457,7 +3466,7 @@ void execute_command(gchar *command)
 		}
 		printf_log("\n");
 	}
-	else if (_strnicmp(command, "key edit", 8) == 0)
+	else if (yixin_strnicmp(command, "key edit", 8) == 0)
 	{
 		int n;
 		if (sscanf(command + 8 + 1, "%d", &n) != EOF)
@@ -3465,7 +3474,7 @@ void execute_command(gchar *command)
 			show_dialog_custom_hotkey(NULL, (gpointer)(n - 1));
 		}
 	}
-	else if (_strnicmp(command, "key add", 7) == 0)
+	else if (yixin_strnicmp(command, "key add", 7) == 0)
 	{
 		if (hotkeynum < MAX_HOTKEY_ITEM)
 		{
@@ -3475,14 +3484,14 @@ void execute_command(gchar *command)
 			show_dialog_custom_hotkey(NULL, (gpointer)(hotkeynum - 1));
 		}
 	}
-	else if (_strnicmp(command, "key remove", 10) == 0)
+	else if (yixin_strnicmp(command, "key remove", 10) == 0)
 	{
 		if (hotkeynum > 0)
 		{
 			hotkeynum--;
 		}
 	}
-	else if (_strnicmp(command, "toolbar edit", 12) == 0)
+	else if (yixin_strnicmp(command, "toolbar edit", 12) == 0)
 	{
 		int n;
 		if (sscanf(command + 12 + 1, "%d", &n) != EOF)
@@ -3490,7 +3499,7 @@ void execute_command(gchar *command)
 			show_dialog_custom_toolbar(NULL, (gpointer)(n - 1));
 		}
 	}
-	else if (_strnicmp(command, "toolbar add", 11) == 0)
+	else if (yixin_strnicmp(command, "toolbar add", 11) == 0)
 	{
 		if (toolbarnum < MAX_TOOLBAR_ITEM)
 		{
@@ -3501,7 +3510,7 @@ void execute_command(gchar *command)
 			show_dialog_custom_toolbar(NULL, (gpointer)(toolbarnum-1));
 		}
 	}
-	else if (_strnicmp(command, "toolbar remove", 14) == 0)
+	else if (yixin_strnicmp(command, "toolbar remove", 14) == 0)
 	{
 		if (toolbarnum > 0)
 		{
@@ -3510,44 +3519,44 @@ void execute_command(gchar *command)
 			yixin_quit();
 		}
 	}
-	else if (_strnicmp(command, "thinking start", 14) == 0)
+	else if (yixin_strnicmp(command, "thinking start", 14) == 0)
 	{
 		start_thinking(windowmain, NULL);
 	}
-	else if (_strnicmp(command, "thinking stop", 13) == 0)
+	else if (yixin_strnicmp(command, "thinking stop", 13) == 0)
 	{
 		stop_thinking(windowmain, NULL);
 	}
-	else if (_strnicmp(command, "undo all", 8) == 0)
+	else if (yixin_strnicmp(command, "undo all", 8) == 0)
 	{
 		change_piece(windowmain, (gpointer)0);
 	}
-	else if (_strnicmp(command, "undo one", 8) == 0)
+	else if (yixin_strnicmp(command, "undo one", 8) == 0)
 	{
 		change_piece(windowmain, (gpointer)1);
 	}
-	else if (_strnicmp(command, "redo one", 8) == 0)
+	else if (yixin_strnicmp(command, "redo one", 8) == 0)
 	{
 		change_piece(windowmain, (gpointer)2);
 	}
-	else if (_strnicmp(command, "redo all", 8) == 0)
+	else if (yixin_strnicmp(command, "redo all", 8) == 0)
 	{
 		change_piece(windowmain, (gpointer)3);
 	}
 	/*
-	else if (_strnicmp(command, "sleep", 5) == 0)
+	else if (yixin_strnicmp(command, "sleep", 5) == 0)
 	{
 		int n;
 		sscanf(command + 5 + 1, "%d", &n);
 		//TODO
 	}
 	*/
-	else if (_strnicmp(command, "bestline", 8) == 0)
+	else if (yixin_strnicmp(command, "bestline", 8) == 0)
 	{
 		printf_log("BESTLINE: %s ", bestline);
 		printf_log("VAL: %d\n", bestval);
 	}
-	else if (_strnicmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
+	else if (yixin_strnicmp(command, "balance", 7) == 0 && (command[7] == '1' || command[7] == '2'))
 	{
 		gchar _command[80];
 		int s;
@@ -3569,7 +3578,7 @@ void execute_command(gchar *command)
 		sprintf(_command, "yxbalance%s %d\n", t == 1 ? "one" : "two", s);
 		send_command(_command);
 	}
-	else if (_strnicmp(command, "nbest", 5) == 0)
+	else if (yixin_strnicmp(command, "nbest", 5) == 0)
 	{
 		gchar _command[80];
 		int s;
@@ -3591,7 +3600,7 @@ void execute_command(gchar *command)
 		sprintf(_command, "yxnbest %d\n", s);
 		send_command(_command);
 	}
-	else if (_strnicmp(command, "searchdefend", 9) == 0)
+	else if (yixin_strnicmp(command, "searchdefend", 9) == 0)
 	{
 		gchar _command[80];
 		sprintf(_command, "start %d %d\n", boardsizew, boardsizeh);
@@ -3609,7 +3618,7 @@ void execute_command(gchar *command)
 		sprintf(_command, "yxsearchdefend\n");
 		send_command(_command);
 	}
-	else if (_strnicmp(command, "dbsetbestmove", 13) == 0)
+	else if (yixin_strnicmp(command, "dbsetbestmove", 13) == 0)
 	{
 		gchar _command[80];
 		send_command("yxsetbestmovedatabase\n");
@@ -3621,7 +3630,7 @@ void execute_command(gchar *command)
 		}
 		send_command("done\n");
 	}
-	else if (_strnicmp(command, "dbclearbestmove", 15) == 0)
+	else if (yixin_strnicmp(command, "dbclearbestmove", 15) == 0)
 	{
 		gchar _command[80];
 		send_command("yxclearbestmovedatabase\n");
@@ -3633,7 +3642,7 @@ void execute_command(gchar *command)
 		}
 		send_command("done\n");
 	}
-	else if (_strnicmp(command, "dbeditlabel", 11) == 0)
+	else if (yixin_strnicmp(command, "dbeditlabel", 11) == 0)
 	{
 		gchar _command[80];
 		if (strlen(command) >= 12)
@@ -3649,7 +3658,7 @@ void execute_command(gchar *command)
 			send_command("done\n");
 		}
 	}
-	else if (_strnicmp(command, "dbedittag", 9) == 0)
+	else if (yixin_strnicmp(command, "dbedittag", 9) == 0)
 	{
 		gchar _command[80];
 		if (strlen(command) >= 10)
@@ -3665,7 +3674,7 @@ void execute_command(gchar *command)
 			send_command("done\n");
 		}
 	}
-	else if (_strnicmp(command, "dbeditval", 9) == 0)
+	else if (yixin_strnicmp(command, "dbeditval", 9) == 0)
 	{
 		gchar _command[80];
 		if (strlen(command) >= 10)
@@ -3683,7 +3692,7 @@ void execute_command(gchar *command)
 			send_command("done\n");
 		}
 	}
-	else if (_strnicmp(command, "dbeditdep", 9) == 0)
+	else if (yixin_strnicmp(command, "dbeditdep", 9) == 0)
 	{
 		gchar _command[80];
 		if (strlen(command) >= 10)
@@ -3701,7 +3710,7 @@ void execute_command(gchar *command)
 			send_command("done\n");
 		}
 	}
-	else if (_strnicmp(command, "dbtopos", 7) == 0)
+	else if (yixin_strnicmp(command, "dbtopos", 7) == 0)
 	{
 		gchar _command[80];
 		sprintf(_command, "%s", command + 7 + 1);
@@ -3725,7 +3734,7 @@ void execute_command(gchar *command)
 			send_command(_command);
 		}
 	}
-	else if (_strnicmp(command, "dbtotxt", 7) == 0)
+	else if (yixin_strnicmp(command, "dbtotxt", 7) == 0)
 	{
 		gchar _command[80];
 		sprintf(_command, "%s", command + 7 + 1);
@@ -3749,7 +3758,7 @@ void execute_command(gchar *command)
 			send_command(_command);
 		}
 	}
-	else if (_strnicmp(command, "txttodb", 7) == 0)
+	else if (yixin_strnicmp(command, "txttodb", 7) == 0)
 	{
 		gchar _command[80];
 		sprintf(_command, "%s", command + 7 + 1);
@@ -3773,7 +3782,7 @@ void execute_command(gchar *command)
 			send_command(_command);
 		}
 	}
-	else if (_strnicmp(command, "dbset", 5) == 0)
+	else if (yixin_strnicmp(command, "dbset", 5) == 0)
 	{
 		gchar _command[80];
 		sprintf(_command, "%s", command + 5 + 1);
@@ -3803,23 +3812,23 @@ void execute_command(gchar *command)
 			}
 		}
 	}
-	else if (_strnicmp(command, "draw", 4) == 0)
+	else if (yixin_strnicmp(command, "draw", 4) == 0)
 	{
 		send_command("yxdraw\n");
 	}
-	else if (_strnicmp(command, "resign", 6) == 0)
+	else if (yixin_strnicmp(command, "resign", 6) == 0)
 	{
 		send_command("yxresign\n");
 	}
-	else if (_strnicmp(command, "dbcheck", 5) == 0)
+	else if (yixin_strnicmp(command, "dbcheck", 5) == 0)
 	{
 		send_command("yxdbcheck\n");
 	}
-	else if (_strnicmp(command, "dbfix", 5) == 0)
+	else if (yixin_strnicmp(command, "dbfix", 5) == 0)
 	{
 		send_command("yxdbfix\n");
 	}
-	else if (_strnicmp(command, "dbval", 5) == 0)
+	else if (yixin_strnicmp(command, "dbval", 5) == 0)
 	{
 		gchar _command[80];
 		send_command("yxquerydatabaseone\n");
@@ -3831,7 +3840,7 @@ void execute_command(gchar *command)
 		}
 		send_command("done\n");
 	}
-	else if (_strnicmp(command, "dbdel one", 9) == 0)
+	else if (yixin_strnicmp(command, "dbdel one", 9) == 0)
 	{
 		gchar _command[80];
 		send_command("yxdeletedatabaseone\n");
@@ -3843,7 +3852,7 @@ void execute_command(gchar *command)
 		}
 		send_command("done\n");
 	}
-	else if (_strnicmp(command, "dbdel all nonwl", 15) == 0)
+	else if (yixin_strnicmp(command, "dbdel all nonwl", 15) == 0)
 	{
 		gchar _command[80];
 		send_command("yxdeletedatabaseall nonwl\n");
@@ -3855,7 +3864,7 @@ void execute_command(gchar *command)
 		}
 		send_command("done\n");
 	}
-	else if (_strnicmp(command, "dbdel all wl", 12) == 0)
+	else if (yixin_strnicmp(command, "dbdel all wl", 12) == 0)
 	{
 		gchar _command[80];
 		send_command("yxdeletedatabaseall wl\n");
@@ -3867,7 +3876,7 @@ void execute_command(gchar *command)
 		}
 		send_command("done\n");
 	}
-	else if (_strnicmp(command, "dbdel all", 9) == 0)
+	else if (yixin_strnicmp(command, "dbdel all", 9) == 0)
 	{
 		gchar _command[80];
 		send_command("yxdeletedatabaseall\n");
@@ -3879,11 +3888,11 @@ void execute_command(gchar *command)
 		}
 		send_command("done\n");
 	}
-	else if (_strnicmp(command, "makebook", 8) == 0)
+	else if (yixin_strnicmp(command, "makebook", 8) == 0)
 	{
 		; //TODO
 	}
-	else if (_strnicmp(command, "print features", 14) == 0)
+	else if (yixin_strnicmp(command, "print features", 14) == 0)
 	{
 		send_command("yxprintfeature\n");
 	}
