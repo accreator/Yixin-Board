@@ -1773,7 +1773,7 @@ void show_dialog_settings(GtkWidget *widget, gpointer data)
 				{
 					sscanf(ptext, "%d", &maxnode);
 					if(maxnode > 1000000) maxnode = 1000000;
-					if(maxnode < 1) maxnode = 1;
+					if(maxnode < 0) maxnode = 0;
 					maxnode *= 1000;
 				}
 				ptext = gtk_entry_get_text(GTK_ENTRY(entryincrement));
@@ -4666,7 +4666,7 @@ void create_windowmain()
 	{
 		FILE *in;
 		char s[80];
-		sprintf(s, "language\\%d.lng", i);
+		sprintf(s, "language/%d.lng", i);
 		if ((in = fopen(s, "r")) != NULL)
 		{
 			while (fgets(s, sizeof(s), in))
@@ -5558,7 +5558,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 		maxdepth = read_int_from_file(in);
 		if(maxdepth < 2 || maxdepth > boardsizeh*boardsizew) maxdepth = boardsizeh*boardsizew;
 		maxnode = read_int_from_file(in);
-		if(maxnode < 1000 || maxnode > 1000000000) maxnode = 1000000000;
+		if(maxnode < 0 || maxnode > 1000000000) maxnode = 1000000000;
 		cautionfactor = read_int_from_file(in);
 		if(cautionfactor < 0 || cautionfactor > CAUTION_NUM) cautionfactor = 1;
 		showtoolbarboth = read_int_from_file(in);
@@ -5687,7 +5687,7 @@ void load_setting(int def_boardsizeh, int def_boardsizew, int def_language, int 
 	clanguage = (char *)malloc(1024 * sizeof(char*));
 	for (i = 0; i < 1024; i++) clanguage[i] = NULL;
 
-	sprintf(s, "language\\%d.lng", language);
+	sprintf(s, "language/%d.lng", language);
 	if ((in = fopen(s, "r")) != NULL)
 	{
 		while (fgets(s, sizeof(s), in))
